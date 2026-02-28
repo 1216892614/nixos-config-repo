@@ -1,0 +1,6 @@
+result
+result-*
+hosts/*/hardware-configuration.nix
+hosts/*/mihomo-config.yaml
+env.nix
+.direnv/

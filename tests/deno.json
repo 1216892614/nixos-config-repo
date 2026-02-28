@@ -1,0 +1,7 @@
+{
+  "tasks": {
+    "test": "deno test --allow-read --allow-run .",
+    "test:files": "deno test --allow-read 01_file_structure_test.ts 10_color_theme_test.ts 11_mihomo_config_test.ts 12_hardware_example_test.ts",
+    "test:nix": "deno test --allow-read --allow-run 02_flake_eval_test.ts 03_system_services_test.ts 04_user_config_test.ts 05_networking_test.ts 06_desktop_env_test.ts 07_fonts_locale_test.ts 08_home_packages_test.ts 09_programs_test.ts"
+  }
+}

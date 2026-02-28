@@ -1,0 +1,13 @@
+services:
+  nix-check:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile
+    volumes:
+      - ..:/config
+    command: >
+      sh -c "
+        nix flake check --no-build /config &&
+        nix eval /config#nixosConfigurations.desktop.config.system.stateVersion &&
+        echo 'All checks passed'
+      "
