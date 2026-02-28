@@ -8,6 +8,12 @@ in
     enable = true;
     systemd.enable = true;
 
+    settings.wallpaper = {
+      enabled = true;
+      setWallpaperOnAllMonitors = true;
+      fillMode = "cover";
+    };
+
     colors = {
       mPrimary = colors.accent;
       mOnPrimary = colors.bg;

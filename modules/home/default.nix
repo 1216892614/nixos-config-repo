@@ -107,5 +107,10 @@
     recursive = true;
   };
 
+  home.file.".config/noctalia/wallpaper.png".source = ../../wallpaper.png;
+  home.file.".cache/noctalia/wallpapers.json".text = builtins.toJSON {
+    defaultWallpaper = "${config.home.homeDirectory}/.config/noctalia/wallpaper.png";
+  };
+
   programs.home-manager.enable = true;
 }
