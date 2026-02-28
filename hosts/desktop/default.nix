@@ -9,7 +9,7 @@ in
 {
   imports =
     (map (f: nixosModulesDir + "/${f}") nixosModuleFiles)
-    ++ [ ./hardware-configuration.nix ];
+    ++ [ ../../hardware-configuration.nix ];
 
   networking.hostName = "desktop";
 
