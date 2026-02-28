@@ -102,7 +102,7 @@
       owner = "gaboolic";
       repo = "rime-shuangpin-fuzhuma";
       rev = "main";
-      hash = lib.fakeHash;
+      hash = "sha256-39STMvHWcix3C11ZXUicEXg1wa8sj4KinVY3aMQHYE4=";
     };
     recursive = true;
   };

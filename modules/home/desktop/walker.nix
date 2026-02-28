@@ -18,52 +18,40 @@ in
 
     themes = {
       ayu-dark = {
-        ui = {
-          window = {
-            box = {
-              background = colors.bg;
-              border.color = colors.accent;
-              border.width = 2;
-              corner_radius = 12;
-              padding = 16;
-            };
-          };
-          search = {
-            entry = {
-              background = colors.surface.lift;
-              color = colors.fg;
-              border.color = colors.surface.over;
-              corner_radius = 8;
-              padding = 8;
-            };
-            spinner = {
-              color = colors.accent;
-            };
-          };
-          list = {
-            item = {
-              background = "transparent";
-              color = colors.fg;
-              corner_radius = 8;
-              padding = 8;
-            };
-            item_selected = {
-              background = colors.surface.lift;
-              color = colors.accent;
-              corner_radius = 8;
-              padding = 8;
-              border.color = colors.accent;
-              border.width = 1;
-            };
-          };
-          scroll = {
-            bar = {
-              background = colors.surface.over;
-              corner_radius = 4;
-              width = 4;
-            };
-          };
-        };
+        style = ''
+          * {
+            font-family: "Sarasa UI SC", sans-serif;
+          }
+          #window {
+            background: ${colors.bg};
+            border: 2px solid ${colors.accent};
+            border-radius: 12px;
+            padding: 16px;
+          }
+          #search entry {
+            background: ${colors.surface.lift};
+            color: ${colors.fg};
+            border: 1px solid ${colors.surface.over};
+            border-radius: 8px;
+            padding: 8px;
+          }
+          #item {
+            background: transparent;
+            color: ${colors.fg};
+            border-radius: 8px;
+            padding: 8px;
+          }
+          #item:selected {
+            background: ${colors.surface.lift};
+            color: ${colors.accent};
+            border: 1px solid ${colors.accent};
+          }
+          scrollbar slider {
+            background: ${colors.surface.over};
+            border-radius: 4px;
+            min-width: 4px;
+          }
+        '';
       };
     };
   };

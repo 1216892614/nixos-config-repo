@@ -11,7 +11,7 @@
 
     # C/C++ toolchain
     clang
-    gcc
+    (lib.hiPrio gcc)
     cmake
     gnumake
     pkg-config

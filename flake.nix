@@ -50,6 +50,7 @@
           nixpkgs.overlays = [
             niri.overlays.niri
           ];
+          programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;
         }
 
         home-manager.nixosModules.home-manager
@@ -58,7 +59,6 @@
             useGlobalPkgs = true;
             useUserPackages = true;
             sharedModules = [
-              niri.homeModules.niri
               noctalia.homeModules.default
               walker.homeManagerModules.default
             ];

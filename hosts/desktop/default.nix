@@ -12,9 +12,7 @@ in
     ++ [ ../../hardware-configuration.nix ];
 
   networking.hostName = "desktop";
-
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true;
+  system.stateVersion = "24.11";
 
   home-manager.users.ep-o1 = import ../../modules/home;
 }
