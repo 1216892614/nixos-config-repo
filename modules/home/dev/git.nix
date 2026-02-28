@@ -1,10 +1,13 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  env = import ../../../env.nix;
+in
 {
   programs.git = {
     enable = true;
-    userName = "ep-o1"; # TODO: set your real name
-    userEmail = "TODO@example.com"; # TODO: set your real email
+    userName = env.gitUserName;
+    userEmail = env.gitUserEmail;
 
     delta = {
       enable = true;
