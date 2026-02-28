@@ -1,0 +1,2 @@
+debs/**/*.deb filter=lfs diff=lfs merge=lfs -text
+icons/** filter=lfs diff=lfs merge=lfs -text

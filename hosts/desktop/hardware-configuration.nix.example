@@ -1,0 +1,48 @@
+{ config, lib, pkgs, modulesPath, ... }:
+
+{
+  imports = [
+    (modulesPath + "/installer/scan/not-detected.nix")
+  ];
+
+  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "ahci" "usbhid" "sd_mod" ];
+  boot.kernelModules = [ "kvm-amd" ];
+
+  # ── GPU: uncomment ONE section ──────────────────────────────────
+
+  # ── NVIDIA ──
+  # services.xserver.videoDrivers = [ "nvidia" ];
+  # hardware.nvidia = {
+  #   modesetting.enable = true;
+  #   powerManagement.enable = false;
+  #   open = true;
+  #   nvidiaSettings = true;
+  #   package = config.boot.kernelPackages.nvidiaPackages.stable;
+  # };
+
+  # ── AMD ──
+  # boot.initrd.kernelModules = [ "amdgpu" ];
+  # services.xserver.videoDrivers = [ "amdgpu" ];
+
+  hardware.graphics.enable = true;
+  hardware.enableRedistributableFirmware = true;
+
+  # ── Filesystems ─────────────────────────────────────────────────
+
+  fileSystems."/" = {
+    device = "/dev/disk/by-uuid/CHANGE-ME";
+    fsType = "ext4";
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-uuid/CHANGE-ME";
+    fsType = "vfat";
+    options = [ "fmask=0077" "dmask=0077" ];
+  };
+
+  swapDevices = [
+    { device = "/dev/disk/by-uuid/CHANGE-ME"; }
+  ];
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+}
