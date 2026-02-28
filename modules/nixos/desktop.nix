@@ -31,7 +31,7 @@
     libva-utils
   ];
 
-  services.niri.enable = true;
+  programs.niri.enable = true;
 
   hardware = {
     bluetooth.enable = true;

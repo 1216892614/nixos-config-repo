@@ -9,21 +9,12 @@ in
 
     plugins = [
       {
-        name = "nix.fish";
-        src = pkgs.fetchFromGitHub {
-          owner = "kidonng";
-          repo = "nix.fish";
-          rev = "ad57d970841ae4a24571b5b489ed76e13571c2c0";
-          hash = "sha256-GMV0GyORJ8Tt2S9wTCo2lkkLtetYv0rc19aA5KJbo48=";
-        };
-      }
-      {
         name = "nvm.fish";
         src = pkgs.fetchFromGitHub {
           owner = "jorgebucaran";
           repo = "nvm.fish";
-          rev = "c69e5d1017b21bcfca8f42c93c7e89571c0e8f0f";
-          hash = "sha256-LV5NiHfg4JOrcjW7hAasUSukT43UBNXGPi1oZWPbnCA=";
+          rev = "cc70373951379cb986a99f059bfc1e9834a3bdd7";
+          hash = "sha256-ZY443mWe/J2eSylzgNEJiLvurqE9StWGb0fvGHthqA0=";
         };
       }
     ];
@@ -37,8 +28,6 @@ in
   };
 
   home.packages = with pkgs; [
-    fishPlugins.fisher
-
     jq
     yq-go
     sd

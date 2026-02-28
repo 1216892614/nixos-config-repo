@@ -4,6 +4,7 @@
   programs.yazi = {
     enable = true;
     enableFishIntegration = true;
+    shellWrapperName = "y";
 
     settings = {
       manager = {
@@ -18,8 +19,8 @@
       clipboard = pkgs.fetchFromGitHub {
         owner = "XYenon";
         repo = "clipboard.yazi";
-        rev = "main";
-        hash = lib.fakeHash;
+        rev = "3b9681091b783d6bc5d07172afd6159060a7db63";
+        hash = "sha256-8p2RC8F8JH1K36HebJM58stHX+lFLD+KYQxfdJm06y0=";
       };
     };
 
