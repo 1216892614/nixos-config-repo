@@ -5,6 +5,13 @@
 
   services.gnome.gnome-keyring.enable = true;
 
+  # 显示管理器：提供图形登录界面，niri-flake 已将 niri 会话注册到 sessionPackages
+  services.displayManager.gdm = {
+    enable = true;
+    wayland = true;
+  };
+  services.displayManager.defaultSession = "niri";
+
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
