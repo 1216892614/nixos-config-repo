@@ -90,6 +90,8 @@ in
 
     spawn-at-startup = [
       { command = [ "xwayland-satellite" ]; }
+      # 确保输入法随 niri 会话启动（fcitx5 会检测已运行实例）
+      { command = [ "fcitx5" ]; }
     ];
   };
 }
