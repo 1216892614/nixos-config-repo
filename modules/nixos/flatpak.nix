@@ -12,7 +12,8 @@
       "sh.ppy.osu"
     ];
 
-    update.onActivation = true;
+    # 不在 activation 时执行，避免网络/仓库失败导致 nixos-rebuild 报错
+    update.onActivation = false;
 
     overrides.global = {
       Context = {
@@ -23,4 +24,7 @@
       };
     };
   };
+
+  # 不随 activation 启动，避免失败导致 nixos-rebuild 报错；需要时手动执行 flatpak install
+  systemd.services.flatpak-managed-install.enable = false;
 }
