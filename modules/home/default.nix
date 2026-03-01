@@ -10,27 +10,16 @@ let
   codexApiKey = env.codexApiKey or "";
   geminiBaseUrl = env.geminiBaseUrl or "";
   geminiApiKey = env.geminiApiKey or "";
-  openclawProviderModels = env.openclawProviderModels or [
-    { id = "claude-opus-4-6"; name = "Claude Opus 4.6"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
-    { id = "claude-sonnet-4-6"; name = "Claude Sonnet 4.6"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
-    { id = "gpt-5.3-codex-high"; name = "GPT-5.3 Codex High"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
-    { id = "gemini-3-flash-preview"; name = "Gemini 3 Flash Preview"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
+  # OpenRouter: one API key, model IDs from openrouter.ai (e.g. anthropic/claude-opus-4.6)
+  openrouterApiKey = env.openrouterApiKey or "";
+  openclawOpenRouterModels = env.openclawOpenRouterModels or [
+    "anthropic/claude-opus-4.6"
+    "google/gemini-3.1-pro-preview"
+    "openai/gpt-5.2-codex"
+    "openai/gpt-5.2-chat"
+    "openai/gpt-5.2-pro"
   ];
-  # Group models by (baseUrl, apiKey); each group becomes one OpenClaw provider (only include groups with non-empty apiKey)
-  openclawProviderGroups = let
-    key = m: (m.baseUrl or "") + "\0" + (m.apiKey or "");
-    grouped = lib.groupBy key (lib.filter (m: (m.apiKey or "") != "") openclawProviderModels);
-    values = map (models: {
-      baseUrl = (builtins.head models).baseUrl + "/v1";
-      apiKey = (builtins.head models).apiKey;
-      api = "openai-completions";
-      models = map (m: { id = m.id; name = m.name; }) models;
-    }) (builtins.attrValues grouped);
-    count = builtins.length values;
-    names = map (i: if i == 1 then "router" else "router-${toString i}") (lib.range 1 count);
-    list = map (i: { name = builtins.elemAt names (i - 1); value = builtins.elemAt values (i - 1); }) (lib.range 1 count);
-  in lib.listToAttrs list;
-  openclawHasProvider = openclawProviderModels != [] && lib.any (m: (m.apiKey or "") != "") openclawProviderModels;
+  openclawHasOpenRouter = openrouterApiKey != "";
 in
 {
   imports = [
@@ -63,6 +52,8 @@ in
     google-chrome
     code-cursor
     codex
+    claude-code
+    gemini-cli
     docker-buildx
     wl-clipboard
     cliphist
@@ -110,9 +101,16 @@ in
     };
   };
 
-  # OpenClaw: one provider per (baseUrl, apiKey) group from openclawProviderModels (url/key per model)
-  xdg.configFile."nix/openclaw-bytecatcode-provider.json" = lib.mkIf openclawHasProvider {
-    text = builtins.toJSON openclawProviderGroups;
+  # OpenClaw: OpenRouter provider (replaces previous ByteCatCode per-model config)
+  xdg.configFile."nix/openclaw-openrouter-provider.json" = lib.mkIf openclawHasOpenRouter {
+    text = builtins.toJSON {
+      openrouter = {
+        baseUrl = "https://openrouter.ai/api/v1";
+        apiKey = openrouterApiKey;
+        api = "openai-completions";
+        models = map (id: { id = id; name = id; }) openclawOpenRouterModels;
+      };
+    };
   };
 
   services.udiskie = {
@@ -210,12 +208,13 @@ in
       $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
     fi
     $DRY_RUN_CMD printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$token" > "$ENV_D_DIR/openclaw.conf"
-    BYTECAT_PROVIDER="''${HOME}/.config/nix/openclaw-bytecatcode-provider.json"
-    if [ -f "$BYTECAT_PROVIDER" ] && [ -s "$BYTECAT_PROVIDER" ]; then
-      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --slurpfile p "$BYTECAT_PROVIDER" '.models.providers = ((.models.providers // {}) + $p[0])' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
-        $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
+    for PROVIDER_FILE in "''${HOME}/.config/nix/openclaw-openrouter-provider.json" "''${HOME}/.config/nix/openclaw-bytecatcode-provider.json"; do
+      if [ -f "$PROVIDER_FILE" ] && [ -s "$PROVIDER_FILE" ]; then
+        if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --slurpfile p "$PROVIDER_FILE" '.models.providers = ((.models.providers // {}) + $p[0])' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+          $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
+        fi
       fi
-    fi
+    done
   '';
 
   # openclaw CLI (wrapper so PATH has "openclaw" without adding the package to profile, which would conflict with nodejs bin/node)
