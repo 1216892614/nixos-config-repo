@@ -177,6 +177,8 @@ journalctl --user -u openclaw-gateway -n 50
 
 5. **重新应用配置**：改过 Nix 配置后请执行 `home-manager switch --flake .#desktop` 或 `sudo fish ./scripts/rebuild.fish`，**务必再执行** `systemctl --user restart openclaw-gateway`，否则 gateway 不会加载新生成的 token 与 `openclaw.json`，会导致无法访问。
 
+6. **「No API key found for provider anthropic」**：说明 agent 在用直连 anthropic 而非 OpenRouter。本配置会在每次 rebuild 时向 `openclaw.json` 写入 `env.OPENROUTER_API_KEY`、`agents.defaults.model.primary = "openrouter/anthropic/claude-opus-4.6"`，并向 `~/.openclaw/agents/main/agent/auth-profiles.json` 写入 `openrouter:default` 的 API key。若仍报错，可手动执行一次：`openclaw onboard --auth-choice apiKey --token-provider openrouter --token "$(jq -r '.openrouter.apiKey' ~/.config/nix/openclaw-openrouter-provider.json)"`，然后重启 gateway。
+
 ### Discord Bot
 
 Gateway 支持 Discord 频道。已启用 `channels.discord.enabled`，token 在 **`env.nix`** 中配置：
