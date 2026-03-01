@@ -15,7 +15,7 @@ in
     layout = {
       gaps = 8;
       focus-ring = {
-        width = 2;
+        width = 4;
         active.color = colors.accent;
         inactive.color = "#6c7380";
       };
@@ -23,8 +23,7 @@ in
 
     binds = {
       "Super+Return".action.spawn = [ "walker" ];
-      "Super+T".action.spawn = [ "kitty" ];
-      "Super+I".action.spawn = [ "kitty" "-e" "zellij" ];
+      "Super+T".action.spawn = [ "kitty" "-e" "zellij" ];
       "Super+Y".action.spawn = [ "kitty" "-e" "yazi" ];
       "Super+Q".action.close-window = { };
       "Super+V".action.spawn = [ "walker" "-m" "clipboard" ];
@@ -40,9 +39,10 @@ in
       "Print".action.screenshot = { };
       "Ctrl+Print".action.screenshot-screen = { };
       "Alt+Print".action.screenshot-window = { };
-      "Super+P".action.spawn = [ "noctalia" "controlCenter" ];
-      "Super+Ctrl+P".action.spawn = [ "noctalia" "settings" ];
-      "Super+L".action.spawn = [ "noctalia" "lockScreen" ];
+      "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
+      "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
+      "Super+L".action.focus-column-right = { };
+      "Super+Ctrl+L".action.spawn = [ "noctalia" "lockScreen" ];
 
       "XF86AudioRaiseVolume".action.spawn = [ "noctalia" "volume" "up" ];
       "XF86AudioLowerVolume".action.spawn = [ "noctalia" "volume" "down" ];
@@ -56,7 +56,7 @@ in
       "Super+Shift+H".action.move-column-left = { };
       "Super+Shift+J".action.move-window-down = { };
       "Super+Shift+K".action.move-window-up = { };
-      "Super+Ctrl+L".action.move-column-right = { };
+      "Super+Ctrl+Shift+L".action.move-column-right = { };
 
       "Super+Left".action.focus-column-left = { };
       "Super+Down".action.focus-window-down = { };
@@ -99,6 +99,12 @@ in
     };
 
     window-rules = [
+      {
+        matches = [
+          { is-active = false; }
+        ];
+        opacity = 0.95;
+      }
       {
         matches = [
           { app-id = "file_chooser"; }
