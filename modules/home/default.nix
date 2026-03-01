@@ -20,6 +20,7 @@ let
     "openai/gpt-5.2-pro"
   ];
   openclawHasOpenRouter = openrouterApiKey != "";
+  openclawDefaultModel = env.openclawDefaultModel or "anthropic/claude-opus-4.6";
   openclawDiscordAllowFrom = env.openclawDiscordAllowFrom or [];
   openclawDiscordDmConfig = if openclawDiscordAllowFrom != [] then {
     policy = "allowlist";
@@ -237,7 +238,7 @@ in
     if [ -f "$OPENROUTER_FILE" ] && [ -s "$OPENROUTER_FILE" ]; then
       OR_KEY="$(${pkgs.jq}/bin/jq -r '.openrouter.apiKey // empty' "$OPENROUTER_FILE" 2>/dev/null)"
       if [ -n "$OR_KEY" ]; then
-        if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg k "$OR_KEY" '.env.OPENROUTER_API_KEY = $k | .agents.defaults = ((.agents.defaults // {}) | .model = ((.model // {}) | .primary = "openrouter/anthropic/claude-opus-4.6"))' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+        if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg k "$OR_KEY" '.env.OPENROUTER_API_KEY = $k | .agents.defaults = ((.agents.defaults // {}) | .model = ((.model // {}) | .primary = "openrouter/${openclawDefaultModel}"))' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
           $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
         fi
         # Persist OpenRouter key to main agent auth-profiles.json (required for agent resolution)
