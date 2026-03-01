@@ -4,6 +4,33 @@ let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
   openclawGatewayToken = env.openclawGatewayToken or "";
   discordBotToken = env.discordBotToken or "";
+  claudeCodeBaseUrl = env.claudeCodeBaseUrl or "";
+  claudeCodeApiKey = env.claudeCodeApiKey or "";
+  codexBaseUrl = env.codexBaseUrl or "";
+  codexApiKey = env.codexApiKey or "";
+  geminiBaseUrl = env.geminiBaseUrl or "";
+  geminiApiKey = env.geminiApiKey or "";
+  openclawProviderModels = env.openclawProviderModels or [
+    { id = "claude-opus-4-6"; name = "Claude Opus 4.6"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
+    { id = "claude-sonnet-4-6"; name = "Claude Sonnet 4.6"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
+    { id = "gpt-5.3-codex-high"; name = "GPT-5.3 Codex High"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
+    { id = "gemini-3-flash-preview"; name = "Gemini 3 Flash Preview"; baseUrl = "https://www.bytecatcode.org"; apiKey = ""; }
+  ];
+  # Group models by (baseUrl, apiKey); each group becomes one OpenClaw provider (only include groups with non-empty apiKey)
+  openclawProviderGroups = let
+    key = m: (m.baseUrl or "") + "\0" + (m.apiKey or "");
+    grouped = lib.groupBy key (lib.filter (m: (m.apiKey or "") != "") openclawProviderModels);
+    values = map (models: {
+      baseUrl = (builtins.head models).baseUrl + "/v1";
+      apiKey = (builtins.head models).apiKey;
+      api = "openai-completions";
+      models = map (m: { id = m.id; name = m.name; }) models;
+    }) (builtins.attrValues grouped);
+    count = builtins.length values;
+    names = map (i: if i == 1 then "router" else "router-${toString i}") (lib.range 1 count);
+    list = map (i: { name = builtins.elemAt names (i - 1); value = builtins.elemAt values (i - 1); }) (lib.range 1 count);
+  in lib.listToAttrs list;
+  openclawHasProvider = openclawProviderModels != [] && lib.any (m: (m.apiKey or "") != "") openclawProviderModels;
 in
 {
   imports = [
@@ -42,6 +69,51 @@ in
     uv  # provides uvx for running Python tools
     # OpenClaw not in profile (would conflict with nodejs bin/node); gateway runs via systemd below.
   ];
+
+  # Claude Code: only when claudeCodeApiKey is set (no key → no config)
+  home.file.".claude/settings.json" = lib.mkIf (claudeCodeApiKey != "") {
+    text = builtins.toJSON {
+      env = {
+        ANTHROPIC_AUTH_TOKEN = claudeCodeApiKey;
+        ANTHROPIC_BASE_URL = claudeCodeBaseUrl;
+        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+      };
+      permissions = { allow = [ ]; deny = [ ]; };
+    };
+  };
+
+  # Codex: only when codexApiKey is set; key only in auth.json, never in env
+  home.file.".codex/config.toml" = lib.mkIf (codexApiKey != "") {
+    text = ''
+      disable_response_storage = true
+      model = "gpt-5.2"
+      model_reasoning_effort = "high"
+      model_provider = "bytecatcode"
+
+      [model_providers.bytecatcode]
+      base_url = "${codexBaseUrl}/v1"
+      name = "bytecatcode"
+      requires_openai_auth = true
+      wire_api = "responses"
+    '';
+  };
+  home.file.".codex/auth.json" = lib.mkIf (codexApiKey != "") {
+    text = builtins.toJSON { OPENAI_API_KEY = codexApiKey; };
+  };
+
+  # Gemini CLI: only when geminiApiKey is set
+  home.file.".gemini/config.json" = lib.mkIf (geminiApiKey != "") {
+    text = builtins.toJSON {
+      CODE_ASSIST_ENDPOINT = geminiBaseUrl + "/";
+      GOOGLE_CLOUD_ACCESS_TOKEN = geminiApiKey;
+      GOOGLE_GENAI_USE_GCA = "true";
+    };
+  };
+
+  # OpenClaw: one provider per (baseUrl, apiKey) group from openclawProviderModels (url/key per model)
+  xdg.configFile."nix/openclaw-bytecatcode-provider.json" = lib.mkIf openclawHasProvider {
+    text = builtins.toJSON openclawProviderGroups;
+  };
 
   services.udiskie = {
     enable = true;
@@ -138,6 +210,12 @@ in
       $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
     fi
     $DRY_RUN_CMD printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$token" > "$ENV_D_DIR/openclaw.conf"
+    BYTECAT_PROVIDER="''${HOME}/.config/nix/openclaw-bytecatcode-provider.json"
+    if [ -f "$BYTECAT_PROVIDER" ] && [ -s "$BYTECAT_PROVIDER" ]; then
+      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --slurpfile p "$BYTECAT_PROVIDER" '.models.providers = ((.models.providers // {}) + $p[0])' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+        $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
+      fi
+    fi
   '';
 
   # OpenClaw in Walker: script opens dashboard in Chrome; append token to URL (from env or ~/.openclaw/gateway-token).
