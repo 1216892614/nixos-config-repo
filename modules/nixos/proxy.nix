@@ -1,7 +1,12 @@
 { pkgs, lib, ... }:
 
 let
-  env = import ../../env.nix;
+  envPath =
+    if builtins.pathExists ../../env.nix then
+      ../../env.nix
+    else
+      ../../env.nix.example;
+  env = import envPath;
 
   fetchConfig = pkgs.writeShellScript "fetch-mihomo-config" ''
     mkdir -p /etc/mihomo
@@ -13,20 +18,38 @@ let
         fi
       done
     }
+    # Ensure DNS listens on localhost:53 so system resolv.conf works.
+    ensure_dns_listen_localhost() {
+      file="$1"
+      if ! [ -f "$file" ] || ! [ -s "$file" ]; then return 0; fi
+      ${pkgs.yq-go}/bin/yq eval '
+        .dns = ((.dns | select(tag == "!!map")) // {})
+        | .dns.enable = true
+        | .dns.listen = "127.0.0.1:53"
+      ' -i "$file"
+    }
+    # TUN 与系统代理排除：localhost/127.0.0.1/::1 不走代理，避免本地服务（如 Vite/miniflare）write EPIPE
+    add_tun_exclude_localhost() {
+      file="$1"
+      if ! [ -f "$file" ] || ! [ -s "$file" ]; then return 0; fi
+      ${pkgs.yq-go}/bin/yq eval '
+        .tun = ((.tun | select(tag == "!!map")) // {})
+        | .tun.enable = true
+        | .tun["route-exclude-address"] = ((.tun["route-exclude-address"] // []) + ["127.0.0.0/8", "::1/128"])
+        | .tun["route-exclude-address"] |= unique
+      ' -i "$file"
+    }
     tmp=$(mktemp)
     if ${pkgs.curl}/bin/curl -sL -o "$tmp" --connect-timeout 15 "${env.mihomoSubscribeUrl}" 2>/dev/null && [ -s "$tmp" ]; then
-      # Ensure DNS listens on localhost:53 so system resolv.conf works.
-      ${pkgs.gnused}/bin/sed -i \
-        -e 's#^\\([[:space:]]*listen:[[:space:]]*\\).*#\\1127.0.0.1:53#' \
-        "$tmp"
+      ensure_dns_listen_localhost "$tmp"
       add_fake_ip_filter "$tmp"
+      add_tun_exclude_localhost "$tmp"
       mv "$tmp" /etc/mihomo/config.yaml
     elif [ -s /etc/mihomo/config.yaml ]; then
-      # If fetch fails, still enforce listen on existing config.
-      ${pkgs.gnused}/bin/sed -i \
-        -e 's#^\\([[:space:]]*listen:[[:space:]]*\\).*#\\1127.0.0.1:53#' \
-        /etc/mihomo/config.yaml
+      # If fetch fails, still enforce DNS listen on existing config.
+      ensure_dns_listen_localhost /etc/mihomo/config.yaml
       add_fake_ip_filter /etc/mihomo/config.yaml
+      add_tun_exclude_localhost /etc/mihomo/config.yaml
     fi
     rm -f "$tmp"
     # 拉取失败时保留现有 config.yaml，不阻塞 activation
@@ -34,6 +57,9 @@ let
   '';
 in
 {
+  # fetch 脚本用 yq 写 TUN exclude；保证运行时可执行
+  environment.systemPackages = [ pkgs.yq-go ];
+
   services.mihomo = {
     enable = true;
     tunMode = true;
