@@ -201,19 +201,29 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # OpenClaw: on each rebuild, generate a new gateway token and write to ~/.openclaw and environment.d.
-  # Only set gateway.auth.token so port and other gateway config are preserved; if jq fails (e.g. JSON5), write minimal config.
+  # OpenClaw: on each rebuild, generate gateway token and merge Nix options into ~/.openclaw (tokens from env.nix).
+  # Works from zero (no openclaw.json) and with existing config (e.g. after openclaw onboard). If openclaw.json is JSON5, convert to JSON first so jq merges succeed.
   home.activation.openclawGenToken = config.lib.dag.entryAfter [ "writeBoundary" ] ''
     OPENCLAW_DIR="''${HOME}/.openclaw"
     ENV_D_DIR="''${HOME}/.config/environment.d"
     $DRY_RUN_CMD mkdir -p "$OPENCLAW_DIR" "$ENV_D_DIR"
+    # Normalise existing openclaw.json from JSON5 to JSON so jq merges work (onboard writes JSON5)
+    if [ -f "$OPENCLAW_DIR/openclaw.json" ] && [ -s "$OPENCLAW_DIR/openclaw.json" ]; then
+      $DRY_RUN_CMD ${pkgs.python3.withPackages (p: [ p.json5 ])}/bin/python -c '
+import json, json5, sys
+path = sys.argv[1]
+try:
+  with open(path) as f: d = json5.load(f)
+  with open(path, "w") as f: json.dump(d, f, indent=2)
+except Exception:
+  pass
+' "$OPENCLAW_DIR/openclaw.json" 2>/dev/null || true
+    fi
     token="$(${pkgs.openssl}/bin/openssl rand -hex 32)"
     $DRY_RUN_CMD printf '%s' "$token" > "$OPENCLAW_DIR/gateway-token"
-    if [ -f "$OPENCLAW_DIR/openclaw.json" ]; then
-      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg t "$token" '.gateway.auth.token = $t | .channels.discord.enabled = true' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+    if [ -f "$OPENCLAW_DIR/openclaw.json" ] && [ -s "$OPENCLAW_DIR/openclaw.json" ]; then
+      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg t "$token" '.gateway.auth.token = $t | .channels.discord = ((.channels.discord // {}) | .enabled = true)' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
         $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
-      else
-        $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
       fi
     else
       $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
