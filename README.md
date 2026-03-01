@@ -130,6 +130,10 @@ cp env.nix.example env.nix
 - 运行时配置与状态目录默认在 `~/.openclaw`（可通过 `OPENCLAW_CONFIG_PATH`、`OPENCLAW_STATE_DIR` 等覆盖）。
 - 首次使用需在 OpenClaw 官方文档或客户端中完成配对/登录；若需 Telegram 等集成，需自行配置 bot token 与密钥。
 
+**Token 来源（均在 env.nix）**：Gateway token 每次 rebuild 自动生成并写回；Discord 使用 `discordBotToken`；OpenRouter 使用 `openrouterApiKey`。以上均从 `env.nix` 读入，由 Nix 写入 `~/.config/nix/*.json` 或 systemd 环境，再在 activation 时合并进 `~/.openclaw/openclaw.json` 与 auth-profiles。
+
+**Rebuild 与从零构建**：Activation 在**从零**（无 `openclaw.json`）时生成最小配置后做与 rebuild 相同的合并；在**已有配置**（例如执行过 `openclaw onboard`）时，会先把 JSON5 转为 JSON 再合并，只更新 gateway token、Discord、OpenRouter、agents.defaults 等 Nix 管理的项，不覆盖 onboard 生成的其它选项。
+
 ### Gateway 令牌配对（unauthorized: gateway token missing）
 
 **本配置会在每次 rebuild 时自动生成新的 gateway token**，并写入：
@@ -177,7 +181,7 @@ journalctl --user -u openclaw-gateway -n 50
 
 5. **重新应用配置**：改过 Nix 配置后请执行 `home-manager switch --flake .#desktop` 或 `sudo fish ./scripts/rebuild.fish`，**务必再执行** `systemctl --user restart openclaw-gateway`，否则 gateway 不会加载新生成的 token 与 `openclaw.json`，会导致无法访问。
 
-6. **「No API key found for provider anthropic」**：说明 agent 在用直连 anthropic 而非 OpenRouter。本配置会在每次 rebuild 时向 `openclaw.json` 写入 `env.OPENROUTER_API_KEY`、`agents.defaults.model.primary = "openrouter/anthropic/claude-opus-4.6"`，并向 `~/.openclaw/agents/main/agent/auth-profiles.json` 写入 `openrouter:default` 的 API key。若仍报错，可手动执行一次：`openclaw onboard --auth-choice apiKey --token-provider openrouter --token "$(jq -r '.openrouter.apiKey' ~/.config/nix/openclaw-openrouter-provider.json)"`，然后重启 gateway。
+6. **「No API key found for provider anthropic」**：说明 agent 在用直连 anthropic 而非 OpenRouter。本配置会在每次 rebuild 时向 `openclaw.json` 写入 `env.OPENROUTER_API_KEY`、`agents.defaults.model.primary`（来自 env.nix 的 `openclawDefaultModel`），并向 `~/.openclaw/agents/main/agent/auth-profiles.json` 写入 `openrouter:default` 的 API key。若仍报错，可手动执行一次：`openclaw onboard --auth-choice apiKey --token-provider openrouter --token "$(jq -r '.openrouter.apiKey' ~/.config/nix/openclaw-openrouter-provider.json)"`，然后重启 gateway。
 
 ### Discord Bot
 
