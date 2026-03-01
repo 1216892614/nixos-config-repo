@@ -42,6 +42,19 @@ cp env.nix.example env.nix
 
 `env.nix` 已加入 `.gitignore`，不会提交到仓库。
 
+### Agent Router（按 CLI 独立 base URL + key）
+
+每个 AI CLI 在 `env.nix` 里各有一套 **base URL** 和 **API key**，可单独换路由：
+
+| 工具 | env.nix 键 | 配置位置 | 说明 |
+|------|-------------|----------|------|
+| **Claude Code** | `claudeCodeBaseUrl` / `claudeCodeApiKey` | `~/.claude/settings.json` | 仅当 key 非空时生成 |
+| **Codex** | `codexBaseUrl` / `codexApiKey` | `~/.codex/config.toml`、`~/.codex/auth.json` | 仅当 key 非空时生成；**key 仅写文件，不放入 env** |
+| **Gemini CLI** | `geminiBaseUrl` / `geminiApiKey` | `~/.gemini/config.json` | 仅当 key 非空时生成 |
+| **OpenClaw** | `openclawProviderModels`（每项含 `id` / `name` / `baseUrl` / `apiKey`） | 按 (baseUrl, apiKey) 分组为多个 provider 合并进 `~/.openclaw/openclaw.json` | 仅当至少一个模型的 apiKey 非空时生成并合并；同一 url+key 的模型归为同一 provider |
+
+**规则**：未设置 key 的 CLI 不会生成任何配置；Codex 的 key 只存在于 `auth.json`，不会出现在环境变量中。OpenClaw 的模型在 `env.nix` 里用 `openclawProviderModels = [ { id = "..."; name = "..."; baseUrl = "..."; apiKey = "..."; } ... ]` 配置，每个模型可单独指定 url/key，相同 (baseUrl, apiKey) 会合并为一个 provider。
+
 ## 目录结构
 
 ```
