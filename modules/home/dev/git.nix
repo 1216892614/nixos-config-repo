@@ -36,7 +36,7 @@ in
     enable = true;
     enableGitIntegration = true;
     options = {
-      syntax-theme = "base16";
+      syntax-theme = "gruvbox-dark";
       line-numbers = true;
       side-by-side = true;
     };

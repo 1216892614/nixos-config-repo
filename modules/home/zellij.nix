@@ -6,7 +6,7 @@
     enableFishIntegration = false;
 
     settings = {
-      theme = "ayu-dark";
+      theme = "gruvbox-dark";
       default_shell = "fish";
     };
   };
