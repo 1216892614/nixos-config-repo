@@ -86,8 +86,11 @@
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # Expose Steam to Walker/Elephant (desktopapplications reads ~/.local/share/applications)
-  xdg.dataFile."applications/steam.desktop".source = "${pkgs.steam}/share/applications/steam.desktop";
+  # Expose Steam to Walker/Elephant; use absolute Exec path so launch from launcher works (no Nix PATH).
+  xdg.dataFile."applications/steam.desktop".text = builtins.replaceStrings
+    [ "Exec=steam " ]
+    [ "Exec=${pkgs.steam}/bin/steam " ]
+    (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
 
   xdg.configFile."xdg-terminal-exec/termfilechooser.conf".text = ''
     cmd=${config.home.homeDirectory}/.local/bin/yazi-wrapper.sh
