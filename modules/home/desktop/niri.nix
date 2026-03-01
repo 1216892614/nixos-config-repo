@@ -27,18 +27,44 @@ in
       "Super+Y".action.spawn = [ "kitty" "-e" "yazi" ];
       "Super+Q".action.close-window = { };
       "Super+V".action.spawn = [ "walker" "-m" "clipboard" ];
+      "Super+Ctrl+V".action.toggle-window-floating = { };
       "Super+Space".action.spawn = [ "fcitx5-remote" "-t" ];
       "Super+G".action.spawn = [
         "sh" "-c"
-        ''grim -g "$(slurp)" - | satty --filename -''
+        ''f=$(mktemp --suffix=.png); grim -g "$(slurp)" "$f"; wl-copy < "$f"; satty --filename "$f"''
       ];
       "Super+Shift+G".action.spawn = [
         "sh" "-c"
-        ''grim -g "$(slurp)" - | satty --filename -''
+        ''f=$(mktemp --suffix=.png); grim -g "$(slurp)" "$f"; wl-copy < "$f"; satty --filename "$f"''
       ];
-      "Print".action.screenshot = { };
-      "Ctrl+Print".action.screenshot-screen = { };
-      "Alt+Print".action.screenshot-window = { };
+      "Print".action.spawn = [
+        "sh" "-c"
+        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim "$f"; wl-copy < "$f"''
+      ];
+      "Ctrl+Print".action.spawn = [
+        "sh" "-c"
+        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim "$f"; wl-copy < "$f"''
+      ];
+      "Alt+Print".action.spawn = [
+        "sh" "-c"
+        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim -g "$(slurp)" "$f"; wl-copy < "$f"''
+      ];
+      "Super+Shift+R".action.spawn = [
+        "sh" "-c"
+        ''
+          if pgrep -x wf-recorder > /dev/null; then
+            recfile=$(cat /tmp/wf-recorder-path 2>/dev/null)
+            pkill -x wf-recorder
+            printf "%s" "$recfile" | wl-copy
+            kitty -e yazi "$HOME/Videos"
+          else
+            mkdir -p "$HOME/Videos"
+            recfile="$HOME/Videos/recording-$(date +%Y%m%d-%H%M%S).mp4"
+            printf "%s" "$recfile" > /tmp/wf-recorder-path
+            nohup wf-recorder -f "$recfile" > /tmp/wf-recorder.log 2>&1 &
+          fi
+        ''
+      ];
       "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
       "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
       "Super+L".action.focus-column-right = { };
@@ -107,6 +133,13 @@ in
       {
         matches = [
           { app-id = "file_chooser"; }
+        ];
+        open-floating = true;
+      }
+      # 截屏预览（satty）默认浮动
+      {
+        matches = [
+          { app-id = "satty"; }
         ];
         open-floating = true;
       }

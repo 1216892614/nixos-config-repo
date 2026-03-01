@@ -48,6 +48,8 @@ in
       ALL_PROXY = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
       no_proxy = "localhost,127.0.0.1,::1";
       NO_PROXY = "localhost,127.0.0.1,::1";
+      # 禁用 Electron 崩溃上报，避免 Flatpak 沙箱内 ptrace: Operation not permitted
+      ELECTRON_DISABLE_CRASH_REPORTER = "1";
     };
 
     overrides."com.qq.QQmusic".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
