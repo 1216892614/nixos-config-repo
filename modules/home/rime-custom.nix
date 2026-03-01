@@ -1,6 +1,7 @@
 # Rime 自定义：模糊音 + 中文模式下默认英文标点
 # 与 rime-shuangpin-fuzhuma 合并后作为 fcitx5/rime 数据目录
-{ pkgs, ... }:
+# 使用 activation 复制到可写目录，避免 store 只读导致 Rime 无法写入 build/user.yaml
+{ config, pkgs, ... }:
 let
   rimeBase = pkgs.fetchFromGitHub {
     owner = "gaboolic";
@@ -9,14 +10,15 @@ let
     hash = "sha256-39STMvHWcix3C11ZXUicEXg1wa8sj4KinVY3aMQHYE4=";
   };
 
-  # 全拼层面模糊音（用于 flypy / zrm 等方案，在双拼转换前派生）
+  # 全拼层面模糊音（用于小鹤/自然码等双拼方案，在双拼转换前派生）
+  # 仅保留常用：平翘舌、前后鼻音 an/ang en/eng in/ing ian/iang uan/uang、ong/iong、n/l
   fuzzyPinyinYaml = pkgs.writeText "fuzzy_pinyin.yaml" ''
     # 模糊音规则（全拼），供各 schema 的 custom 通过 __include 引用
     fuzzy_rules:
-      # 平翘舌 zh/ch/sh <-> z/c/s
+      # 平翘舌 z/zh, c/ch, s/sh
       - derive/^([zcs])h/$1/
       - derive/^([zcs])([^h].*)$/$1h$2/
-      # 前后鼻音
+      # 前后鼻音 an/ang, en/eng, in/ing, ian/iang, uan/uang
       - derive/ang$/an/
       - derive/an$/ang/
       - derive/eng$/en/
@@ -27,15 +29,12 @@ let
       - derive/iang$/ian/
       - derive/uan$/uang/
       - derive/uang$/uan/
-      # n/l, f/h, r/l, k/g
+      # ong/iong
+      - derive/ong$/iong/
+      - derive/iong$/ong/
+      # 声母 n/l
       - derive/^l/n/
       - derive/^n/l/
-      - derive/^f/h/
-      - derive/^h/f/
-      - derive/^r/l/
-      - derive/^l/r/
-      - derive/^k/g/
-      - derive/^g/k/
   '';
 
   # 小鹤键位空间模糊音（仅用于 moqi_single_xh 顶屏版，该方案 algebra 已是键位）
@@ -50,7 +49,7 @@ let
   '';
 
   # 各方案 custom：默认英文标点 (ascii_punct reset: 1) + 模糊音
-  # switches 中 ascii_punct 在 moqi.yaml 里是第 8 项 (0-based: 7)
+  # __include 合并后 switches 在 schema 根，ascii_punct 为第 8 项 (0-based: 7)
   moqiWanFlypyCustom = pkgs.writeText "moqi_wan_flypy.custom.yaml" ''
     patch:
       "switches/7/reset": 1
@@ -101,9 +100,12 @@ let
   '';
 in
 {
-  # recursive = true：目标为可写目录+文件链接，Rime 需在此目录写入 build/、user.yaml 等，否则无候选窗、仅出拉丁字母
-  home.file.".local/share/fcitx5/rime" = {
-    source = rimeWithCustom;
-    recursive = true;
-  };
+  # 复制到可写目录（activation 以当前用户运行，不 rm 避免删不动 root 所属文件）
+  home.activation.copyRimeConfig = config.lib.dag.entryAfter [ "writeBoundary" ] ''
+    RIME_SRC="${rimeWithCustom}"
+    RIME_DEST="${config.home.homeDirectory}/.local/share/fcitx5/rime"
+    $DRY_RUN_CMD mkdir -p "$RIME_DEST"
+    $DRY_RUN_CMD cp -rL "$RIME_SRC"/* "$RIME_DEST"/ 2>/dev/null || true
+    $DRY_RUN_CMD rm -rf "$RIME_DEST"/build 2>/dev/null || true
+  '';
 }

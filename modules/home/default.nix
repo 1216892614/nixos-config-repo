@@ -1,5 +1,9 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
+  openclawGatewayToken = env.openclawGatewayToken or "";  # optional override; otherwise token is auto-generated on rebuild
+in
 {
   imports = [
     ./desktop/niri.nix
@@ -20,6 +24,12 @@
   home.homeDirectory = "/home/ep-o1";
   home.stateVersion = "24.11";
 
+  home.sessionVariables = {
+    OPENCLAW_URL = "http://localhost:18789";
+  } // lib.optionalAttrs (openclawGatewayToken != "") {
+    OPENCLAW_GATEWAY_TOKEN = openclawGatewayToken;
+  };
+
   home.packages = with pkgs; [
     steam
     google-chrome
@@ -28,6 +38,8 @@
     docker-buildx
     wl-clipboard
     cliphist
+    uv  # provides uvx for running Python tools
+    # OpenClaw not in profile (would conflict with nodejs bin/node); gateway runs via systemd below.
   ];
 
   services.udiskie = {
@@ -86,6 +98,76 @@
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
+
+  # OpenClaw gateway: start at graphical session; use http://localhost:18789
+  # Use flake store path (not in home.packages) to avoid bin/node conflict with nodejs.
+  systemd.user.services.openclaw-gateway = {
+    Unit = {
+      Description = "OpenClaw gateway (localhost:18789)";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${inputs.nix-openclaw.packages.${pkgs.system}.default}/bin/openclaw gateway --allow-unconfigured";
+      # gateway 配置重载时会 exit 0 做 full process restart，需 Restart=always 让 systemd 再拉起
+      Restart = "always";
+      RestartSec = "3s";
+      # 确保 gateway 能找到 ~/.openclaw 配置与状态目录
+      Environment = [ "HOME=${config.home.homeDirectory}" ];
+      WorkingDirectory = "%h";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # OpenClaw: on each rebuild, generate a new gateway token and write to ~/.openclaw and environment.d.
+  # Only set gateway.auth.token so port and other gateway config are preserved; if jq fails (e.g. JSON5), write minimal config.
+  home.activation.openclawGenToken = config.lib.dag.entryAfter [ "writeBoundary" ] ''
+    OPENCLAW_DIR="''${HOME}/.openclaw"
+    ENV_D_DIR="''${HOME}/.config/environment.d"
+    $DRY_RUN_CMD mkdir -p "$OPENCLAW_DIR" "$ENV_D_DIR"
+    token="$(${pkgs.openssl}/bin/openssl rand -hex 32)"
+    $DRY_RUN_CMD printf '%s' "$token" > "$OPENCLAW_DIR/gateway-token"
+    if [ -f "$OPENCLAW_DIR/openclaw.json" ]; then
+      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg t "$token" '.gateway.auth.token = $t' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+        $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
+      else
+        $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}}' > "$OPENCLAW_DIR/openclaw.json"
+      fi
+    else
+      $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}}' > "$OPENCLAW_DIR/openclaw.json"
+    fi
+    $DRY_RUN_CMD printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$token" > "$ENV_D_DIR/openclaw.conf"
+  '';
+
+  # OpenClaw in Walker: script opens dashboard in Chrome; append token to URL (from env or ~/.openclaw/gateway-token).
+  home.file.".local/bin/openclaw-dashboard".text = ''
+    #!/usr/bin/env bash
+    url="''${OPENCLAW_URL:-http://localhost:18789}"
+    token="''${OPENCLAW_GATEWAY_TOKEN:-}"
+    if [ -z "$token" ] && [ -f "''${HOME}/.openclaw/gateway-token" ]; then
+      token=$(cat "''${HOME}/.openclaw/gateway-token")
+    fi
+    if [ -n "$token" ]; then
+      url="$url?token=$token"
+    fi
+    exec ${pkgs.google-chrome}/bin/google-chrome "$url"
+  '';
+  home.file.".local/bin/openclaw-dashboard".executable = true;
+
+  # OpenClaw icon (scalable vector) for desktop entry and Walker; full path in Icon= so launchers display it
+  xdg.dataFile."icons/hicolor/scalable/apps/openclaw-dashboard.svg".source = ../../icons/openclaw.svg;
+
+  xdg.dataFile."applications/openclaw-dashboard.desktop".text = ''
+    [Desktop Entry]
+    Name=OpenClaw
+    Comment=Open OpenClaw dashboard in browser (sign-in, token)
+    Exec=${config.home.homeDirectory}/.local/bin/openclaw-dashboard
+    Icon=${config.home.homeDirectory}/.local/share/icons/hicolor/scalable/apps/openclaw-dashboard.svg
+    Terminal=false
+    Type=Application
+    Categories=Network;
+    Keywords=openclaw;dashboard;gateway;ai;
+  '';
 
   # Expose Steam to Walker/Elephant; use absolute Exec path so launch from launcher works (no Nix PATH).
   xdg.dataFile."applications/steam.desktop".text = builtins.replaceStrings
