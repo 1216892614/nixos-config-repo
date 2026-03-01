@@ -20,6 +20,11 @@ let
     "openai/gpt-5.2-pro"
   ];
   openclawHasOpenRouter = openrouterApiKey != "";
+  openclawDiscordAllowFrom = env.openclawDiscordAllowFrom or [];
+  openclawDiscordDmConfig = if openclawDiscordAllowFrom != [] then {
+    policy = "allowlist";
+    allowFrom = openclawDiscordAllowFrom;
+  } else null;
 in
 {
   imports = [
@@ -111,6 +116,11 @@ in
         models = map (id: { id = id; name = id; }) openclawOpenRouterModels;
       };
     };
+  };
+
+  # OpenClaw Discord: pre-approved DM user IDs from env.nix (channels.discord.dm allowlist)
+  xdg.configFile."nix/openclaw-discord-dm.json" = lib.mkIf (openclawDiscordDmConfig != null) {
+    text = builtins.toJSON openclawDiscordDmConfig;
   };
 
   services.udiskie = {
@@ -207,6 +217,13 @@ in
     else
       $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
     fi
+    # Discord: merge pre-approved DM allowlist from env.nix (openclawDiscordAllowFrom) into channels.discord.dm
+    DISCORD_DM_FILE="''${HOME}/.config/nix/openclaw-discord-dm.json"
+    if [ -f "$DISCORD_DM_FILE" ] && [ -s "$DISCORD_DM_FILE" ]; then
+      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --slurpfile d "$DISCORD_DM_FILE" '.channels.discord = ((.channels.discord // {}) | .dm = $d[0])' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+        $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
+      fi
+    fi
     $DRY_RUN_CMD printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$token" > "$ENV_D_DIR/openclaw.conf"
     for PROVIDER_FILE in "''${HOME}/.config/nix/openclaw-openrouter-provider.json" "''${HOME}/.config/nix/openclaw-bytecatcode-provider.json"; do
       if [ -f "$PROVIDER_FILE" ] && [ -s "$PROVIDER_FILE" ]; then
@@ -215,6 +232,25 @@ in
         fi
       fi
     done
+    # OpenRouter: set env.OPENROUTER_API_KEY and agents.defaults.model so agent uses provider "openrouter" (avoids "No API key for provider anthropic")
+    OPENROUTER_FILE="''${HOME}/.config/nix/openclaw-openrouter-provider.json"
+    if [ -f "$OPENROUTER_FILE" ] && [ -s "$OPENROUTER_FILE" ]; then
+      OR_KEY="$(${pkgs.jq}/bin/jq -r '.openrouter.apiKey // empty' "$OPENROUTER_FILE" 2>/dev/null)"
+      if [ -n "$OR_KEY" ]; then
+        if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg k "$OR_KEY" '.env.OPENROUTER_API_KEY = $k | .agents.defaults = ((.agents.defaults // {}) | .model = ((.model // {}) | .primary = "openrouter/anthropic/claude-opus-4.6"))' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+          $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
+        fi
+        # Persist OpenRouter key to main agent auth-profiles.json (required for agent resolution)
+        AGENT_DIR="''${OPENCLAW_DIR}/agents/main/agent"
+        $DRY_RUN_CMD mkdir -p "$AGENT_DIR"
+        AUTH_FILE="$AGENT_DIR/auth-profiles.json"
+        if [ -f "$AUTH_FILE" ]; then
+          $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg k "$OR_KEY" '.profiles["openrouter:default"] = (.profiles["openrouter:default"] // {} | .provider = "openrouter" | .mode = "api_key" | .apiKey = $k)' "$AUTH_FILE" > "$AUTH_FILE.tmp" 2>/dev/null && $DRY_RUN_CMD mv "$AUTH_FILE.tmp" "$AUTH_FILE"
+        else
+          $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg k "$OR_KEY" '{profiles: {"openrouter:default": {provider: "openrouter", mode: "api_key", apiKey: $k}}}' > "$AUTH_FILE"
+        fi
+      fi
+    fi
   '';
 
   # openclaw CLI (wrapper so PATH has "openclaw" without adding the package to profile, which would conflict with nodejs bin/node)
