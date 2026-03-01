@@ -2,7 +2,8 @@
 
 let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
-  openclawGatewayToken = env.openclawGatewayToken or "";  # optional override; otherwise token is auto-generated on rebuild
+  openclawGatewayToken = env.openclawGatewayToken or "";
+  discordBotToken = env.discordBotToken or "";
 in
 {
   imports = [
@@ -112,8 +113,8 @@ in
       # gateway 配置重载时会 exit 0 做 full process restart，需 Restart=always 让 systemd 再拉起
       Restart = "always";
       RestartSec = "3s";
-      # 确保 gateway 能找到 ~/.openclaw 配置与状态目录
-      Environment = [ "HOME=${config.home.homeDirectory}" ];
+      Environment = [ "HOME=${config.home.homeDirectory}" ]
+        ++ lib.optional (discordBotToken != "") "DISCORD_BOT_TOKEN=${discordBotToken}";
       WorkingDirectory = "%h";
     };
     Install.WantedBy = [ "graphical-session.target" ];
@@ -128,13 +129,13 @@ in
     token="$(${pkgs.openssl}/bin/openssl rand -hex 32)"
     $DRY_RUN_CMD printf '%s' "$token" > "$OPENCLAW_DIR/gateway-token"
     if [ -f "$OPENCLAW_DIR/openclaw.json" ]; then
-      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg t "$token" '.gateway.auth.token = $t' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
+      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg t "$token" '.gateway.auth.token = $t | .channels.discord.enabled = true' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
         $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
       else
-        $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}}' > "$OPENCLAW_DIR/openclaw.json"
+        $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
       fi
     else
-      $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}}' > "$OPENCLAW_DIR/openclaw.json"
+      $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
     fi
     $DRY_RUN_CMD printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$token" > "$ENV_D_DIR/openclaw.conf"
   '';

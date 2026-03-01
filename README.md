@@ -164,6 +164,16 @@ journalctl --user -u openclaw-gateway -n 50
 
 5. **重新应用配置**：改过 Nix 配置后请执行 `home-manager switch --flake .#desktop` 或 `sudo fish ./scripts/rebuild.fish`，**务必再执行** `systemctl --user restart openclaw-gateway`，否则 gateway 不会加载新生成的 token 与 `openclaw.json`，会导致无法访问。
 
+### Discord Bot
+
+Gateway 支持 Discord 频道。已启用 `channels.discord.enabled`，token 在 **`env.nix`** 中配置：
+
+- 在 **`env.nix`** 里设置 **`discordBotToken = "你的Bot Token";`**（`env.nix.example` 有示例）。
+- rebuild 后重启 gateway：`systemctl --user restart openclaw-gateway`。
+- 在 Discord 开发者后台为 Bot 开启 **Message Content Intent**（及按需 **Server Members Intent**），将 Bot 邀请到服务器后，在 OpenClaw 中完成配对。
+
+`env.nix` 已加入 `.gitignore`，不会提交；注意 build 后 token 会进入 Nix store，仅本机重建时勿泄露 store。
+
 ### 使用 openclaw CLI
 
 因未装入用户 profile，终端中不会直接有 `openclaw` 命令。若需在命令行使用，可临时用 flake 提供的路径，或自行在 `~/.local/bin` 下做 wrapper 指向该路径。
