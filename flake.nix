@@ -32,9 +32,14 @@
     };
 
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
+
+    nix-openclaw = {
+      url = "github:openclaw/nix-openclaw";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, nix-openclaw, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -71,12 +76,15 @@
           nix.settings = {
             substituters = [
               "https://walker.cachix.org"
+              "https://cache.garnix.io"
             ];
             trusted-public-keys = [
               "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
+              "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
             ];
             extra-substituters = [
               "https://walker.cachix.org"
+              "https://cache.garnix.io"
             ];
           };
         }
