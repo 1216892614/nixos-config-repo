@@ -5,9 +5,28 @@ let
 
   fetchConfig = pkgs.writeShellScript "fetch-mihomo-config" ''
     mkdir -p /etc/mihomo
+    add_fake_ip_filter() {
+      file="$1"
+      for d in "+.qq.com" "+.qq.com.cn" "+.tencent.com" "+.wechat.com" "+.weixin.qq.com" "+.wx.qq.com" "+.tim.qq.com"; do
+        if ! ${pkgs.gnugrep}/bin/grep -q "^[[:space:]]*- $d\$" "$file"; then
+          ${pkgs.gnused}/bin/sed -i "/^  fake-ip-filter:/a\\    - $d" "$file"
+        fi
+      done
+    }
     tmp=$(mktemp)
     if ${pkgs.curl}/bin/curl -sL -o "$tmp" --connect-timeout 15 "${env.mihomoSubscribeUrl}" 2>/dev/null && [ -s "$tmp" ]; then
+      # Ensure DNS listens on localhost:53 so system resolv.conf works.
+      ${pkgs.gnused}/bin/sed -i \
+        -e 's#^\\([[:space:]]*listen:[[:space:]]*\\).*#\\1127.0.0.1:53#' \
+        "$tmp"
+      add_fake_ip_filter "$tmp"
       mv "$tmp" /etc/mihomo/config.yaml
+    elif [ -s /etc/mihomo/config.yaml ]; then
+      # If fetch fails, still enforce listen on existing config.
+      ${pkgs.gnused}/bin/sed -i \
+        -e 's#^\\([[:space:]]*listen:[[:space:]]*\\).*#\\1127.0.0.1:53#' \
+        /etc/mihomo/config.yaml
+      add_fake_ip_filter /etc/mihomo/config.yaml
     fi
     rm -f "$tmp"
     # 拉取失败时保留现有 config.yaml，不阻塞 activation
@@ -20,6 +39,11 @@ in
     tunMode = true;
     configFile = "/etc/mihomo/config.yaml";
     webui = pkgs.metacubexd;
+  };
+
+  systemd.services.mihomo.serviceConfig = {
+    AmbientCapabilities = lib.mkForce "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+    CapabilityBoundingSet = lib.mkForce "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
   };
 
   systemd.services.mihomo-fetch-config = {

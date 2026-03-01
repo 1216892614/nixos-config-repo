@@ -9,11 +9,7 @@ in
 {
   imports =
     (map (f: nixosModulesDir + "/${f}") nixosModuleFiles)
-    ++ (
-      if builtins.pathExists ../../hardware-configuration.nix
-      then [ ../../hardware-configuration.nix ]
-      else [ ../../hardware-configuration.nix.example ]
-    );
+    ++ [ ./hardware-configuration.nix ];
 
   networking.hostName = "desktop";
   system.stateVersion = "24.11";

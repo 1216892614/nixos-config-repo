@@ -58,6 +58,7 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
+            backupFileExtension = "hm-bak";
             sharedModules = [
               noctalia.homeModules.default
               walker.homeManagerModules.default

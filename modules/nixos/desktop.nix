@@ -31,6 +31,7 @@
   };
 
   environment.systemPackages = with pkgs; [
+    git
     xwayland-satellite
     v4l-utils
     ffmpeg

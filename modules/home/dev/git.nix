@@ -6,30 +6,39 @@ in
 {
   programs.git = {
     enable = true;
-    userName = env.gitUserName;
-    userEmail = env.gitUserEmail;
-
-    delta = {
-      enable = true;
-      options = {
-        syntax-theme = "base16";
-        line-numbers = true;
-        side-by-side = true;
+    settings = {
+      user = {
+        name = env.gitUserName;
+        email = env.gitUserEmail;
       };
-    };
 
-    aliases = {
-      co = "checkout";
-      br = "branch";
-      ci = "commit";
-      st = "status";
-      lg = "log --oneline --graph --decorate --all";
-    };
+      alias = {
+        co = "checkout";
+        br = "branch";
+        ci = "commit";
+        st = "status";
+        lg = "log --oneline --graph --decorate --all";
+      };
 
-    extraConfig = {
       init.defaultBranch = "main";
       pull.rebase = true;
       push.autoSetupRemote = true;
+      http.proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
+      https.proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
+      core.sshCommand = "ssh -o ProxyCommand='nc -x 127.0.0.1:${toString env.mihomoMixedPort} -X connect %h %p'";
+      "url \"ssh://git@ssh.github.com:443/\"" = {
+        insteadOf = [ "git@github.com:" "ssh://git@github.com/" ];
+      };
+    };
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      syntax-theme = "base16";
+      line-numbers = true;
+      side-by-side = true;
     };
   };
 }

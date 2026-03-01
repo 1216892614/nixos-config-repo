@@ -14,6 +14,11 @@ in
         max_entries = 50;
         exec = "wl-copy";
       };
+      providers = {
+        default = [ "desktopapplications" "calc" "websearch" "clipboard" ];
+        empty = [ "desktopapplications" ];
+        max_results = 50;
+      };
     };
 
     themes = {

@@ -29,7 +29,10 @@ in
       "Super+Q".action.close-window = { };
       "Super+V".action.spawn = [ "walker" "-m" "clipboard" ];
       "Super+Space".action.spawn = [ "fcitx5-remote" "-t" ];
-      "Super+G".action.spawn = [ "${config.home.homeDirectory}/.local/bin/capture.sh" ];
+      "Super+G".action.spawn = [
+        "sh" "-c"
+        ''grim -g "$(slurp)" - | satty --filename -''
+      ];
       "Super+Shift+G".action.spawn = [
         "sh" "-c"
         ''grim -g "$(slurp)" - | satty --filename -''
@@ -54,6 +57,22 @@ in
       "Super+Shift+J".action.move-window-down = { };
       "Super+Shift+K".action.move-window-up = { };
       "Super+Ctrl+L".action.move-column-right = { };
+
+      "Super+Left".action.focus-column-left = { };
+      "Super+Down".action.focus-window-down = { };
+      "Super+Up".action.focus-window-up = { };
+      "Super+Right".action.focus-column-right = { };
+
+      "Super+Shift+Left".action.move-column-left = { };
+      "Super+Shift+Down".action.move-window-down = { };
+      "Super+Shift+Up".action.move-window-up = { };
+      "Super+Shift+Right".action.move-column-right = { };
+
+      "Super+bracketleft".action.consume-or-expel-window-left = { };
+      "Super+bracketright".action.consume-or-expel-window-right = { };
+      "Super+O".action.toggle-overview = { };
+      "Super+R".action.switch-preset-column-width = { };
+
 
       "Super+1".action.focus-workspace = 1;
       "Super+2".action.focus-workspace = 2;
