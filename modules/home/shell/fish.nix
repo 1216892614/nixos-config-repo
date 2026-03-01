@@ -25,6 +25,9 @@ in
       find = "fd";
       grep = "rg";
     };
+
+    # 优先用 wrapper（带 --devel），避免 Flatpak 内 ptrace 报错
+    functions."com.tencent.WeChat".body = "${config.home.homeDirectory}/.local/bin/com.tencent.WeChat $argv";
   };
 
   home.packages = with pkgs; [

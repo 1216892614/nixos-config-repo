@@ -29,6 +29,7 @@
   ];
 
   home.sessionPath = [
+    "$HOME/.local/bin"
     "$HOME/.cargo/bin"
     "$HOME/.deno/bin"
     "$HOME/.bun/bin"

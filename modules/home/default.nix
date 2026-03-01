@@ -13,6 +13,7 @@
     ./zellij.nix
     ./yazi.nix
     ./recording.nix
+    ./rime-custom.nix
   ];
 
   home.username = "ep-o1";
@@ -92,6 +93,33 @@
     [ "Exec=${pkgs.steam}/bin/steam " ]
     (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
 
+  # WeChat (Flatpak): --devel + 禁用崩溃上报，避免启动阶段 ptrace/crash 逻辑导致无窗口
+  xdg.dataFile."applications/com.tencent.WeChat.desktop".text = ''
+    [Desktop Entry]
+    Name=WeChat
+    Name[zh_CN]=微信
+    Exec=${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat @@u %U @@
+    Terminal=false
+    Type=Application
+    Icon=com.tencent.WeChat
+    StartupWMClass=WeChat
+    Categories=Network;
+    Keywords=wechat;weixin;
+    Comment=WeChat Desktop
+    Comment[zh_CN]=微信桌面版
+    X-Flatpak=com.tencent.WeChat
+  '';
+
+  # 终端运行 com.tencent.WeChat 时用 wrapper（--devel + 禁用崩溃上报，与 desktop 一致）
+  home.file.".local/bin/com.tencent.WeChat".text = ''
+    #!/usr/bin/env bash
+    exec ${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat "$@"
+  '';
+  home.file.".local/bin/com.tencent.WeChat".executable = true;
+
+  # WeChat 期望的目录，缺失时可能导致启动异常
+  home.file.".xwechat/crashinfo/attachments/.keep".text = "";
+
   # QQ Music (Flatpak): use absolute path to flatpak so Walker can launch it.
   xdg.dataFile."applications/com.qq.QQmusic.desktop".text = ''
     [Desktop Entry]
@@ -118,16 +146,6 @@
       #!/usr/bin/env bash
       kitty --class=file_chooser -e yazi "$@" --chooser-file="$1"
     '';
-  };
-
-  xdg.dataFile."fcitx5/rime" = {
-    source = pkgs.fetchFromGitHub {
-      owner = "gaboolic";
-      repo = "rime-shuangpin-fuzhuma";
-      rev = "main";
-      hash = "sha256-39STMvHWcix3C11ZXUicEXg1wa8sj4KinVY3aMQHYE4=";
-    };
-    recursive = true;
   };
 
   home.file.".config/noctalia/wallpaper.png".source = ../../wallpaper.png;
