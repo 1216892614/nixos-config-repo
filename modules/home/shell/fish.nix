@@ -7,6 +7,11 @@ in
   programs.fish = {
     enable = true;
 
+    # Ensure PATH includes these dirs (HM sessionPath can be overridden by systemd/env; fish gets them here)
+    shellInit = ''
+      fish_add_path -g $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
+    '';
+
     plugins = [
       {
         name = "nvm.fish";

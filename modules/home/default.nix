@@ -218,6 +218,13 @@ in
     fi
   '';
 
+  # openclaw CLI (wrapper so PATH has "openclaw" without adding the package to profile, which would conflict with nodejs bin/node)
+  home.file.".local/bin/openclaw".text = ''
+    #!/usr/bin/env bash
+    exec "${inputs.nix-openclaw.packages.${pkgs.system}.default}/bin/openclaw" "''$@"
+  '';
+  home.file.".local/bin/openclaw".executable = true;
+
   # OpenClaw in Walker: script opens dashboard in Chrome; append token to URL (from env or ~/.openclaw/gateway-token).
   home.file.".local/bin/openclaw-dashboard".text = ''
     #!/usr/bin/env bash
