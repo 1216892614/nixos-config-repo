@@ -39,6 +39,17 @@
     libva-utils
   ];
 
+  # Ensure DISPLAY is available to D-Bus and systemd --user activation env
+  systemd.user.services.dbus-update-activation-environment = {
+    description = "Update D-Bus activation environment";
+    wantedBy = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY";
+    };
+  };
+
   programs.niri.enable = true;
 
   hardware = {

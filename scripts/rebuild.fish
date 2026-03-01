@@ -15,3 +15,4 @@ sudo rsync -a --delete \
   $src/ $dst/
 
 sudo nixos-rebuild switch --flake $dst#desktop
+and systemctl --user restart pipewire wireplumber 2>/dev/null
