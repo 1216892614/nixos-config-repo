@@ -20,6 +20,7 @@
   home.stateVersion = "24.11";
 
   home.packages = with pkgs; [
+    steam
     google-chrome
     code-cursor
     codex
@@ -84,6 +85,9 @@
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
+
+  # Expose Steam to Walker/Elephant (desktopapplications reads ~/.local/share/applications)
+  xdg.dataFile."applications/steam.desktop".source = "${pkgs.steam}/share/applications/steam.desktop";
 
   xdg.configFile."xdg-terminal-exec/termfilechooser.conf".text = ''
     cmd=${config.home.homeDirectory}/.local/bin/yazi-wrapper.sh

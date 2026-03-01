@@ -15,7 +15,8 @@ in
         exec = "wl-copy";
       };
       providers = {
-        default = [ "desktopapplications" "calc" "websearch" "clipboard" ];
+        # clipboard only when launched with Super+V (walker -m clipboard)
+        default = [ "desktopapplications" "calc" "websearch" ];
         empty = [ "desktopapplications" ];
         max_results = 50;
       };

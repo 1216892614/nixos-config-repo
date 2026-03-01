@@ -11,7 +11,6 @@ in
       "com.qq.QQ"
       "com.qq.QQmusic"
       "com.tencent.WeChat"
-      "com.valvesoftware.Steam"
       "sh.ppy.osu"
     ];
 
@@ -51,8 +50,6 @@ in
       NO_PROXY = "localhost,127.0.0.1,::1";
     };
 
-    overrides."com.valvesoftware.Steam".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
-
     overrides."com.qq.QQmusic".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
     overrides."com.qq.QQmusic".Environment = {
       http_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
@@ -75,14 +72,8 @@ in
     XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
   '';
 
-  environment.etc."flatpak/overrides/com.valvesoftware.Steam".text = ''
-    [Context]
-    sockets=wayland;x11;fallback-x11
-  '';
-
   systemd.tmpfiles.rules = [
     "L+ /var/lib/flatpak/overrides/global - - - - /etc/flatpak/overrides/global"
-    "L+ /var/lib/flatpak/overrides/com.valvesoftware.Steam - - - - /etc/flatpak/overrides/com.valvesoftware.Steam"
   ];
 
   # 不随 activation 启动，避免失败导致 nixos-rebuild 报错；需要时手动执行 flatpak install
