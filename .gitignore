@@ -1,6 +1,6 @@
 result
 result-*
-hardware-configuration.nix
+/hardware-configuration.nix
 hosts/*/mihomo-config.yaml
 env.nix
 .direnv/

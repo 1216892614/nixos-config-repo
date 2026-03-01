@@ -15,9 +15,4 @@
     satty
     wf-recorder
   ];
-
-  home.file.".local/bin/capture.sh" = {
-    source = ../../scripts/capture.sh;
-    executable = true;
-  };
 }

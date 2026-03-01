@@ -2,7 +2,7 @@
   bg         = "#10141c";
   fg         = "#bfbdb6";
   line       = "#161a24";
-  selection  = "#3388ff40";
+  selection  = "#3388ff";
   accent     = "#e6b450";
   comment    = "#acb6bf8c";
   gutter     = "#6c738099";
