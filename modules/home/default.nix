@@ -39,8 +39,8 @@
   gtk = {
     enable = true;
     theme = {
-      name = "adw-gtk3-dark";
-      package = pkgs.adw-gtk3;
+      name = "gruvbox-dark";
+      package = pkgs.gruvbox-dark-gtk;
     };
     iconTheme = {
       name = "Adwaita";
@@ -91,6 +91,22 @@
     [ "Exec=steam " ]
     [ "Exec=${pkgs.steam}/bin/steam " ]
     (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
+
+  # QQ Music (Flatpak): use absolute path to flatpak so Walker can launch it.
+  xdg.dataFile."applications/com.qq.QQmusic.desktop".text = ''
+    [Desktop Entry]
+    Name=QQ Music
+    Name[zh_CN]=QQ音乐
+    Exec=${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --command=qqmusic.sh --file-forwarding com.qq.QQmusic @@u %U @@
+    Terminal=false
+    Type=Application
+    Icon=com.qq.QQmusic
+    StartupWMClass=QQMusic
+    Comment=Tencent QQMusic
+    Comment[zh_CN]=QQ音乐
+    Categories=AudioVideo;
+    X-Flatpak=com.qq.QQmusic
+  '';
 
   xdg.configFile."xdg-terminal-exec/termfilechooser.conf".text = ''
     cmd=${config.home.homeDirectory}/.local/bin/yazi-wrapper.sh

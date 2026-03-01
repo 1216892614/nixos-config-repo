@@ -39,6 +39,7 @@
     ffmpeg
     libva
     libva-utils
+    vlc
   ];
 
   # Ensure DISPLAY is available to D-Bus and systemd --user activation env

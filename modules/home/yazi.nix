@@ -1,5 +1,19 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  gruvbox-dark-yazi = pkgs.fetchFromGitHub {
+    owner = "poperigby";
+    repo = "gruvbox-dark-yazi";
+    rev = "a251bd2d88feb61dfe6d4c4583c3b0a969c41bdb";
+    hash = "sha256-4XRm23i9XpgAO+08iPM0xGppnIfuP+xzxzO6UMfvy28=";
+  };
+  # theme.toml with syntect_theme uncommented, pointing to deployed tmTheme
+  gruvbox-theme-toml = builtins.replaceStrings [
+    "# syntect_theme = \"~/.config/yazi/Gruvbox-Dark.tmTheme\""
+  ] [
+    "syntect_theme = \"~/.config/yazi/Gruvbox-Dark.tmTheme\""
+  ] (builtins.readFile "${gruvbox-dark-yazi}/theme.toml");
+in
 {
   programs.yazi = {
     enable = true;
@@ -14,6 +28,9 @@
         linemode = "size";
       };
     };
+
+    # Gruvbox Dark theme from https://github.com/poperigby/gruvbox-dark-yazi
+    # (theme.toml and .tmTheme deployed below via xdg.configFile)
 
     plugins = {
       clipboard = pkgs.fetchFromGitHub {
@@ -36,5 +53,12 @@
         }
       ];
     };
+  };
+
+  xdg.configFile."yazi/theme.toml" = {
+    text = gruvbox-theme-toml;
+  };
+  xdg.configFile."yazi/Gruvbox-Dark.tmTheme" = {
+    source = "${gruvbox-dark-yazi}/Gruvbox-Dark.tmTheme";
   };
 }

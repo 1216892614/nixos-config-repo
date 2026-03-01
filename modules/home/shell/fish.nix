@@ -103,7 +103,7 @@ in
 
   programs.bat = {
     enable = true;
-    config.theme = "base16";
+    config.theme = "gruvbox-dark";
   };
 
   programs.eza = {
@@ -128,7 +128,7 @@ in
   programs.btop = {
     enable = true;
     settings = {
-      color_theme = "ayu";
+      color_theme = "gruvbox_dark";
       theme_background = false;
     };
   };
