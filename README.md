@@ -51,9 +51,9 @@ cp env.nix.example env.nix
 | **Claude Code** | `claudeCodeBaseUrl` / `claudeCodeApiKey` | `~/.claude/settings.json` | 仅当 key 非空时生成 |
 | **Codex** | `codexBaseUrl` / `codexApiKey` | `~/.codex/config.toml`、`~/.codex/auth.json` | 仅当 key 非空时生成；**key 仅写文件，不放入 env** |
 | **Gemini CLI** | `geminiBaseUrl` / `geminiApiKey` | `~/.gemini/config.json` | 仅当 key 非空时生成 |
-| **OpenClaw** | `openclawProviderModels`（每项含 `id` / `name` / `baseUrl` / `apiKey`） | 按 (baseUrl, apiKey) 分组为多个 provider 合并进 `~/.openclaw/openclaw.json` | 仅当至少一个模型的 apiKey 非空时生成并合并；同一 url+key 的模型归为同一 provider |
+| **OpenClaw** | `openrouterApiKey` / `openclawOpenRouterModels` | OpenRouter 单 key + 模型 ID 列表，合并为 provider `openrouter` 进 `~/.openclaw/openclaw.json` | 仅当 `openrouterApiKey` 非空时生成并合并 |
 
-**规则**：未设置 key 的 CLI 不会生成任何配置；Codex 的 key 只存在于 `auth.json`，不会出现在环境变量中。OpenClaw 的模型在 `env.nix` 里用 `openclawProviderModels = [ { id = "..."; name = "..."; baseUrl = "..."; apiKey = "..."; } ... ]` 配置，每个模型可单独指定 url/key，相同 (baseUrl, apiKey) 会合并为一个 provider。
+**规则**：未设置 key 的 CLI 不会生成任何配置；Codex 的 key 只存在于 `auth.json`，不会出现在环境变量中。OpenClaw 使用 OpenRouter：在 `env.nix` 中设置 `openrouterApiKey` 和 `openclawOpenRouterModels = [ "anthropic/claude-opus-4.6" "google/gemini-3.1-pro-preview" ... ]`（openrouter.ai 的模型 ID），会生成并合并进 `~/.openclaw/openclaw.json` 的 `models.providers.openrouter`。
 
 ## 目录结构
 
