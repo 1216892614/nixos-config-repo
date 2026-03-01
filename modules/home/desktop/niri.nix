@@ -42,21 +42,20 @@ in
       "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
       "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
       "Super+L".action.focus-column-right = { };
-      "Super+Ctrl+L".action.spawn = [ "noctalia" "lockScreen" ];
+      "Super+Ctrl+Shift+L".action.spawn = [ "noctalia-shell" "ipc" "call" "lockScreen" "toggle" ];
 
-      "XF86AudioRaiseVolume".action.spawn = [ "noctalia" "volume" "up" ];
-      "XF86AudioLowerVolume".action.spawn = [ "noctalia" "volume" "down" ];
-      "XF86AudioMute".action.spawn = [ "noctalia" "volume" "mute" ];
+      "XF86AudioRaiseVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "increase" ];
+      "XF86AudioLowerVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "decrease" ];
+      "XF86AudioMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteOutput" ];
 
       "Super+H".action.focus-column-left = { };
       "Super+J".action.focus-window-down = { };
       "Super+K".action.focus-window-up = { };
-      "Super+Shift+L".action.focus-column-right = { };
+      "Super+Shift+L".action.move-column-right = { };
 
       "Super+Shift+H".action.move-column-left = { };
       "Super+Shift+J".action.move-window-down = { };
       "Super+Shift+K".action.move-window-up = { };
-      "Super+Ctrl+Shift+L".action.move-column-right = { };
 
       "Super+Left".action.focus-column-left = { };
       "Super+Down".action.focus-window-down = { };
@@ -115,6 +114,17 @@ in
 
     spawn-at-startup = [
       { command = [ "xwayland-satellite" ]; }
+      # Refresh activation env after session init so DBus/systemd get DISPLAY.
+      { command = [
+          "${pkgs.dbus}/bin/dbus-update-activation-environment"
+          "--systemd"
+          "DISPLAY"
+          "WAYLAND_DISPLAY"
+          "XDG_CURRENT_DESKTOP"
+          "XDG_SESSION_TYPE"
+          "XDG_SESSION_DESKTOP"
+        ];
+      }
       # 确保输入法随 niri 会话启动（fcitx5 会检测已运行实例）
       { command = [ "fcitx5" ]; }
     ];

@@ -38,6 +38,42 @@
     extraPackages = with pkgs; [ nvidia-vaapi-driver ];
   };
 
+  # Route audio to P2710V monitor via DisplayPort (HDMI/DP 2).
+  # Applied on first login or after: systemctl --user restart wireplumber
+  services.pipewire.wireplumber.extraConfig."50-hdmi-default" = {
+    "default.configured.audio.sink" = "alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1";
+    "monitor.alsa.rules" = [
+      {
+        matches = [
+          { "device.name" = "alsa_card.pci-0000_01_00.1"; }
+        ];
+        actions.update-props = {
+          "api.acp.auto-profile" = true;
+          "api.acp.auto-port" = true;
+          "device.profile" = "output:hdmi-stereo-extra1";
+        };
+      }
+      {
+        matches = [
+          { "device.name" = "alsa_card.pci-0000_79_00.6"; }
+        ];
+        actions.update-props = {
+          "api.acp.auto-profile" = true;
+          "api.acp.auto-port" = true;
+        };
+      }
+      {
+        matches = [
+          { "node.name" = "alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1"; }
+        ];
+        actions.update-props = {
+          "priority.session" = 2000;
+          "priority.driver" = 2000;
+        };
+      }
+    ];
+  };
+
   hardware.enableRedistributableFirmware = true;
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

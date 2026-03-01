@@ -69,8 +69,10 @@ in
   };
 
   networking.firewall = {
-    trustedInterfaces = [ "Mihomo" ];
+    # mihomo tun interface is usually named "Meta"; keep "Mihomo" for compatibility.
+    trustedInterfaces = [ "Meta" "Mihomo" ];
     extraReversePathFilterRules = ''
+      iifname "Meta" accept
       iifname "Mihomo" accept
     '';
     allowedTCPPorts = [ env.mihomoMixedPort env.mihomoApiPort ];

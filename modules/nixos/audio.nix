@@ -37,5 +37,8 @@
 
   environment.systemPackages = with pkgs; [
     pavucontrol
+    alsa-utils
+    pamixer
+    pulseaudio
   ];
 }
