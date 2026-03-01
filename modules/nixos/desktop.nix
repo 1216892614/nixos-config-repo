@@ -30,6 +30,8 @@
     GTK_USE_PORTAL = "1";
   };
 
+  programs.steam.enable = true;
+
   environment.systemPackages = with pkgs; [
     git
     xwayland-satellite
