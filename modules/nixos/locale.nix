@@ -23,15 +23,15 @@
       sarasa-gothic
       nerd-fonts.symbols-only
       fira-code
-      noto-fonts-cjk-sans
+      source-han-sans
+      source-han-serif
+      source-han-mono
+      wqy_zenhei
       noto-fonts-color-emoji
     ];
 
-    fontconfig.defaultFonts = {
-      sansSerif = [ "Sarasa UI SC" "Noto Sans CJK SC" ];
-      serif = [ "Sarasa UI SC" "Noto Serif CJK SC" ];
-      monospace = [ "Sarasa Mono SC" "Fira Code" "Symbols Nerd Font" ];
-      emoji = [ "Noto Color Emoji" ];
-    };
+    # Steam is sensitive to fontconfig defaults; rely on fontconfig fallback instead.
+    fontDir.enable = true;
+    fontconfig.enable = true;
   };
 }

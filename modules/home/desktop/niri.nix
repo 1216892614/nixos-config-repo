@@ -122,8 +122,7 @@ in
       "Super+F".action.fullscreen-window = { };
       "Super+Shift+E".action.quit = { };
 
-      # WeChat (Flatpak): 与 desktop/wrapper 一致，用绝对路径确保从 niri 能拉起
-      "Super+w".action.spawn = [ "${config.home.homeDirectory}/.local/bin/com.tencent.WeChat" ];
+      "Super+w".action.spawn = [ "wechat" ];
     };
 
     window-rules = [
@@ -165,6 +164,11 @@ in
           "XDG_CURRENT_DESKTOP"
           "XDG_SESSION_TYPE"
           "XDG_SESSION_DESKTOP"
+          "GTK_IM_MODULE"
+          "QT_IM_MODULE"
+          "SDL_IM_MODULE"
+          "INPUT_METHOD"
+          "XMODIFIERS"
         ];
       }
       # 确保输入法随 niri 会话启动（fcitx5 会检测已运行实例）
