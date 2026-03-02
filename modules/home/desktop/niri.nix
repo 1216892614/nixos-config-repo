@@ -121,12 +121,19 @@ in
 
       "Super+F".action.fullscreen-window = { };
       "Super+Shift+E".action.quit = { };
+
+      # WeChat (Flatpak): 与 desktop/wrapper 一致，用绝对路径确保从 niri 能拉起
+      "Super+w".action.spawn = [ "${config.home.homeDirectory}/.local/bin/com.tencent.WeChat" ];
     };
 
     window-rules = [
+      # 非活动窗口半透明，仅平铺窗口（浮动窗口不压暗，避免影响视频等）
       {
         matches = [
           { is-active = false; }
+        ];
+        excludes = [
+          { is-floating = true; }
         ];
         opacity = 0.95;
       }
@@ -136,12 +143,14 @@ in
         ];
         open-floating = true;
       }
-      # 截屏预览（satty）默认浮动
+      # 截屏预览（satty）默认浮动，宽高不超过半屏
       {
         matches = [
           { app-id = "satty"; }
         ];
         open-floating = true;
+        default-column-width = { proportion = 0.5; };
+        default-window-height = { proportion = 0.5; };
       }
     ];
 

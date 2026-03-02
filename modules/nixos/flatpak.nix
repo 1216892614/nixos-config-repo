@@ -55,6 +55,8 @@ in
       NO_PROXY = "localhost,127.0.0.1,::1";
       # 禁用 Electron 崩溃上报，避免 Flatpak 沙箱内 ptrace: Operation not permitted
       ELECTRON_DISABLE_CRASH_REPORTER = "1";
+      # 强制 XWayland，避免 Wayland 下窗口不显示
+      GDK_BACKEND = "x11";
     };
 
     overrides."com.qq.QQmusic".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
