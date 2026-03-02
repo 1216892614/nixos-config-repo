@@ -2,14 +2,23 @@
 
 let
   colors = import ../../../lib/colors.nix;
+  env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else {};
+  anthropicBaseUrl = env.anthropicBaseUrl or "";
+  anthropicAuthToken = env.anthropicAuthToken or "";
+  anthropicEnv = if anthropicAuthToken != "" then ''
+    set -gx ANTHROPIC_BASE_URL "${anthropicBaseUrl}"
+    set -gx ANTHROPIC_AUTH_TOKEN "${anthropicAuthToken}"
+  '' else "";
 in
 {
   programs.fish = {
     enable = true;
 
     # Ensure PATH includes these dirs (HM sessionPath can be overridden by systemd/env; fish gets them here)
+    # Anthropic (Claude Code): ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN from env.nix
     shellInit = ''
       fish_add_path -g $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
+      ${anthropicEnv}
     '';
 
     plugins = [
