@@ -4,10 +4,6 @@ let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
   openclawGatewayToken = env.openclawGatewayToken or "";
   discordBotToken = env.discordBotToken or "";
-  claudeCodeBaseUrl = env.claudeCodeBaseUrl or "";
-  claudeCodeApiKey = env.claudeCodeApiKey or "";
-  codexBaseUrl = env.codexBaseUrl or "";
-  codexApiKey = env.codexApiKey or "";
   geminiBaseUrl = env.geminiBaseUrl or "";
   geminiApiKey = env.geminiApiKey or "";
   # OpenRouter: one API key, model IDs from openrouter.ai (e.g. anthropic/claude-opus-4.6)
@@ -28,7 +24,7 @@ let
   } else null;
   w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" {} ''
     mkdir -p $out/share/icons
-    cp -R ${../../icons/W11-CC-V2.2-Dark-Default-wayland} $out/share/icons/W11-CC-V2.2-Dark-Default-wayland
+    cp -R "${inputs.self}/icons/W11-CC-V2.2-Dark-Default-wayland" "$out/share/icons/W11-CC-V2.2-Dark-Default-wayland"
   '';
 in
 {
@@ -61,7 +57,6 @@ in
     steam
     google-chrome
     code-cursor
-    codex
     claude-code
     gemini-cli
     docker-buildx
@@ -70,37 +65,6 @@ in
     uv  # provides uvx for running Python tools
     # OpenClaw not in profile (would conflict with nodejs bin/node); gateway runs via systemd below.
   ];
-
-  # Claude Code: only when claudeCodeApiKey is set (no key → no config)
-  home.file.".claude/settings.json" = lib.mkIf (claudeCodeApiKey != "") {
-    text = builtins.toJSON {
-      env = {
-        ANTHROPIC_AUTH_TOKEN = claudeCodeApiKey;
-        ANTHROPIC_BASE_URL = claudeCodeBaseUrl;
-        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
-      };
-      permissions = { allow = [ ]; deny = [ ]; };
-    };
-  };
-
-  # Codex: only when codexApiKey is set; key only in auth.json, never in env
-  home.file.".codex/config.toml" = lib.mkIf (codexApiKey != "") {
-    text = ''
-      disable_response_storage = true
-      model = "gpt-5.2"
-      model_reasoning_effort = "high"
-      model_provider = "bytecatcode"
-
-      [model_providers.bytecatcode]
-      base_url = "${codexBaseUrl}/v1"
-      name = "bytecatcode"
-      requires_openai_auth = true
-      wire_api = "responses"
-    '';
-  };
-  home.file.".codex/auth.json" = lib.mkIf (codexApiKey != "") {
-    text = builtins.toJSON { OPENAI_API_KEY = codexApiKey; };
-  };
 
   # Gemini CLI: only when geminiApiKey is set
   home.file.".gemini/config.json" = lib.mkIf (geminiApiKey != "") {

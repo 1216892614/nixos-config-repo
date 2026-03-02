@@ -5,7 +5,7 @@ Deno.test("home packages include expected software", async () => {
     `builtins.toJSON (map (p: p.pname or p.name or "unknown") nixosConfigurations.desktop.config.home-manager.users.ep-o1.home.packages)`
   );
   const expected = [
-    "google-chrome", "code-cursor", "codex",
+    "google-chrome", "code-cursor",
     "grim", "slurp", "satty", "wf-recorder", "wl-clipboard", "cliphist",
     "docker-buildx", "sccache",
     "cargo-edit", "cargo-watch",
