@@ -26,6 +26,9 @@
     pnpm
     deno
     bun
+
+    # Java (e.g. for X Minecraft Launcher / modded Minecraft)
+    jdk21
   ];
 
   home.sessionPath = [
@@ -40,5 +43,6 @@
     SCCACHE_CACHE_SIZE = "10G";
     RUSTUP_HOME = "$HOME/.rustup";
     CARGO_HOME = "$HOME/.cargo";
+    JAVA_HOME = "${pkgs.jdk21}";
   };
 }

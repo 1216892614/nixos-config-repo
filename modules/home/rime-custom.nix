@@ -54,7 +54,7 @@ let
     patch:
       "switches/7/reset": 1
       "speller/algebra":
-        - __include: fuzzy_pinyin:/fuzzy_rules
+        - __include: fuzzy_pinyin.yaml:/fuzzy_rules
         - __include: moqi_speller.yaml:/flypy_speller
         - __include: moqi_speller.yaml:/moqi_aux
         - __include: moqi_speller.yaml:/common_aux
@@ -64,7 +64,7 @@ let
     patch:
       "switches/7/reset": 1
       "speller/algebra":
-        - __include: fuzzy_pinyin:/fuzzy_rules
+        - __include: fuzzy_pinyin.yaml:/fuzzy_rules
         - __include: moqi_speller.yaml:/zrm_speller
         - __include: moqi_speller.yaml:/zrm_aux
         - __include: moqi_speller.yaml:/common_aux
@@ -75,14 +75,14 @@ let
     patch:
       "switches/7/reset": 1
       "speller/algebra/+":
-        - __include: fuzzy_flypy_key:/fuzzy_flypy_key
+        - __include: fuzzy_flypy_key.yaml:/fuzzy_flypy_key
   '';
 
   moqiWanFlypymoCustomFile = pkgs.writeText "moqi_wan_flypymo.custom.yaml" ''
     patch:
       "switches/7/reset": 1
       "speller/algebra":
-        - __include: fuzzy_pinyin:/fuzzy_rules
+        - __include: fuzzy_pinyin.yaml:/fuzzy_rules
         - __include: moqi_speller.yaml:/flypy_speller
         - __include: moqi_speller.yaml:/moqi_aux
         - __include: moqi_speller.yaml:/common_aux

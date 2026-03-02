@@ -54,7 +54,6 @@ in
   };
 
   home.packages = with pkgs; [
-    steam
     google-chrome
     code-cursor
     claude-code
@@ -63,6 +62,8 @@ in
     wl-clipboard
     cliphist
     uv  # provides uvx for running Python tools
+    wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
+    qqmusic
     # OpenClaw not in profile (would conflict with nodejs bin/node); gateway runs via systemd below.
   ];
 
@@ -281,55 +282,114 @@ except Exception:
     Keywords=openclaw;dashboard;gateway;ai;
   '';
 
-  # Expose Steam to Walker/Elephant; use absolute Exec path so launch from launcher works (no Nix PATH).
-  xdg.dataFile."applications/steam.desktop".text = builtins.replaceStrings
-    [ "Exec=steam " ]
-    [ "Exec=${pkgs.steam}/bin/steam " ]
-    (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
+  # Steam: wrapper with /bin/sh; load systemd user env so launch from Walker (Elephant) gets WAYLAND_DISPLAY etc.
+  home.file.".local/bin/steam-wrapper".text = ''
+    #!/bin/sh
+    if command -v systemctl >/dev/null 2>&1; then
+      for line in $(systemctl --user show-environment 2>/dev/null); do
+        case "$line" in *=*) export "$line" ;; esac
+      done 2>/dev/null || true
+    fi
+    # Ensure we run NixOS Steam (programs.steam) so extraPackages/fonts are present.
+    exec /run/current-system/sw/bin/steam "$@"
+  '';
+  home.file.".local/bin/steam-wrapper".executable = true;
+  xdg.dataFile."applications/steam.desktop".text =
+    builtins.replaceStrings
+      [ "Exec=steam" ]
+      [ "Exec=${config.home.homeDirectory}/.local/bin/steam-wrapper" ]
+      (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
 
-  # WeChat (Flatpak): --devel + 禁用崩溃上报，避免启动阶段 ptrace/crash 逻辑导致无窗口
-  xdg.dataFile."applications/com.tencent.WeChat.desktop".text = ''
+  # Steam follows per-user fontconfig; force strong CJK fallbacks.
+  xdg.configFile."fontconfig/conf.d/99-steam-cjk.conf".text = ''
+    <?xml version="1.0"?>
+    <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+    <fontconfig>
+      <alias>
+        <family>sans-serif</family>
+        <prefer>
+          <family>WenQuanYi Zen Hei</family>
+          <family>Sarasa UI SC</family>
+          <family>Source Han Sans SC</family>
+        </prefer>
+      </alias>
+
+      <alias>
+        <family>serif</family>
+        <prefer>
+          <family>Source Han Serif SC</family>
+          <family>Sarasa UI SC</family>
+          <family>WenQuanYi Zen Hei</family>
+        </prefer>
+      </alias>
+
+      <match target="pattern">
+        <test name="family" compare="eq">
+          <string>Arial</string>
+        </test>
+        <edit name="family" mode="assign" binding="strong">
+          <string>WenQuanYi Zen Hei</string>
+        </edit>
+      </match>
+    </fontconfig>
+  '';
+
+  # WeChat (nixpkgs): wrapper so Walker can launch; load systemd user env for WAYLAND_DISPLAY etc.
+  home.file.".local/bin/wechat-wrapper".text = ''
+    #!/bin/sh
+    if command -v systemctl >/dev/null 2>&1; then
+      for line in $(systemctl --user show-environment 2>/dev/null); do
+        case "$line" in *=*) export "$line" ;; esac
+      done 2>/dev/null || true
+    fi
+    exec ${pkgs.wechat}/bin/wechat "$@"
+  '';
+  home.file.".local/bin/wechat-wrapper".executable = true;
+  xdg.dataFile."applications/wechat.desktop".text = ''
     [Desktop Entry]
     Name=WeChat
     Name[zh_CN]=微信
-    Exec=${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --env=GDK_BACKEND=x11 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat @@u %U @@
+    Exec=${config.home.homeDirectory}/.local/bin/wechat-wrapper %U
     Terminal=false
     Type=Application
-    Icon=com.tencent.WeChat
-    StartupWMClass=WeChat
+    Icon=wechat
     Categories=Network;
-    Keywords=wechat;weixin;
+    Keywords=wechat;weixin;微信;
     Comment=WeChat Desktop
     Comment[zh_CN]=微信桌面版
-    X-Flatpak=com.tencent.WeChat
   '';
 
-  # 终端运行 com.tencent.WeChat 时用 wrapper（--devel + 禁用崩溃上报，与 desktop 一致）
-  home.file.".local/bin/com.tencent.WeChat".text = ''
+  # X Minecraft Launcher (Flatpak): desktop entry so Walker shows it; run "flatpak install -y flathub app.xmcl.voxelum" once if not installed.
+  xdg.dataFile."applications/app.xmcl.voxelum.desktop".text = ''
+    [Desktop Entry]
+    Name=X Minecraft Launcher
+    Comment=Minecraft launcher with modpack support (Fabric, Forge, Quilt)
+    Exec=${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --file-forwarding app.xmcl.voxelum @@u %U @@
+    Terminal=false
+    Type=Application
+    Icon=app.xmcl.voxelum
+    Categories=Game;
+    Keywords=minecraft;launcher;mod;
+    X-Flatpak=app.xmcl.voxelum
+  '';
+  home.file.".local/bin/xmcl".text = ''
     #!/usr/bin/env bash
-    exec ${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --env=GDK_BACKEND=x11 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat "$@"
+    exec ${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --file-forwarding app.xmcl.voxelum "$@"
   '';
-  home.file.".local/bin/com.tencent.WeChat".executable = true;
+  home.file.".local/bin/xmcl".executable = true;
 
-  # WeChat 期望的目录：用 activation 创建可写目录，避免 Nix 的 .keep 符号链接导致无法在此创建 crash 子目录
-  home.activation.ensureXwechatCrashDir = config.lib.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "$HOME/.xwechat/crashinfo/attachments"
-  '';
-
-  # QQ Music (Flatpak): use absolute path to flatpak so Walker can launch it.
-  xdg.dataFile."applications/com.qq.QQmusic.desktop".text = ''
+  # QQ Music (nixpkgs): desktop entry so Walker shows it; absolute Exec path.
+  xdg.dataFile."applications/qqmusic.desktop".text = ''
     [Desktop Entry]
     Name=QQ Music
     Name[zh_CN]=QQ音乐
-    Exec=${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --command=qqmusic.sh --file-forwarding com.qq.QQmusic @@u %U @@
+    Exec=${pkgs.qqmusic}/bin/qqmusic %U
     Terminal=false
     Type=Application
-    Icon=com.qq.QQmusic
-    StartupWMClass=QQMusic
+    Icon=qqmusic
     Comment=Tencent QQMusic
     Comment[zh_CN]=QQ音乐
     Categories=AudioVideo;
-    X-Flatpak=com.qq.QQmusic
   '';
 
   xdg.configFile."xdg-terminal-exec/termfilechooser.conf".text = ''

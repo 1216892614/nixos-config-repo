@@ -13,9 +13,8 @@ in
     enable = true;
 
     packages = [
+      "app.xmcl.voxelum"  # X Minecraft Launcher
       "com.qq.QQ"
-      "com.qq.QQmusic"
-      "com.tencent.WeChat"
       "sh.ppy.osu"
     ];
 
@@ -42,49 +41,14 @@ in
       no_proxy = "localhost,127.0.0.1,::1";
       NO_PROXY = "localhost,127.0.0.1,::1";
     };
-
-    overrides."com.tencent.WeChat".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
-    overrides."com.tencent.WeChat".Environment = {
-      http_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      https_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      all_proxy = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-      HTTP_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      HTTPS_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      ALL_PROXY = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-      no_proxy = "localhost,127.0.0.1,::1";
-      NO_PROXY = "localhost,127.0.0.1,::1";
-      # 禁用 Electron 崩溃上报，避免 Flatpak 沙箱内 ptrace: Operation not permitted
-      ELECTRON_DISABLE_CRASH_REPORTER = "1";
-      # 强制 XWayland，避免 Wayland 下窗口不显示
-      GDK_BACKEND = "x11";
-    };
-
-    overrides."com.qq.QQmusic".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
-    overrides."com.qq.QQmusic".Environment = {
-      http_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      https_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      all_proxy = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-      HTTP_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      HTTPS_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      ALL_PROXY = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-      no_proxy = "localhost,127.0.0.1,::1";
-      NO_PROXY = "localhost,127.0.0.1,::1";
-    };
   };
 
-  # Apply critical Flatpak overrides even when flatpak-managed-install is disabled.
-  environment.etc."flatpak/overrides/global".text = ''
-    [Context]
-    sockets=wayland;!x11;!fallback-x11
+  # overrides 由 flatpak-managed-install 根据 services.flatpak.overrides 写入
+  # /var/lib/flatpak/overrides/global，不能把该路径做成指向只读 /etc 的符号链接，否则脚本写入会报 Read-only file system
 
-    [Environment]
-    XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
-  '';
-
-  systemd.tmpfiles.rules = [
-    "L+ /var/lib/flatpak/overrides/global - - - - /etc/flatpak/overrides/global"
-  ];
-
-  # 不随 activation 启动，避免失败导致 nixos-rebuild 报错；需要时手动执行 flatpak install
-  systemd.services.flatpak-managed-install.enable = false;
+  systemd.services.flatpak-managed-install = {
+    enable = true;
+    # 安装失败（如网络问题）时不把 unit 标为 failed，避免 nixos-rebuild switch 报错
+    serviceConfig.SuccessExitStatus = [ 0 1 ];
+  };
 }

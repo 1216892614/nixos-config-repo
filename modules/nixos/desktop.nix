@@ -30,7 +30,19 @@
     GTK_USE_PORTAL = "1";
   };
 
-  programs.steam.enable = true;
+  programs.steam = {
+    enable = true;
+    # Same idea as: pkgs.steam.override { extraPkgs = pkgs: [ ...fonts... ]; }
+    # Force fonts to exist inside Steam's FHS env (some setups still show □□□ without this).
+    extraPackages = with pkgs; [
+      wqy_zenhei
+      source-han-sans
+      source-han-serif
+      source-han-mono
+      noto-fonts-color-emoji
+      sarasa-gothic
+    ];
+  };
 
   environment.systemPackages = with pkgs; [
     git
@@ -49,7 +61,7 @@
     after = [ "graphical-session.target" ];
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY";
+      ExecStart = "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS";
     };
   };
 

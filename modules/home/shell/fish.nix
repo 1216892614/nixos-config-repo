@@ -16,8 +16,11 @@ in
 
     # Ensure PATH includes these dirs (HM sessionPath can be overridden by systemd/env; fish gets them here)
     # Anthropic (Claude Code): ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN from env.nix
+    # OpenJDK 21: JAVA_HOME for launchers (e.g. X Minecraft Launcher) and Java tools
     shellInit = ''
       fish_add_path -g $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
+      set -gx JAVA_HOME "${pkgs.jdk21}"
+      fish_add_path -g $JAVA_HOME/bin
       ${anthropicEnv}
     '';
 
@@ -40,8 +43,6 @@ in
       grep = "rg";
     };
 
-    # 优先用 wrapper（带 --devel），避免 Flatpak 内 ptrace 报错
-    functions."com.tencent.WeChat".body = "${config.home.homeDirectory}/.local/bin/com.tencent.WeChat $argv";
   };
 
   home.packages = with pkgs; [
