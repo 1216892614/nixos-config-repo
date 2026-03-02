@@ -5,3 +5,6 @@ hosts/*/mihomo-config.yaml
 env.nix
 .direnv/
 *.tmp.yaml
+
+.vscode
+.cursor
