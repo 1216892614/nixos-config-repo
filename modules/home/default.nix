@@ -292,7 +292,7 @@ except Exception:
     [Desktop Entry]
     Name=WeChat
     Name[zh_CN]=微信
-    Exec=${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat @@u %U @@
+    Exec=${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --env=GDK_BACKEND=x11 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat @@u %U @@
     Terminal=false
     Type=Application
     Icon=com.tencent.WeChat
@@ -307,12 +307,14 @@ except Exception:
   # 终端运行 com.tencent.WeChat 时用 wrapper（--devel + 禁用崩溃上报，与 desktop 一致）
   home.file.".local/bin/com.tencent.WeChat".text = ''
     #!/usr/bin/env bash
-    exec ${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat "$@"
+    exec ${pkgs.flatpak}/bin/flatpak run --devel --env=ELECTRON_DISABLE_CRASH_REPORTER=1 --env=GDK_BACKEND=x11 --branch=stable --arch=x86_64 --command=wechat --file-forwarding com.tencent.WeChat "$@"
   '';
   home.file.".local/bin/com.tencent.WeChat".executable = true;
 
-  # WeChat 期望的目录，缺失时可能导致启动异常
-  home.file.".xwechat/crashinfo/attachments/.keep".text = "";
+  # WeChat 期望的目录：用 activation 创建可写目录，避免 Nix 的 .keep 符号链接导致无法在此创建 crash 子目录
+  home.activation.ensureXwechatCrashDir = config.lib.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "$HOME/.xwechat/crashinfo/attachments"
+  '';
 
   # QQ Music (Flatpak): use absolute path to flatpak so Walker can launch it.
   xdg.dataFile."applications/com.qq.QQmusic.desktop".text = ''
