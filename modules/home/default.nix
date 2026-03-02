@@ -26,6 +26,10 @@ let
     policy = "allowlist";
     allowFrom = openclawDiscordAllowFrom;
   } else null;
+  w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" {} ''
+    mkdir -p $out/share/icons
+    cp -R ${../../icons/W11-CC-V2.2-Dark-Default-wayland} $out/share/icons/W11-CC-V2.2-Dark-Default-wayland
+  '';
 in
 {
   imports = [
@@ -137,6 +141,10 @@ in
       name = "gruvbox-dark";
       package = pkgs.gruvbox-dark-gtk;
     };
+    cursorTheme = {
+      name = "W11-CC-V2.2-Dark-Default-wayland";
+      package = w11CursorTheme;
+    };
     iconTheme = {
       name = "Adwaita";
       package = pkgs.adwaita-icon-theme;
@@ -149,6 +157,14 @@ in
     enable = true;
     platformTheme.name = "adwaita";
     style.name = "adwaita-dark";
+  };
+
+  home.pointerCursor = {
+    name = "W11-CC-V2.2-Dark-Default-wayland";
+    package = w11CursorTheme;
+    size = 32;
+    gtk.enable = true;
+    x11.enable = true;
   };
 
   dconf.settings."org/gnome/desktop/interface" = {

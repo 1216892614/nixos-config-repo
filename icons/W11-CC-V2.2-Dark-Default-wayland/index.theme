@@ -1,0 +1,9 @@
+[Icon Theme]
+Name=W11 Cursors Dark HDPI Default (Wayland)
+Comment=Converted from W11-CC-V2.2 HDPI by Jepri (default, dark, regular)
+Inherits=Adwaita
+Directories=cursors
+
+[cursors]
+Size=32
+Type=Fixed
