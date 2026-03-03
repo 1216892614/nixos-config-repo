@@ -21,6 +21,7 @@ in
       fish_add_path -g $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
       set -gx JAVA_HOME "${pkgs.jdk21}"
       fish_add_path -g $JAVA_HOME/bin
+      set -gx PKG_CONFIG_PATH "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig"
       ${anthropicEnv}
     '';
 
