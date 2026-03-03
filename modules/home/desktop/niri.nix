@@ -155,20 +155,16 @@ in
 
     spawn-at-startup = [
       { command = [ "xwayland-satellite" ]; }
-      # Refresh activation env after session init so DBus/systemd get DISPLAY.
+      # 把 DISPLAY 和输入法变量写入 systemd/DBus，供后续启动的应用继承（双保险：systemd 用户服务也会做）
       { command = [
-          "${pkgs.dbus}/bin/dbus-update-activation-environment"
-          "--systemd"
-          "DISPLAY"
-          "WAYLAND_DISPLAY"
-          "XDG_CURRENT_DESKTOP"
-          "XDG_SESSION_TYPE"
-          "XDG_SESSION_DESKTOP"
-          "GTK_IM_MODULE"
-          "QT_IM_MODULE"
-          "SDL_IM_MODULE"
-          "INPUT_METHOD"
-          "XMODIFIERS"
+          "${pkgs.stdenv.shell}"
+          "-c"
+          ''
+            export GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx
+            exec "${pkgs.dbus}/bin/dbus-update-activation-environment" --systemd \
+              DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP \
+              GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS
+          ''
         ];
       }
       # 确保输入法随 niri 会话启动（fcitx5 会检测已运行实例）
