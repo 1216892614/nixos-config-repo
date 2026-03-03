@@ -40,7 +40,19 @@
   };
 
   outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, nix-openclaw, ... }@inputs:
+  let
+    pkgs = nixpkgs.legacyPackages.x86_64-linux;
+  in
   {
+    devShells.x86_64-linux.default = pkgs.mkShell {
+      buildInputs = with pkgs; [
+        openssl
+        pkg-config
+        cargo
+        rustc
+      ];
+    };
+
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
