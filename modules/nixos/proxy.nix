@@ -10,6 +10,15 @@ let
 
   fetchConfig = pkgs.writeShellScript "fetch-mihomo-config" ''
     mkdir -p /etc/mihomo
+    # 判断是否为有效 YAML（非 HTML 且 yq 可解析）
+    is_valid_yaml() {
+      local f="$1"
+      [ -f "$f" ] && [ -s "$f" ] || return 1
+      if ${pkgs.gnugrep}/bin/grep -qE '^\s*<!DOCTYPE|^\s*<html|^<\?xml' "$f" 2>/dev/null; then
+        return 1
+      fi
+      ${pkgs.yq-go}/bin/yq eval '.' "$f" >/dev/null 2>&1
+    }
     add_fake_ip_filter() {
       file="$1"
       for d in "+.qq.com" "+.qq.com.cn" "+.tencent.com" "+.wechat.com" "+.weixin.qq.com" "+.wx.qq.com" "+.tim.qq.com"; do
@@ -40,19 +49,25 @@ let
       ' -i "$file"
     }
     tmp=$(mktemp)
+    cleanup() { rm -f "$tmp"; }
+    trap cleanup EXIT
+    use_fetched=
     if ${pkgs.curl}/bin/curl -sL -o "$tmp" --connect-timeout 15 "${env.mihomoSubscribeUrl}" 2>/dev/null && [ -s "$tmp" ]; then
-      ensure_dns_listen_localhost "$tmp"
-      add_fake_ip_filter "$tmp"
-      add_tun_exclude_localhost "$tmp"
-      mv "$tmp" /etc/mihomo/config.yaml
-    elif [ -s /etc/mihomo/config.yaml ]; then
-      # If fetch fails, still enforce DNS listen on existing config.
-      ensure_dns_listen_localhost /etc/mihomo/config.yaml
-      add_fake_ip_filter /etc/mihomo/config.yaml
-      add_tun_exclude_localhost /etc/mihomo/config.yaml
+      if is_valid_yaml "$tmp"; then
+        ensure_dns_listen_localhost "$tmp"
+        add_fake_ip_filter "$tmp"
+        add_tun_exclude_localhost "$tmp"
+        cp "$tmp" /etc/mihomo/config.yaml
+        use_fetched=1
+      fi
     fi
-    rm -f "$tmp"
-    # 拉取失败时保留现有 config.yaml，不阻塞 activation
+    if [ -z "$use_fetched" ]; then
+      if [ -f /etc/mihomo/config.yaml ] && [ -s /etc/mihomo/config.yaml ] && is_valid_yaml /etc/mihomo/config.yaml; then
+        ensure_dns_listen_localhost /etc/mihomo/config.yaml
+        add_fake_ip_filter /etc/mihomo/config.yaml
+        add_tun_exclude_localhost /etc/mihomo/config.yaml
+      fi
+    fi
     exit 0
   '';
 in
@@ -86,10 +101,10 @@ in
   };
 
   systemd.timers.mihomo-fetch-config = {
-    description = "Periodically update mihomo config";
+    description = "Periodically update mihomo config (every 2 hours)";
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnCalendar = "hourly";
+      OnCalendar = "*-*-* 00/2:00:00";
       Persistent = true;
     };
   };
