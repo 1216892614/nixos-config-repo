@@ -15,7 +15,8 @@
     cmake
     gnumake
     pkg-config
-    openssl  # dev headers + .pc for openssl-sys (e.g. cargo install rust-docs-mcp)
+    openssl
+    openssl.dev  # headers + .pc for openssl-sys (e.g. cargo install rust-docs-mcp)
 
     # Python
     python3
@@ -45,5 +46,7 @@
     RUSTUP_HOME = "$HOME/.rustup";
     CARGO_HOME = "$HOME/.cargo";
     JAVA_HOME = "${pkgs.jdk21}";
+    # So pkg-config finds openssl.pc (for openssl-sys in cargo builds)
+    PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
   };
 }
