@@ -11,12 +11,14 @@
 
     # C/C++ toolchain
     clang
+    lld
     (lib.hiPrio gcc)
     cmake
     gnumake
     pkg-config
     openssl
     openssl.dev  # headers + .pc for openssl-sys (e.g. cargo install rust-docs-mcp)
+    wayland  # lib + wayland-client.pc for wayland-sys (Rust Wayland crates)
 
     # Python
     python3
@@ -46,7 +48,7 @@
     RUSTUP_HOME = "$HOME/.rustup";
     CARGO_HOME = "$HOME/.cargo";
     JAVA_HOME = "${pkgs.jdk21}";
-    # So pkg-config finds openssl.pc (for openssl-sys in cargo builds)
-    PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+    # So pkg-config finds .pc files for cargo build scripts (openssl-sys, wayland-sys, etc.)
+    PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
   };
 }
