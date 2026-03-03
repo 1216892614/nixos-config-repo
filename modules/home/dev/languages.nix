@@ -15,6 +15,7 @@
     cmake
     gnumake
     pkg-config
+    openssl  # dev headers + .pc for openssl-sys (e.g. cargo install rust-docs-mcp)
 
     # Python
     python3
