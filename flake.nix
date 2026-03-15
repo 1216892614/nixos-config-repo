@@ -32,14 +32,9 @@
     };
 
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
-
-    nix-openclaw = {
-      url = "github:openclaw/nix-openclaw";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, nix-openclaw, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -53,6 +48,7 @@
 
         {
           nixpkgs.overlays = [
+            (import ./overlays/default.nix)
             niri.overlays.niri
           ];
           programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;

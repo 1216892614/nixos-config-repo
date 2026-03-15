@@ -160,15 +160,14 @@ in
           "${pkgs.stdenv.shell}"
           "-c"
           ''
-            export GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx
+            export QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx
             exec "${pkgs.dbus}/bin/dbus-update-activation-environment" --systemd \
               DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP \
-              GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS
+              QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS
           ''
         ];
       }
-      # 确保输入法随 niri 会话启动（fcitx5 会检测已运行实例）
-      { command = [ "fcitx5" ]; }
+      # fcitx5 由 systemd 用户服务启动（见 modules/home/default.nix），崩溃会自动重启
     ];
   };
 }

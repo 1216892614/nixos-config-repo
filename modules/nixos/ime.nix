@@ -1,10 +1,9 @@
 { pkgs, ... }:
 
 {
-  # 让 GTK/Qt/SDL 应用在 Wayland 下正确接管 fcitx5
-  # （否则 fcitx5 虽然能切换到 rime，但应用侧不走输入法，不会弹候选窗）
+  # Wayland 前端可用时不再强制 GTK_IM_MODULE，避免 fcitx5 警告
+  # 保留 Qt/SDL/Xwayland 相关变量以兼容非原生 Wayland 应用
   environment.sessionVariables = {
-    GTK_IM_MODULE = "fcitx";
     QT_IM_MODULE = "fcitx";
     SDL_IM_MODULE = "fcitx";
     INPUT_METHOD = "fcitx";
@@ -20,6 +19,15 @@
         fcitx5-gtk
         fcitx5-rime
       ];
+      # 默认组加入 Rime，才能用 Super+Space 切到 Rime，再 F4/Ctrl+` 选摩奇方案
+      settings.inputMethod = {
+        "Groups/0" = {
+          Name = "Default";
+          "Default Layout" = "us";
+        };
+        "Groups/0/Items/0" = { Name = "keyboard-us"; };
+        "Groups/0/Items/1" = { Name = "rime"; };
+      };
     };
   };
 }
