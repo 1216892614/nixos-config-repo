@@ -2,26 +2,6 @@
 
 let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
-  openclawGatewayToken = env.openclawGatewayToken or "";
-  discordBotToken = env.discordBotToken or "";
-  geminiBaseUrl = env.geminiBaseUrl or "";
-  geminiApiKey = env.geminiApiKey or "";
-  # OpenRouter: one API key, model IDs from openrouter.ai (e.g. anthropic/claude-opus-4.6)
-  openrouterApiKey = env.openrouterApiKey or "";
-  openclawOpenRouterModels = env.openclawOpenRouterModels or [
-    "anthropic/claude-opus-4.6"
-    "google/gemini-3.1-pro-preview"
-    "openai/gpt-5.2-codex"
-    "openai/gpt-5.2-chat"
-    "openai/gpt-5.2-pro"
-  ];
-  openclawHasOpenRouter = openrouterApiKey != "";
-  openclawDefaultModel = env.openclawDefaultModel or "anthropic/claude-opus-4.6";
-  openclawDiscordAllowFrom = env.openclawDiscordAllowFrom or [];
-  openclawDiscordDmConfig = if openclawDiscordAllowFrom != [] then {
-    policy = "allowlist";
-    allowFrom = openclawDiscordAllowFrom;
-  } else null;
   w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" {} ''
     mkdir -p $out/share/icons
     cp -R "${inputs.self}/icons/W11-CC-V2.2-Dark-Default-wayland" "$out/share/icons/W11-CC-V2.2-Dark-Default-wayland"
@@ -48,50 +28,26 @@ in
   home.stateVersion = "24.11";
 
   home.sessionVariables = {
-    OPENCLAW_URL = "http://localhost:18789";
-  } // lib.optionalAttrs (openclawGatewayToken != "") {
-    OPENCLAW_GATEWAY_TOKEN = openclawGatewayToken;
+    PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
   };
 
   home.packages = with pkgs; [
     google-chrome
     code-cursor
-    claude-code
     gemini-cli
+    cc-switch
+    codex
+    opencode
+    claude-code
     docker-buildx
     wl-clipboard
     cliphist
-    uv  # provides uvx for running Python tools
+    uv  # provides uvx for running Python tools (e.g. astrbot)
     wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
     qqmusic
-    # OpenClaw not in profile (would conflict with nodejs bin/node); gateway runs via systemd below.
   ];
 
-  # Gemini CLI: only when geminiApiKey is set
-  home.file.".gemini/config.json" = lib.mkIf (geminiApiKey != "") {
-    text = builtins.toJSON {
-      CODE_ASSIST_ENDPOINT = geminiBaseUrl + "/";
-      GOOGLE_CLOUD_ACCESS_TOKEN = geminiApiKey;
-      GOOGLE_GENAI_USE_GCA = "true";
-    };
-  };
-
-  # OpenClaw: OpenRouter provider (replaces previous ByteCatCode per-model config)
-  xdg.configFile."nix/openclaw-openrouter-provider.json" = lib.mkIf openclawHasOpenRouter {
-    text = builtins.toJSON {
-      openrouter = {
-        baseUrl = "https://openrouter.ai/api/v1";
-        apiKey = openrouterApiKey;
-        api = "openai-completions";
-        models = map (id: { id = id; name = id; }) openclawOpenRouterModels;
-      };
-    };
-  };
-
-  # OpenClaw Discord: pre-approved DM user IDs from env.nix (channels.discord.dm allowlist)
-  xdg.configFile."nix/openclaw-discord-dm.json" = lib.mkIf (openclawDiscordDmConfig != null) {
-    text = builtins.toJSON openclawDiscordDmConfig;
-  };
+  # Claude Code / Codex / Gemini / OpenCode providers: managed by CC Switch (~/.cc-switch).
 
   services.udiskie = {
     enable = true;
@@ -136,6 +92,22 @@ in
     color-scheme = "prefer-dark";
   };
 
+  # fcitx5/Rime: 用户服务 + 失败重启，避免运行一段时间后输入法挂掉
+  systemd.user.services.fcitx5 = {
+    Unit = {
+      Description = "Fcitx5 input method (Rime)";
+      After = [ "graphical-session.target" "dbus-update-activation-environment.service" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.fcitx5}/bin/fcitx5";
+      Restart = "on-failure";
+      RestartSec = "3";
+      Environment = "QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
   systemd.user.services.cliphist-text = {
     Unit = {
       Description = "Clipboard history for text";
@@ -162,124 +134,50 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # OpenClaw gateway: start at graphical session; use http://localhost:18789
-  # Use flake store path (not in home.packages) to avoid bin/node conflict with nodejs.
-  systemd.user.services.openclaw-gateway = {
-    Unit = {
-      Description = "OpenClaw gateway (localhost:18789)";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-    };
-    Service = {
-      ExecStart = "${inputs.nix-openclaw.packages.${pkgs.system}.default}/bin/openclaw gateway --allow-unconfigured";
-      # gateway 配置重载时会 exit 0 做 full process restart，需 Restart=always 让 systemd 再拉起
-      Restart = "always";
-      RestartSec = "3s";
-      Environment = [ "HOME=${config.home.homeDirectory}" ]
-        ++ lib.optional (discordBotToken != "") "DISCORD_BOT_TOKEN=${discordBotToken}";
-      WorkingDirectory = "%h";
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
-
-  # OpenClaw: on each rebuild, generate gateway token and merge Nix options into ~/.openclaw (tokens from env.nix).
-  # Works from zero (no openclaw.json) and with existing config (e.g. after openclaw onboard). If openclaw.json is JSON5, convert to JSON first so jq merges succeed.
-  home.activation.openclawGenToken = config.lib.dag.entryAfter [ "writeBoundary" ] ''
-    OPENCLAW_DIR="''${HOME}/.openclaw"
-    ENV_D_DIR="''${HOME}/.config/environment.d"
-    $DRY_RUN_CMD mkdir -p "$OPENCLAW_DIR" "$ENV_D_DIR"
-    # Normalise existing openclaw.json from JSON5 to JSON so jq merges work (onboard writes JSON5)
-    if [ -f "$OPENCLAW_DIR/openclaw.json" ] && [ -s "$OPENCLAW_DIR/openclaw.json" ]; then
-      $DRY_RUN_CMD ${pkgs.python3.withPackages (p: [ p.json5 ])}/bin/python -c '
-import json, json5, sys
-path = sys.argv[1]
-try:
-  with open(path) as f: d = json5.load(f)
-  with open(path, "w") as f: json.dump(d, f, indent=2)
-except Exception:
-  pass
-' "$OPENCLAW_DIR/openclaw.json" 2>/dev/null || true
-    fi
-    token="$(${pkgs.openssl}/bin/openssl rand -hex 32)"
-    $DRY_RUN_CMD printf '%s' "$token" > "$OPENCLAW_DIR/gateway-token"
-    if [ -f "$OPENCLAW_DIR/openclaw.json" ] && [ -s "$OPENCLAW_DIR/openclaw.json" ]; then
-      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg t "$token" '.gateway.auth.token = $t | .channels.discord = ((.channels.discord // {}) | .enabled = true)' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
-        $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
-      fi
-    else
-      $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg t "$token" '{gateway: {auth: {token: $t}}, channels: {discord: {enabled: true}}}' > "$OPENCLAW_DIR/openclaw.json"
-    fi
-    # Discord: merge pre-approved DM allowlist from env.nix (openclawDiscordAllowFrom) into channels.discord.dm
-    DISCORD_DM_FILE="''${HOME}/.config/nix/openclaw-discord-dm.json"
-    if [ -f "$DISCORD_DM_FILE" ] && [ -s "$DISCORD_DM_FILE" ]; then
-      if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --slurpfile d "$DISCORD_DM_FILE" '.channels.discord = ((.channels.discord // {}) | .dm = $d[0])' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
-        $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
-      fi
-    fi
-    $DRY_RUN_CMD printf 'OPENCLAW_GATEWAY_TOKEN=%s\n' "$token" > "$ENV_D_DIR/openclaw.conf"
-    for PROVIDER_FILE in "''${HOME}/.config/nix/openclaw-openrouter-provider.json" "''${HOME}/.config/nix/openclaw-bytecatcode-provider.json"; do
-      if [ -f "$PROVIDER_FILE" ] && [ -s "$PROVIDER_FILE" ]; then
-        if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --slurpfile p "$PROVIDER_FILE" '.models.providers = ((.models.providers // {}) + $p[0])' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
-          $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
-        fi
-      fi
-    done
-    # OpenRouter: set env.OPENROUTER_API_KEY and agents.defaults.model so agent uses provider "openrouter" (avoids "No API key for provider anthropic")
-    OPENROUTER_FILE="''${HOME}/.config/nix/openclaw-openrouter-provider.json"
-    if [ -f "$OPENROUTER_FILE" ] && [ -s "$OPENROUTER_FILE" ]; then
-      OR_KEY="$(${pkgs.jq}/bin/jq -r '.openrouter.apiKey // empty' "$OPENROUTER_FILE" 2>/dev/null)"
-      if [ -n "$OR_KEY" ]; then
-        if $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg k "$OR_KEY" '.env.OPENROUTER_API_KEY = $k | .agents.defaults = ((.agents.defaults // {}) | .model = ((.model // {}) | .primary = "openrouter/${openclawDefaultModel}"))' "$OPENCLAW_DIR/openclaw.json" > "$OPENCLAW_DIR/openclaw.json.tmp" 2>/dev/null; then
-          $DRY_RUN_CMD mv "$OPENCLAW_DIR/openclaw.json.tmp" "$OPENCLAW_DIR/openclaw.json"
-        fi
-        # Persist OpenRouter key to main agent auth-profiles.json (required for agent resolution)
-        AGENT_DIR="''${OPENCLAW_DIR}/agents/main/agent"
-        $DRY_RUN_CMD mkdir -p "$AGENT_DIR"
-        AUTH_FILE="$AGENT_DIR/auth-profiles.json"
-        if [ -f "$AUTH_FILE" ]; then
-          $DRY_RUN_CMD ${pkgs.jq}/bin/jq --arg k "$OR_KEY" '.profiles["openrouter:default"] = (.profiles["openrouter:default"] // {} | .provider = "openrouter" | .mode = "api_key" | .apiKey = $k)' "$AUTH_FILE" > "$AUTH_FILE.tmp" 2>/dev/null && $DRY_RUN_CMD mv "$AUTH_FILE.tmp" "$AUTH_FILE"
-        else
-          $DRY_RUN_CMD ${pkgs.jq}/bin/jq -n --arg k "$OR_KEY" '{profiles: {"openrouter:default": {provider: "openrouter", mode: "api_key", apiKey: $k}}}' > "$AUTH_FILE"
-        fi
-      fi
-    fi
-  '';
-
-  # openclaw CLI (wrapper so PATH has "openclaw" without adding the package to profile, which would conflict with nodejs bin/node)
-  home.file.".local/bin/openclaw".text = ''
+  # AstrBot: Agentic IM chatbot (https://astrbot.app/, https://github.com/AstrBotDevs/AstrBot); run via uvx (first run may install)
+  home.file.".local/bin/astrbot".text = ''
     #!/usr/bin/env bash
-    exec "${inputs.nix-openclaw.packages.${pkgs.system}.default}/bin/openclaw" "''$@"
+    exec "${pkgs.uv}/bin/uvx" astrbot "''$@"
   '';
-  home.file.".local/bin/openclaw".executable = true;
+  home.file.".local/bin/astrbot".executable = true;
 
-  # OpenClaw in Walker: script opens dashboard in Chrome; append token to URL (from env or ~/.openclaw/gateway-token).
-  home.file.".local/bin/openclaw-dashboard".text = ''
-    #!/usr/bin/env bash
-    url="''${OPENCLAW_URL:-http://localhost:18789}"
-    token="''${OPENCLAW_GATEWAY_TOKEN:-}"
-    if [ -z "$token" ] && [ -f "''${HOME}/.openclaw/gateway-token" ]; then
-      token=$(cat "''${HOME}/.openclaw/gateway-token")
+  # CC Switch: wrapper so launch from Walker gets WAYLAND_DISPLAY etc.; fallbacks if session env is stale
+  home.file.".local/bin/cc-switch-wrapper".text = ''
+    #!/bin/sh
+    if command -v systemctl >/dev/null 2>&1; then
+      for line in $(systemctl --user show-environment 2>/dev/null); do
+        case "$line" in *=*) export "$line" ;; esac
+      done 2>/dev/null || true
     fi
-    if [ -n "$token" ]; then
-      url="$url?token=$token"
+    # 若 systemd 用户环境里没有 Wayland，用常见回退（避免运行一段时间后从 Walker 启动失败）
+    : "''${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+    export XDG_RUNTIME_DIR
+    if [ -z "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/wayland-1" ]; then
+      export WAYLAND_DISPLAY=wayland-1
     fi
-    exec ${pkgs.google-chrome}/bin/google-chrome "$url"
+    if [ -z "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
+      export WAYLAND_DISPLAY=wayland-0
+    fi
+    # 对 CC Switch 禁用复杂输入法，避免 fcitx5/Rime 与 WebKitGTK 在 Wayland/XWayland 下导致卡死
+    unset GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS
+    export GTK_IM_MODULE=gtk-im-context-simple
+    export XMODIFIERS=@im=none
+    # 在部分 Wayland WM（如 niri）下，强制走 X11 后端可以避免 AppImage + WebKitGTK 的输入焦点问题
+    export GDK_BACKEND=x11
+    exec ${pkgs.cc-switch}/bin/cc-switch "$@"
   '';
-  home.file.".local/bin/openclaw-dashboard".executable = true;
+  home.file.".local/bin/cc-switch-wrapper".executable = true;
 
-  # OpenClaw icon (scalable vector) for desktop entry and Walker; full path in Icon= so launchers display it
-  xdg.dataFile."icons/hicolor/scalable/apps/openclaw-dashboard.svg".source = ../../icons/openclaw.svg;
-
-  xdg.dataFile."applications/openclaw-dashboard.desktop".text = ''
+  # CC Switch: desktop entry for Walker
+  xdg.dataFile."applications/cc-switch.desktop".text = ''
     [Desktop Entry]
-    Name=OpenClaw
-    Comment=Open OpenClaw dashboard in browser (sign-in, token)
-    Exec=${config.home.homeDirectory}/.local/bin/openclaw-dashboard
-    Icon=${config.home.homeDirectory}/.local/share/icons/hicolor/scalable/apps/openclaw-dashboard.svg
+    Name=CC Switch
+    Comment=Manage Claude Code, Codex, Gemini CLI, OpenCode providers
+    Exec=${config.home.homeDirectory}/.local/bin/cc-switch-wrapper
     Terminal=false
     Type=Application
-    Categories=Network;
-    Keywords=openclaw;dashboard;gateway;ai;
+    Categories=Settings;Utility;
+    Keywords=cc-switch;claude;codex;gemini;opencode;ai;
   '';
 
   # Steam: wrapper with /bin/sh; load systemd user env so launch from Walker (Elephant) gets WAYLAND_DISPLAY etc.

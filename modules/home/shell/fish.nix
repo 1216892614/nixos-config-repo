@@ -2,27 +2,19 @@
 
 let
   colors = import ../../../lib/colors.nix;
-  env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else {};
-  anthropicBaseUrl = env.anthropicBaseUrl or "";
-  anthropicAuthToken = env.anthropicAuthToken or "";
-  anthropicEnv = if anthropicAuthToken != "" then ''
-    set -gx ANTHROPIC_BASE_URL "${anthropicBaseUrl}"
-    set -gx ANTHROPIC_AUTH_TOKEN "${anthropicAuthToken}"
-  '' else "";
 in
 {
   programs.fish = {
     enable = true;
 
-    # Ensure PATH includes these dirs (HM sessionPath can be overridden by systemd/env; fish gets them here)
-    # Anthropic (Claude Code): ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN from env.nix
+    # Ensure PATH includes these dirs: HM profile (codex, opencode, cc-switch, etc.) and common tool dirs
+    # Claude Code / Codex / Gemini API: use CC Switch to manage providers and env (no Nix-set ANTHROPIC_* here).
     # OpenJDK 21: JAVA_HOME for launchers (e.g. X Minecraft Launcher) and Java tools
     shellInit = ''
-      fish_add_path -g $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
+      fish_add_path -g ${config.home.profileDirectory}/bin $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
       set -gx JAVA_HOME "${pkgs.jdk21}"
       fish_add_path -g $JAVA_HOME/bin
       set -gx PKG_CONFIG_PATH "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig"
-      ${anthropicEnv}
     '';
 
     plugins = [

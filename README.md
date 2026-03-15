@@ -42,17 +42,7 @@ cp env.nix.example env.nix
 
 `env.nix` 已加入 `.gitignore`，不会提交到仓库。
 
-### Agent Router（按 CLI 独立 base URL + key）
-
-每个 AI CLI 在 `env.nix` 里各有一套 **base URL** 和 **API key**，可单独换路由：
-
-| 工具 | env.nix 键 | 配置方式 | 说明 |
-|------|-------------|----------|------|
-| **Claude Code** | `anthropicBaseUrl` / `anthropicAuthToken` | Fish 环境变量 `ANTHROPIC_BASE_URL`、`ANTHROPIC_AUTH_TOKEN`（HM `programs.fish.sessionVariables`） | 仅当 key 非空时设置；不生成 `~/.claude/settings.json` |
-| **Gemini CLI** | `geminiBaseUrl` / `geminiApiKey` | `~/.gemini/config.json` | 仅当 key 非空时生成 |
-| **OpenClaw** | `openrouterApiKey` / `openclawOpenRouterModels` | OpenRouter 单 key + 模型 ID 列表，合并为 provider `openrouter` 进 `~/.openclaw/openclaw.json` | 仅当 `openrouterApiKey` 非空时生成并合并 |
-
-**规则**：未设置 key 的 CLI 不会生成任何配置。OpenClaw 使用 OpenRouter：在 `env.nix` 中设置 `openrouterApiKey` 和 `openclawOpenRouterModels = [ "anthropic/claude-opus-4.6" "google/gemini-3.1-pro-preview" ... ]`（openrouter.ai 的模型 ID），会生成并合并进 `~/.openclaw/openclaw.json` 的 `models.providers.openrouter`。
+AI 相关 base URL / API key（Claude Code、Codex、Gemini CLI、OpenCode）由 **CC Switch** 管理（`~/.cc-switch`），不在 `env.nix` 中设置环境变量。
 
 ## 目录结构
 

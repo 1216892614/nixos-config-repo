@@ -62,13 +62,12 @@
     after = [ "graphical-session.target" ];
     serviceConfig.Type = "oneshot";
     environment = {
-      GTK_IM_MODULE = "fcitx";
       QT_IM_MODULE = "fcitx";
       SDL_IM_MODULE = "fcitx";
       INPUT_METHOD = "fcitx";
       XMODIFIERS = "@im=fcitx";
     };
-    serviceConfig.ExecStart = "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS";
+    serviceConfig.ExecStart = "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS";
   };
 
   programs.niri.enable = true;

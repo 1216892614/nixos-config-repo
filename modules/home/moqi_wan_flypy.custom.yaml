@@ -1,0 +1,106 @@
+# 墨奇+小鹤双拼·鹤形 自定义配置
+# moqi_wan_flypy.custom.yaml
+
+patch:
+  # 添加模糊音支持
+  "speller/algebra/+":
+    # z = zh
+    - derive/^zh/z/
+    - derive/^z([^h])/zh$1/
+    
+    # c = ch
+    - derive/^ch/c/
+    - derive/^c([^h])/ch$1/
+    
+    # s = sh
+    - derive/^sh/s/
+    - derive/^s([^h])/sh$1/
+    
+    # l = n
+    - derive/^l/n/
+    - derive/^n/l/
+    
+    # f = h
+    - derive/^f/h/
+    - derive/^h([^u])/f$1/
+    
+    # ang = an
+    - derive/ang$/an/
+    - derive/an$/ang/
+    
+    # eng = en
+    - derive/eng$/en/
+    - derive/en$/eng/
+    
+    # ing = in
+    - derive/ing$/in/
+    - derive/in$/ing/
+  
+  # 使用英文标点符号
+  "punctuator/import_preset": symbols
+  "punctuator/half_shape":
+    ',' : { commit: ',' }
+    '.' : { commit: '.' }
+    '<' : '<'
+    '>' : '>'
+    '/' : '/'
+    '?' : { commit: '?' }
+    ';' : { commit: ';' }
+    ':' : { commit: ':' }
+    '''' : { pair: [ ''', ''' ] }
+    '"' : { pair: [ '"', '"' ] }
+    '\' : '\'
+    '|' : '|'
+    '`' : '`'
+    '~' : '~'
+    '!' : { commit: '!' }
+    '@' : '@'
+    '#' : '#'
+    '%' : '%'
+    '$' : '$'
+    '^' : '^'
+    '&' : '&'
+    '*' : '*'
+    '(' : '('
+    ')' : ')'
+    '-' : '-'
+    '_' : '_'
+    '+' : '+'
+    '=' : '='
+    '[' : '['
+    ']' : ']'
+    '{' : '{'
+    '}' : '}'
+  "punctuator/full_shape":
+    ',' : { commit: ',' }
+    '.' : { commit: '.' }
+    '<' : '<'
+    '>' : '>'
+    '/' : '/'
+    '?' : { commit: '?' }
+    ';' : { commit: ';' }
+    ':' : { commit: ':' }
+    '''' : { pair: [ ''', ''' ] }
+    '"' : { pair: [ '"', '"' ] }
+    '\' : '\'
+    '|' : '|'
+    '`' : '`'
+    '~' : '~'
+    '!' : { commit: '!' }
+    '@' : '@'
+    '#' : '#'
+    '%' : '%'
+    '$' : '$'
+    '^' : '^'
+    '&' : '&'
+    '*' : '*'
+    '(' : '('
+    ')' : ')'
+    '-' : '-'
+    '_' : '_'
+    '+' : '+'
+    '=' : '='
+    '[' : '['
+    ']' : ']'
+    '{' : '{'
+    '}' : '}'
