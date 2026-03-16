@@ -2,105 +2,25 @@
 # moqi_single_xh.custom.yaml
 
 patch:
-  # 添加模糊音支持
+  # 默认启用英文标点 (ascii_punct 是 switches 第 8 项，0-based index 7)
+  "switches/@7/reset": 1
+
+  # 模糊音（小鹤键位空间：zh=v, ch=i, sh=u）
   "speller/algebra/+":
-    # z = zh
-    - derive/^zh/z/
-    - derive/^z([^h])/zh$1/
-    
-    # c = ch
-    - derive/^ch/c/
-    - derive/^c([^h])/ch$1/
-    
-    # s = sh
-    - derive/^sh/s/
-    - derive/^s([^h])/sh$1/
-    
-    # l = n
-    - derive/^l/n/
-    - derive/^n/l/
-    
-    # f = h
-    - derive/^f/h/
-    - derive/^h([^u])/f$1/
-    
-    # ang = an
-    - derive/ang$/an/
-    - derive/an$/ang/
-    
-    # eng = en
-    - derive/eng$/en/
-    - derive/en$/eng/
-    
-    # ing = in
-    - derive/ing$/in/
-    - derive/in$/ing/
-  
-  # 使用英文标点符号
-  "punctuator/import_preset": symbols
-  "punctuator/half_shape":
-    ',' : { commit: ',' }
-    '.' : { commit: '.' }
-    '<' : '<'
-    '>' : '>'
-    '/' : '/'
-    '?' : { commit: '?' }
-    ';' : { commit: ';' }
-    ':' : { commit: ':' }
-    '''' : { pair: [ ''', ''' ] }
-    '"' : { pair: [ '"', '"' ] }
-    '\' : '\'
-    '|' : '|'
-    '`' : '`'
-    '~' : '~'
-    '!' : { commit: '!' }
-    '@' : '@'
-    '#' : '#'
-    '%' : '%'
-    '$' : '$'
-    '^' : '^'
-    '&' : '&'
-    '*' : '*'
-    '(' : '('
-    ')' : ')'
-    '-' : '-'
-    '_' : '_'
-    '+' : '+'
-    '=' : '='
-    '[' : '['
-    ']' : ']'
-    '{' : '{'
-    '}' : '}'
-  "punctuator/full_shape":
-    ',' : { commit: ',' }
-    '.' : { commit: '.' }
-    '<' : '<'
-    '>' : '>'
-    '/' : '/'
-    '?' : { commit: '?' }
-    ';' : { commit: ';' }
-    ':' : { commit: ':' }
-    '''' : { pair: [ ''', ''' ] }
-    '"' : { pair: [ '"', '"' ] }
-    '\' : '\'
-    '|' : '|'
-    '`' : '`'
-    '~' : '~'
-    '!' : { commit: '!' }
-    '@' : '@'
-    '#' : '#'
-    '%' : '%'
-    '$' : '$'
-    '^' : '^'
-    '&' : '&'
-    '*' : '*'
-    '(' : '('
-    ')' : ')'
-    '-' : '-'
-    '_' : '_'
-    '+' : '+'
-    '=' : '='
-    '[' : '['
-    ']' : ']'
-    '{' : '{'
-    '}' : '}'
+    # 平翘舌 z↔zh(v), c↔ch(i), s↔sh(u)
+    - derive/^z([a-z])/v$1/
+    - derive/^c([a-z])/i$1/
+    - derive/^s([a-z])/u$1/
+    - derive/^v([a-z])/z$1/
+    - derive/^i([a-z])/c$1/
+    - derive/^u([a-z])/s$1/
+    # 前后鼻音 an(j)↔ang(h), en(f)↔eng(g), in(b)↔ing(k)
+    - derive/^([a-z])j$/$1h/
+    - derive/^([a-z])h$/$1j/
+    - derive/^([a-z])f$/$1g/
+    - derive/^([a-z])g$/$1f/
+    - derive/^([a-z])b$/$1k/
+    - derive/^([a-z])k$/$1b/
+    # n/l
+    - derive/^n([a-z])/l$1/
+    - derive/^l([a-z])/n$1/
