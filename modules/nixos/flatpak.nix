@@ -14,7 +14,6 @@ in
 
     packages = [
       "app.xmcl.voxelum"  # X Minecraft Launcher
-      "com.qq.QQ"
       "sh.ppy.osu"
     ];
 
@@ -30,17 +29,6 @@ in
       };
     };
 
-    overrides."com.qq.QQ".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
-    overrides."com.qq.QQ".Environment = {
-      http_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      https_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      all_proxy = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-      HTTP_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      HTTPS_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-      ALL_PROXY = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-      no_proxy = "localhost,127.0.0.1,::1";
-      NO_PROXY = "localhost,127.0.0.1,::1";
-    };
   };
 
   # overrides 由 flatpak-managed-install 根据 services.flatpak.overrides 写入
