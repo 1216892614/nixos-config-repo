@@ -44,6 +44,7 @@ in
     cliphist
     uv  # provides uvx for running Python tools (e.g. astrbot)
     wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
+    qq      # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
     qqmusic
   ];
 
@@ -275,6 +276,21 @@ in
     exec ${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --file-forwarding app.xmcl.voxelum "$@"
   '';
   home.file.".local/bin/xmcl".executable = true;
+
+  # QQ (nixpkgs): desktop entry so Walker shows it; absolute Exec path.
+  xdg.dataFile."applications/qq.desktop".text = ''
+    [Desktop Entry]
+    Name=QQ
+    Name[zh_CN]=QQ
+    Exec=${pkgs.qq}/bin/qq %U
+    Terminal=false
+    Type=Application
+    Icon=qq
+    Comment=Tencent QQ
+    Comment[zh_CN]=腾讯QQ
+    Categories=Network;
+    Keywords=qq;tencent;
+  '';
 
   # QQ Music (nixpkgs): desktop entry so Walker shows it; absolute Exec path.
   xdg.dataFile."applications/qqmusic.desktop".text = ''
