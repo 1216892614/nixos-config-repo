@@ -101,10 +101,10 @@ in
   };
 
   systemd.timers.mihomo-fetch-config = {
-    description = "Periodically update mihomo config (every 2 hours)";
+    description = "Periodically update mihomo config (every hour)";
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnCalendar = "*-*-* 00/2:00:00";
+      OnCalendar = "*-*-* *:00:00";
       Persistent = true;
     };
   };

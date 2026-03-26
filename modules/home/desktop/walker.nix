@@ -12,7 +12,7 @@ in
       builtins.clipboard = {
         image_height = 300;
         max_entries = 50;
-        exec = "sh -c 'wl-copy && sleep 0.2 && wtype -M ctrl v -m ctrl'";
+        exec = "sh -c 'cliphist decode | wl-copy && sleep 0.3 && wtype -M ctrl v -m ctrl'";
       };
       providers = {
         # clipboard only when launched with Super+V (walker -m clipboard)

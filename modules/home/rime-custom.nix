@@ -11,7 +11,7 @@ let
     owner = "gaboolic";
     repo = "rime-shuangpin-fuzhuma";
     rev = "main";
-    hash = "sha256-39STMvHWcix3C11ZXUicEXg1wa8sj4KinVY3aMQHYE4=";
+    hash = "sha256-XE92YYrikT1TbfeXMCYiL9a3eo7mt/Dp3s6egiaE0R0=";
   };
 
   defaultCustom = pkgs.writeText "default.custom.yaml" ''
@@ -51,9 +51,22 @@ in
   home.activation.copyRimeConfig = config.lib.dag.entryAfter [ "writeBoundary" ] ''
     RIME_SRC="${rimeWithCustom}"
     RIME_DEST="${config.home.homeDirectory}/.local/share/fcitx5/rime"
+    RIME_STAMP="$RIME_DEST/.nix-source-hash"
+    FCITX_PROFILE="${config.home.homeDirectory}/.config/fcitx5/profile"
     $DRY_RUN_CMD mkdir -p "$RIME_DEST"
-    $DRY_RUN_CMD cp -rL --no-preserve=mode "$RIME_SRC"/* "$RIME_DEST"/ 2>/dev/null || true
-    $DRY_RUN_CMD chmod -R u+w "$RIME_DEST" 2>/dev/null || true
-    $DRY_RUN_CMD rm -rf "$RIME_DEST"/build 2>/dev/null || true
+
+    NEW_HASH="${rimeWithCustom}"
+    OLD_HASH="$(cat "$RIME_STAMP" 2>/dev/null || echo "")"
+    if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+      $DRY_RUN_CMD cp -rL --no-preserve=mode "$RIME_SRC"/* "$RIME_DEST"/ 2>/dev/null || true
+      $DRY_RUN_CMD chmod -R u+w "$RIME_DEST" 2>/dev/null || true
+      $DRY_RUN_CMD rm -rf "$RIME_DEST"/build 2>/dev/null || true
+      echo "$NEW_HASH" > "$RIME_STAMP"
+    fi
+
+    # Ensure rime is in fcitx5 profile (fcitx5 strips it when Rime fails to load)
+    if [ -f "$FCITX_PROFILE" ] && ! grep -q "Name=rime" "$FCITX_PROFILE" 2>/dev/null; then
+      $DRY_RUN_CMD rm -f "$FCITX_PROFILE"
+    fi
   '';
 }
