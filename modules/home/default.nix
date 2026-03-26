@@ -14,7 +14,7 @@ in
     ./desktop/walker.nix
     ./shell/fish.nix
     ./dev/git.nix
-    ./dev/zed.nix
+    ./dev/cursor.nix
     ./dev/languages.nix
     ./terminal.nix
     ./zellij.nix
@@ -41,6 +41,7 @@ in
     claude-code
     docker-buildx
     wl-clipboard
+    wtype       # simulate keypress for walker clipboard paste
     cliphist
     uv  # provides uvx for running Python tools (e.g. astrbot)
     wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
@@ -101,7 +102,7 @@ in
       PartOf = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart = "${pkgs.fcitx5}/bin/fcitx5";
+      ExecStart = "/run/current-system/sw/bin/fcitx5";
       Restart = "on-failure";
       RestartSec = "3";
       Environment = "QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx";

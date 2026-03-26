@@ -29,6 +29,8 @@ in
       };
     };
 
+    # osu! 需要 X11 socket 走 XWayland 以获得更好的游戏性能（NVIDIA Wayland 合成开销大）
+    overrides."sh.ppy.osu".Context.sockets = [ "wayland" "x11" "fallback-x11" ];
   };
 
   # overrides 由 flatpak-managed-install 根据 services.flatpak.overrides 写入

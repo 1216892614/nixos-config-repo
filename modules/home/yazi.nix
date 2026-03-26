@@ -27,6 +27,23 @@ in
         sort_dir_first = true;
         linemode = "size";
       };
+
+      opener = {
+        terminal = [
+          {
+            run = ''kitty -e zellij --cwd "%s"'';
+            orphan = true;
+            desc = "Open in Zellij (kitty)";
+            "for" = "linux";
+          }
+        ];
+      };
+
+      open = {
+        prepend_rules = [
+          { mime = "inode/directory"; use = "terminal"; }
+        ];
+      };
     };
 
     # Gruvbox Dark theme from https://github.com/poperigby/gruvbox-dark-yazi
@@ -50,6 +67,11 @@ in
             "plugin clipboard -- --action=copy"
           ];
           desc = "Yank and copy to system clipboard";
+        }
+        {
+          on = [ "<Enter>" ];
+          run = "open";
+          desc = "Open file or directory (folders open in Zellij)";
         }
       ];
     };
