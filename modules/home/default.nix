@@ -283,7 +283,7 @@ in
     [Desktop Entry]
     Name=QQ
     Name[zh_CN]=QQ
-    Exec=${pkgs.qq}/bin/qq %U
+    Exec=${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer %U
     Terminal=false
     Type=Application
     Icon=qq
