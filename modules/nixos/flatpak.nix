@@ -15,6 +15,7 @@ in
     packages = [
       "app.xmcl.voxelum"  # X Minecraft Launcher
       "sh.ppy.osu"
+      "org.blender.Blender"
     ];
 
     # 不在 activation 时执行，避免网络/仓库失败导致 nixos-rebuild 报错
