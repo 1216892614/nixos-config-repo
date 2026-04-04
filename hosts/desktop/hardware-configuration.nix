@@ -21,7 +21,6 @@
       options = [ "fmask=0022" "dmask=0022" ];
     };
 
-  swapDevices = [ ];
 
   # NVIDIA RTX 5080 (GB203 Blackwell)
   services.xserver.videoDrivers = [ "nvidia" ];
