@@ -143,6 +143,256 @@ in
   '';
   home.file.".local/bin/astrbot".executable = true;
 
+  home.file.".local/bin/omo-server".text = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+    port="''${1:?missing port}"
+    cwd="''${2:?missing cwd}"
+    cd "$cwd"
+    exec opencode serve --hostname 127.0.0.1 --port "$port"
+  '';
+  home.file.".local/bin/omo-server".executable = true;
+
+  home.file.".local/bin/omo-client".text = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    port="''${1:?missing port}"
+    cwd="''${2:?missing cwd}"
+    url="http://127.0.0.1:$port"
+    health="$url/global/health"
+
+    for _ in $(seq 1 150); do
+      if wget -qO- "$health" >/dev/null 2>&1; then
+        cd "$cwd"
+        exec opencode attach "$url" --dir "$cwd"
+      fi
+      sleep 0.2
+    done
+
+    echo "omo: timed out waiting for $health" >&2
+    exit 1
+  '';
+  home.file.".local/bin/omo-client".executable = true;
+
+  home.file.".local/bin/omo-supervisor".text = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    port="''${1:?missing port}"
+    cwd="''${2:?missing cwd}"
+    server_pid=""
+
+    cleanup() {
+      if [ -n "$server_pid" ] && kill -0 "$server_pid" >/dev/null 2>&1; then
+        kill "$server_pid" >/dev/null 2>&1 || true
+        wait "$server_pid" 2>/dev/null || true
+      fi
+      if [ -n "''${ZELLIJ:-}" ]; then
+        zellij action quit >/dev/null 2>&1 || true
+      fi
+    }
+
+    trap cleanup EXIT INT TERM
+
+    "${config.home.homeDirectory}/.local/bin/omo-server" "$port" "$cwd" &
+    server_pid=$!
+
+    "${config.home.homeDirectory}/.local/bin/omo-client" "$port" "$cwd"
+  '';
+  home.file.".local/bin/omo-supervisor".executable = true;
+
+  home.file.".local/bin/omo-launch".text = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [ "$#" -ne 0 ]; then
+      echo "usage: omo" >&2
+      exit 1
+    fi
+
+    for cmd in zellij mktemp ss awk grep; do
+      if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "omo: required command not found: $cmd" >&2
+        exit 127
+      fi
+    done
+
+    cwd="$PWD"
+    helper_dir="${config.home.homeDirectory}/.local/bin"
+    for helper in "$helper_dir/omo-server" "$helper_dir/omo-client" "$helper_dir/omo-supervisor"; do
+      if [ ! -x "$helper" ]; then
+        echo "omo: helper not found or not executable: $helper" >&2
+        exit 1
+      fi
+    done
+
+    layout_file="$(mktemp /tmp/omo-layout-XXXXXX.kdl)"
+    cleanup() {
+      rm -f "$layout_file"
+    }
+    trap cleanup EXIT
+
+    find_port() {
+      local candidate
+      for _ in $(seq 1 200); do
+        candidate="$(shuf -i 20000-65000 -n 1)"
+        if ! ss -ltnH 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)$candidate$"; then
+          printf '%s\n' "$candidate"
+          return 0
+        fi
+      done
+      return 1
+    }
+
+    port="$(find_port)" || {
+      echo "omo: failed to find a free TCP port" >&2
+      exit 1
+    }
+
+    OMO_CWD="$cwd" OMO_PORT="$port" OMO_HOME="${config.home.homeDirectory}" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
+import os
+
+cwd = os.environ["OMO_CWD"]
+port = os.environ["OMO_PORT"]
+home = os.environ["OMO_HOME"]
+
+client = f'{home}/.local/bin/omo-client'
+supervisor = f'{home}/.local/bin/omo-supervisor'
+
+def q(value: str) -> str:
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+print("layout {")
+print("    default_tab_template {")
+print('        pane size=1 borderless=true {')
+print('            plugin location="zellij:tab-bar"')
+print("        }")
+print("        children")
+print('        pane size=1 borderless=true {')
+print('            plugin location="zellij:status-bar"')
+print("        }")
+print("    }")
+print(f'    tab name="omo" focus=true cwd={q(cwd)} {{')
+print('        pane split_direction="horizontal" {')
+print('            pane split_direction="vertical" {')
+print(f'                pane command={q(client)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print(f'                pane command={q(client)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print("            }")
+print('            pane split_direction="vertical" {')
+print(f'                pane command={q(client)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print(f'                pane command={q(client)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print("            }")
+print("        }")
+print("    }")
+print(f'    tab name="fish" cwd={q(cwd)} {{')
+print('        pane split_direction="horizontal" {')
+print('            pane split_direction="vertical" {')
+print(f'                pane command={q(supervisor)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print(f'                pane command={q(client)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print("            }")
+print('            pane split_direction="vertical" {')
+print(f'                pane command={q(client)} {{')
+print(f'                    args {q(port)} {q(cwd)}')
+print("                }")
+print("                pane")
+print("            }")
+print("        }")
+print("    }")
+print("}")
+PY
+
+    command zellij --layout "$layout_file"
+  '';
+  home.file.".local/bin/omo-launch".executable = true;
+
+  home.file.".local/bin/lo-launch".text = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [ "$#" -ne 1 ]; then
+      echo "usage: lo <cols>x<rows>" >&2
+      exit 1
+    fi
+
+    spec="$1"
+    if [[ ! "$spec" =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
+      echo "lo: invalid layout spec: $spec" >&2
+      echo "usage: lo <cols>x<rows>" >&2
+      exit 1
+    fi
+
+    for cmd in zellij mktemp; do
+      if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "lo: required command not found: $cmd" >&2
+        exit 127
+      fi
+    done
+
+    cols="''${BASH_REMATCH[1]}"
+    rows="''${BASH_REMATCH[2]}"
+    cwd="$PWD"
+    layout_file="$(mktemp /tmp/lo-layout-XXXXXX.kdl)"
+    cleanup() {
+      rm -f "$layout_file"
+    }
+    trap cleanup EXIT
+
+    LO_CWD="$cwd" LO_COLS="$cols" LO_ROWS="$rows" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
+import os
+
+cwd = os.environ["LO_CWD"]
+cols = int(os.environ["LO_COLS"])
+rows = int(os.environ["LO_ROWS"])
+
+def q(value: str) -> str:
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+def emit_grid(indent: str, cols: int, rows: int) -> None:
+    print(f'{indent}pane split_direction="horizontal" {{')
+    for _ in range(cols):
+        print(f'{indent}    pane split_direction="vertical" {{')
+        for _ in range(rows):
+            print(f"{indent}        pane")
+        print(f'{indent}    }}')
+    print(f'{indent}}}')
+
+print("layout {")
+print("    default_tab_template {")
+print('        pane size=1 borderless=true {')
+print('            plugin location="zellij:tab-bar"')
+print("        }")
+print("        children")
+print('        pane size=1 borderless=true {')
+print('            plugin location="zellij:status-bar"')
+print("        }")
+print("    }")
+print(f'    tab focus=true cwd={q(cwd)} {{')
+emit_grid("        ", cols, rows)
+print("    }")
+print("}")
+PY
+
+    if [ -n "''${ZELLIJ:-}" ]; then
+      command zellij action new-tab --layout "$layout_file" --cwd "$cwd"
+    else
+      command zellij --layout "$layout_file"
+    fi
+  '';
+  home.file.".local/bin/lo-launch".executable = true;
+
   # CC Switch: wrapper so launch from Walker gets WAYLAND_DISPLAY etc.; fallbacks if session env is stale
   home.file.".local/bin/cc-switch-wrapper".text = ''
     #!/bin/sh
