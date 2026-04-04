@@ -1,5 +1,65 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  mkLeaf = { pane = { }; };
+
+  mkSplit = direction: children:
+    if builtins.length children == 1 then
+      builtins.head children
+    else
+      {
+        pane = {
+          split_direction = direction;
+          _children = children;
+        };
+      };
+
+  mkGrid = cols: rows:
+    mkSplit "horizontal" (
+      builtins.genList
+        (_: mkSplit "vertical" (builtins.genList (_: mkLeaf) rows))
+        cols
+    );
+
+  mkLayout = cols: rows: {
+    layout = {
+      _children = [
+        {
+          default_tab_template = {
+            _children = [
+              {
+                pane = {
+                  size = 1;
+                  borderless = true;
+                  plugin = {
+                    location = "zellij:tab-bar";
+                  };
+                };
+              }
+              { children = { }; }
+              {
+                pane = {
+                  size = 1;
+                  borderless = true;
+                  plugin = {
+                    location = "zellij:status-bar";
+                  };
+                };
+              }
+            ];
+          };
+        }
+        {
+          tab = {
+            _props.focus = true;
+            _children = [ (mkGrid cols rows) ];
+          };
+        }
+      ];
+    };
+  };
+
+in
 {
   programs.zellij = {
     enable = true;
@@ -190,5 +250,12 @@
           }
       }
     '';
+
+    layouts = {
+      "lo-1x2" = mkLayout 1 2;
+      "lo-2x1" = mkLayout 2 1;
+      "lo-2x2" = mkLayout 2 2;
+      "lo-3x4" = mkLayout 3 4;
+    };
   };
 }

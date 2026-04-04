@@ -36,6 +36,61 @@ in
       grep = "rg";
     };
 
+    functions.lo = ''
+      if test (count $argv) -gt 1
+        echo "usage: lo [<cols>x<rows>]" >&2
+        return 1
+      end
+
+      if not command -sq zellij
+        echo "lo: zellij not found in PATH" >&2
+        return 127
+      end
+
+      set -l spec 2x2
+      if test (count $argv) -gt 0
+        set spec $argv[1]
+      end
+
+      if not string match -rq '^[1-9][0-9]*x[1-9][0-9]*$' -- "$spec"
+        echo "lo: invalid layout spec: $spec" >&2
+        echo "usage: lo [<cols>x<rows>]" >&2
+        return 1
+      end
+
+      set -l launcher "$HOME/.local/bin/lo-launch"
+      if not test -x "$launcher"
+        echo "lo: helper not found or not executable: $launcher" >&2
+        return 1
+      end
+
+      command "$launcher" "$spec"
+      return $status
+    '';
+
+    functions.omo = ''
+      if test (count $argv) -ne 0
+        echo "usage: omo" >&2
+        return 1
+      end
+
+      for cmd in zellij opencode
+        if not command -sq $cmd
+          echo "omo: required command not found: $cmd" >&2
+          return 127
+        end
+      end
+
+      set -l launcher "$HOME/.local/bin/omo-launch"
+      if not test -x "$launcher"
+        echo "omo: helper not found or not executable: $launcher" >&2
+        return 1
+      end
+
+      command "$launcher"
+      return $status
+    '';
+
   };
 
   home.packages = with pkgs; [
