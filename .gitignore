@@ -7,4 +7,4 @@ env.nix
 *.tmp.yaml
 
 .vscode
-.cursor
+.cursor__pycache__/

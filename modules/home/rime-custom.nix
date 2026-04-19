@@ -30,6 +30,7 @@ let
 
   patchSpellerScript = ./patch-speller.py;
   patchMoqiScript = ./patch-moqi.py;
+  patchWanFlypyScript = ./patch-wan-flypy.py;
   punctuatorYaml = ./rime-punctuator.yaml;
 
   rimeWithCustom = pkgs.runCommand "fcitx5-rime-with-custom" {
@@ -45,6 +46,7 @@ let
 
     python3 ${patchSpellerScript} ${fuzzyQuanpinYaml} $out/moqi_speller.yaml
     python3 ${patchMoqiScript} $out/moqi.yaml ${punctuatorYaml}
+    python3 ${patchWanFlypyScript} $out/moqi_wan_flypy.schema.yaml
   '';
 in
 {
@@ -58,8 +60,13 @@ in
     NEW_HASH="${rimeWithCustom}"
     OLD_HASH="$(cat "$RIME_STAMP" 2>/dev/null || echo "")"
     if [ "$NEW_HASH" != "$OLD_HASH" ]; then
-      $DRY_RUN_CMD cp -rL --no-preserve=mode "$RIME_SRC"/* "$RIME_DEST"/ 2>/dev/null || true
-      $DRY_RUN_CMD chmod -R u+w "$RIME_DEST" 2>/dev/null || true
+      # Preserve user data: *.userdb/ (word frequency), user.yaml, user.custom.dict*
+      $DRY_RUN_CMD ${pkgs.rsync}/bin/rsync -rL --chmod=u+w \
+        --exclude='*.userdb' --exclude='*.userdb/**' \
+        --exclude='user.yaml' \
+        --exclude='user.custom.dict*' \
+        --exclude='.nix-source-hash' \
+        "$RIME_SRC"/ "$RIME_DEST"/
       $DRY_RUN_CMD rm -rf "$RIME_DEST"/build 2>/dev/null || true
       echo "$NEW_HASH" > "$RIME_STAMP"
     fi

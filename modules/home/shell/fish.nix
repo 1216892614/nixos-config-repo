@@ -68,6 +68,56 @@ in
       return $status
     '';
 
+    functions.killz = ''
+      if test (count $argv) -ne 0
+        echo "usage: killz" >&2
+        return 1
+      end
+
+      set -l found 0
+
+      # --- opencode (server + client) ---
+      set -l oc_pids (pgrep -f 'opencode (serve|attach)')
+      if test -n "$oc_pids"
+        set found 1
+        echo "killz: killing opencode process(es)..."
+        for pid in $oc_pids
+          kill -- -$pid 2>/dev/null; or kill $pid 2>/dev/null
+        end
+        sleep 0.3
+        set -l oc_remaining (pgrep -f 'opencode (serve|attach)')
+        if test -n "$oc_remaining"
+          for pid in $oc_remaining
+            kill -9 -- -$pid 2>/dev/null; or kill -9 $pid 2>/dev/null
+          end
+        end
+      end
+
+      # --- zellij ---
+      set -l pids (pgrep -x zellij)
+      if test -n "$pids"
+        set found 1
+        echo "killz: killing zellij process tree(s)..."
+        for pid in $pids
+          kill -- -$pid 2>/dev/null; or kill $pid 2>/dev/null
+        end
+        sleep 0.3
+        set -l remaining (pgrep -x zellij)
+        if test -n "$remaining"
+          for pid in $remaining
+            kill -9 -- -$pid 2>/dev/null; or kill -9 $pid 2>/dev/null
+          end
+        end
+      end
+
+      if test $found -eq 0
+        echo "killz: no zellij or opencode processes found"
+        return 0
+      end
+
+      echo "killz: done"
+    '';
+
     functions.omo = ''
       if test (count $argv) -ne 0
         echo "usage: omo" >&2
