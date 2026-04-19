@@ -565,9 +565,9 @@ PY
     '';
   };
 
-  home.file.".config/noctalia/wallpaper.png".source = ../../wallpaper.png;
+  home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpaper.jpeg;
   home.file.".cache/noctalia/wallpapers.json".text = builtins.toJSON {
-    defaultWallpaper = "${config.home.homeDirectory}/.config/noctalia/wallpaper.png";
+    defaultWallpaper = "${config.home.homeDirectory}/.config/noctalia/wallpaper.jpeg";
   };
 
   programs.home-manager.enable = true;

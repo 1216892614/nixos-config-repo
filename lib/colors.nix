@@ -1,54 +1,54 @@
-# Gruvbox Dark palette — https://github.com/morhetz/gruvbox
+# Forest Night palette — Deep greens, blues, and earth tones
 {
-  bg         = "#282828";
-  fg         = "#ebdbb2";
-  line       = "#1d2021";
-  selection  = "#458588";
-  accent     = "#fe8019";
-  comment    = "#928374";
-  gutter     = "#7c6f64";
+  bg         = "#1e2326";
+  fg         = "#d3c6aa";
+  line       = "#181b1e";
+  selection  = "#3a515d";
+  accent     = "#7fbbb3";
+  comment    = "#7a8478";
+  gutter     = "#5a6a5f";
 
-  keyword    = "#fb4934";
-  func       = "#b8bb26";
-  string     = "#b8bb26";
-  constant   = "#d3869b";
-  tag        = "#83a598";
-  entity     = "#83a598";
-  regexp     = "#8ec07c";
-  markup     = "#fb4934";
-  operator   = "#8ec07c";
-  error      = "#fb4934";
+  keyword    = "#e67e80";
+  func       = "#a7c080";
+  string     = "#dbbc7f";
+  constant   = "#d699b6";
+  tag        = "#83c092";
+  entity     = "#7fbbb3";
+  regexp     = "#83c092";
+  markup     = "#e67e80";
+  operator   = "#7fbbb3";
+  error      = "#e67e80";
 
   terminal = {
-    bg            = "#282828";
-    fg            = "#ebdbb2";
-    cursor        = "#fe8019";
-    black         = "#282828";
-    red           = "#cc241d";
-    green         = "#98971a";
-    yellow        = "#d79921";
-    blue          = "#458588";
-    magenta       = "#b16286";
-    cyan          = "#689d6a";
-    white         = "#a89984";
-    brightBlack   = "#928374";
-    brightRed     = "#fb4934";
-    brightGreen   = "#b8bb26";
-    brightYellow  = "#fabd2f";
-    brightBlue    = "#83a598";
-    brightMagenta = "#d3869b";
-    brightCyan    = "#8ec07c";
-    brightWhite   = "#ebdbb2";
+    bg            = "#1e2326";
+    fg            = "#d3c6aa";
+    cursor        = "#7fbbb3";
+    black         = "#1e2326";
+    red           = "#e67e80";
+    green         = "#a7c080";
+    yellow        = "#dbbc7f";
+    blue          = "#7fbbb3";
+    magenta       = "#d699b6";
+    cyan          = "#83c092";
+    white         = "#d3c6aa";
+    brightBlack   = "#7a8478";
+    brightRed     = "#f85552";
+    brightGreen   = "#8da101";
+    brightYellow  = "#dfa000";
+    brightBlue    = "#3a94c5";
+    brightMagenta = "#df69ba";
+    brightCyan    = "#35a77c";
+    brightWhite   = "#dfddc8";
   };
 
-  added    = "#b8bb26";
-  modified = "#83a598";
-  removed  = "#fb4934";
+  added    = "#a7c080";
+  modified = "#7fbbb3";
+  removed  = "#e67e80";
 
   surface = {
-    sunk = "#1d2021";
-    base = "#282828";
-    lift = "#3c3836";
-    over = "#504945";
+    sunk = "#181b1e";
+    base = "#1e2326";
+    lift = "#2e383c";
+    over = "#3f4a4e";
   };
 }
