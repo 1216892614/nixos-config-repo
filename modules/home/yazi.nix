@@ -1,18 +1,101 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  gruvbox-dark-yazi = pkgs.fetchFromGitHub {
-    owner = "poperigby";
-    repo = "gruvbox-dark-yazi";
-    rev = "a251bd2d88feb61dfe6d4c4583c3b0a969c41bdb";
-    hash = "sha256-4XRm23i9XpgAO+08iPM0xGppnIfuP+xzxzO6UMfvy28=";
-  };
-  # theme.toml with syntect_theme uncommented, pointing to deployed tmTheme
-  gruvbox-theme-toml = builtins.replaceStrings [
-    "# syntect_theme = \"~/.config/yazi/Gruvbox-Dark.tmTheme\""
-  ] [
-    "syntect_theme = \"~/.config/yazi/Gruvbox-Dark.tmTheme\""
-  ] (builtins.readFile "${gruvbox-dark-yazi}/theme.toml");
+  colors = import ../../lib/colors.nix;
+  
+  # Forest Night theme for Yazi
+  forest-night-theme = ''
+    [manager]
+    cwd = { fg = "${colors.accent}" }
+    
+    hovered         = { fg = "${colors.bg}", bg = "${colors.accent}" }
+    preview_hovered = { underline = true }
+    
+    find_keyword  = { fg = "${colors.string}", italic = true }
+    find_position = { fg = "${colors.comment}", bg = "reset", italic = true }
+    
+    marker_selected = { fg = "${colors.func}", bg = "${colors.func}" }
+    marker_copied   = { fg = "${colors.string}", bg = "${colors.string}" }
+    marker_cut      = { fg = "${colors.removed}", bg = "${colors.removed}" }
+    
+    tab_active   = { fg = "${colors.bg}", bg = "${colors.accent}" }
+    tab_inactive = { fg = "${colors.fg}", bg = "${colors.surface.lift}" }
+    tab_width    = 1
+    
+    border_symbol = "│"
+    border_style  = { fg = "${colors.surface.over}" }
+    
+    [status]
+    separator_open  = ""
+    separator_close = ""
+    separator_style = { fg = "${colors.surface.over}", bg = "${colors.surface.over}" }
+    
+    mode_normal = { fg = "${colors.bg}", bg = "${colors.accent}", bold = true }
+    mode_select = { fg = "${colors.bg}", bg = "${colors.func}", bold = true }
+    mode_unset  = { fg = "${colors.bg}", bg = "${colors.comment}", bold = true }
+    
+    progress_label  = { fg = "${colors.fg}", bold = true }
+    progress_normal = { fg = "${colors.accent}", bg = "${colors.surface.lift}" }
+    progress_error  = { fg = "${colors.error}", bg = "${colors.surface.lift}" }
+    
+    permissions_t = { fg = "${colors.func}" }
+    permissions_r = { fg = "${colors.string}" }
+    permissions_w = { fg = "${colors.removed}" }
+    permissions_x = { fg = "${colors.accent}" }
+    permissions_s = { fg = "${colors.comment}" }
+    
+    [select]
+    border   = { fg = "${colors.accent}" }
+    active   = { fg = "${colors.accent}" }
+    inactive = { fg = "${colors.fg}" }
+    
+    [input]
+    border   = { fg = "${colors.accent}" }
+    title    = {}
+    value    = {}
+    selected = { reversed = true }
+    
+    [completion]
+    border   = { fg = "${colors.accent}" }
+    active   = { bg = "${colors.surface.lift}" }
+    inactive = {}
+    
+    [tasks]
+    border  = { fg = "${colors.accent}" }
+    title   = {}
+    hovered = { underline = true }
+    
+    [which]
+    mask            = { bg = "${colors.surface.sunk}" }
+    cand            = { fg = "${colors.accent}" }
+    rest            = { fg = "${colors.comment}" }
+    desc            = { fg = "${colors.fg}" }
+    separator       = "  "
+    separator_style = { fg = "${colors.comment}" }
+    
+    [help]
+    on      = { fg = "${colors.accent}" }
+    exec    = { fg = "${colors.func}" }
+    desc    = { fg = "${colors.fg}" }
+    hovered = { bg = "${colors.surface.lift}", bold = true }
+    footer  = { fg = "${colors.bg}", bg = "${colors.fg}" }
+    
+    [filetype]
+    rules = [
+      { mime = "image/*", fg = "${colors.accent}" },
+      { mime = "video/*", fg = "${colors.tag}" },
+      { mime = "audio/*", fg = "${colors.constant}" },
+      { mime = "application/zip", fg = "${colors.removed}" },
+      { mime = "application/gzip", fg = "${colors.removed}" },
+      { mime = "application/x-tar", fg = "${colors.removed}" },
+      { mime = "application/x-bzip", fg = "${colors.removed}" },
+      { mime = "application/x-bzip2", fg = "${colors.removed}" },
+      { mime = "application/x-7z-compressed", fg = "${colors.removed}" },
+      { mime = "application/x-rar", fg = "${colors.removed}" },
+      { name = "*", fg = "${colors.fg}" },
+      { name = "*/", fg = "${colors.accent}" }
+    ]
+  '';
 in
 {
   programs.yazi = {
@@ -46,8 +129,7 @@ in
       };
     };
 
-    # Gruvbox Dark theme from https://github.com/poperigby/gruvbox-dark-yazi
-    # (theme.toml and .tmTheme deployed below via xdg.configFile)
+    # Forest Night theme (custom)
 
     plugins = {
       clipboard = pkgs.fetchFromGitHub {
@@ -78,9 +160,6 @@ in
   };
 
   xdg.configFile."yazi/theme.toml" = {
-    text = gruvbox-theme-toml;
-  };
-  xdg.configFile."yazi/Gruvbox-Dark.tmTheme" = {
-    source = "${gruvbox-dark-yazi}/Gruvbox-Dark.tmTheme";
+    text = forest-night-theme;
   };
 }
