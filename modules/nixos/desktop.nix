@@ -84,9 +84,6 @@
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;
 
-  # 允许 Noctalia 通过 D-Bus 访问 NetworkManager
-  services.dbus.packages = [ pkgs.networkmanager ];
-
   boot = {
     kernelModules = [ "v4l2loopback" "uvcvideo" "uinput" ];
     extraModulePackages = with config.boot.kernelPackages; [
