@@ -393,9 +393,7 @@ PY
   '';
   home.file.".local/bin/lo-launch".executable = true;
 
-   # CC Switch: wrapper so launch from Walker gets WAYLAND_DISPLAY etc.; fallbacks if session env is stale
-  # NOTE: IM/GDK env overrides are now baked into the cc-switch overlay (symlinkJoin + makeWrapper),
-  # so this wrapper only needs to ensure Wayland display is set for Walker launches.
+  # CC Switch: wrapper so launch from Walker gets WAYLAND_DISPLAY etc.; fallbacks if session env is stale
   home.file.".local/bin/cc-switch-wrapper".text = ''
     #!/bin/sh
     if command -v systemctl >/dev/null 2>&1; then
@@ -412,6 +410,12 @@ PY
     if [ -z "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
       export WAYLAND_DISPLAY=wayland-0
     fi
+    # 对 CC Switch 禁用复杂输入法，避免 fcitx5/Rime 与 WebKitGTK 在 Wayland/XWayland 下导致卡死
+    unset GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS
+    export GTK_IM_MODULE=gtk-im-context-simple
+    export XMODIFIERS=@im=none
+    # 在部分 Wayland WM（如 niri）下，强制走 X11 后端可以避免 AppImage + WebKitGTK 的输入焦点问题
+    export GDK_BACKEND=x11
     exec ${pkgs.cc-switch}/bin/cc-switch "$@"
   '';
   home.file.".local/bin/cc-switch-wrapper".executable = true;
@@ -529,7 +533,7 @@ PY
     [Desktop Entry]
     Name=QQ
     Name[zh_CN]=QQ
-    Exec=${pkgs.qq}/bin/qq --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer --ozone-platform-hint=auto --enable-wayland-ime=true --wayland-text-input-version=3 %U
+    Exec=${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer %U
     Terminal=false
     Type=Application
     Icon=qq
