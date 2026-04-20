@@ -11,7 +11,7 @@ let
     owner = "gaboolic";
     repo = "rime-shuangpin-fuzhuma";
     rev = "main";
-    hash = "sha256-BlznNJviPl3QthKYv8RdL2dTtepfgqCPtbs6kO2QIqA=";
+    hash = "sha256-XE92YYrikT1TbfeXMCYiL9a3eo7mt/Dp3s6egiaE0R0=";
   };
 
   defaultCustom = pkgs.writeText "default.custom.yaml" ''

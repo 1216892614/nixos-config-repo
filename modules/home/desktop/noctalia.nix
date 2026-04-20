@@ -69,22 +69,13 @@ in
 {
   programs.noctalia-shell = {
     enable = true;
+    systemd.enable = true;
 
     settings = {
       wallpaper = {
         enabled = true;
-        path = "/home/ep-o1/nixos-config-repo/wallpaper.jpeg";
         setWallpaperOnAllMonitors = true;
         fillMode = "cover";
-      };
-
-      lockScreen = {
-        enabled = true;
-        wallpaper = {
-          enabled = true;
-          path = "/home/ep-o1/nixos-config-repo/wallpaper.jpeg";
-          fillMode = "cover";
-        };
       };
 
       bar.widgets.right = [
@@ -98,8 +89,22 @@ in
       ];
     };
 
-    # plugins 配置已移除，让 Noctalia 自己管理 plugins.json
-    # 插件文件通过 home.file 部署（见下方）
+    plugins = {
+      sources = [
+        {
+          enabled = true;
+          name = "Official Noctalia Plugins";
+          url = "https://github.com/noctalia-dev/noctalia-plugins";
+        }
+      ];
+      states = {
+        "screen-recorder" = {
+          enabled = true;
+          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+        };
+      };
+      version = 2;
+    };
 
     # 顶栏录屏始终显示；录制时红色方块（见下方补丁插件）
     pluginSettings = {
