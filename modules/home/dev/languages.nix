@@ -51,4 +51,10 @@
     # So pkg-config finds .pc files for cargo build scripts (openssl-sys, wayland-sys, etc.)
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
   };
+
+  # Limit parallel linker jobs to prevent rust-lld from exhausting memory
+  home.file.".cargo/config.toml".text = ''
+    [build]
+    jobs = 4
+  '';
 }

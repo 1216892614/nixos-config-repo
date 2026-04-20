@@ -1,4 +1,4 @@
-# Rime 自定义配置
+# Rime 自定义配置 + fcitx5 Forest Night 主题
 # 与 rime-shuangpin-fuzhuma 合并后作为 fcitx5/rime 数据目录
 # 使用 activation 复制到可写目录，避免 store 只读导致 Rime 无法写入 build/user.yaml
 #
@@ -48,6 +48,27 @@ let
   '';
 in
 {
+  # ── fcitx5 Forest Night 主题 ──────────────────────────────────────
+  # 主题文件 → ~/.local/share/fcitx5/themes/ForestNight/theme.conf
+  xdg.dataFile."fcitx5/themes/ForestNight/theme.conf".source = ./fcitx5-theme-forest-night.conf;
+
+  # ClassicUI 配置：选用 Forest Night 主题 + 竖排候选 + 光标跟随
+  # PerScreenDPI 确保 HiDPI 下候选窗口大小正确
+  # ForceWaylandDPI=0 让 fcitx5 使用 Wayland 报告的 scale factor
+  xdg.configFile."fcitx5/conf/classicui.conf".text = ''
+    # 主题
+    Theme=ForestNight
+    # 竖排候选词（更不容易被遮挡，且视觉更紧凑）
+    Vertical Candidate List=True
+    # 跟随光标定位候选窗口
+    PerScreenDPI=True
+    # Wayland 下使用 compositor 报告的 DPI，避免候选窗口大小异常
+    ForceWaylandDPI=0
+    # 候选词按单行显示
+    WheelForPaging=True
+  '';
+
+  # ── Rime 数据目录 ────────────────────────────────────────────────
   home.activation.copyRimeConfig = config.lib.dag.entryAfter [ "writeBoundary" ] ''
     RIME_SRC="${rimeWithCustom}"
     RIME_DEST="${config.home.homeDirectory}/.local/share/fcitx5/rime"

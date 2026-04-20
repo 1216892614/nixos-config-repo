@@ -41,7 +41,7 @@ in
     enable = true;
     enableGitIntegration = true;
     options = {
-      syntax-theme = "gruvbox-dark";
+      syntax-theme = "Nord";
       line-numbers = true;
       side-by-side = true;
     };
