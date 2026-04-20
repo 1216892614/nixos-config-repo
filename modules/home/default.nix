@@ -33,14 +33,13 @@ in
 
   home.packages = with pkgs; [
     google-chrome
-    code-cursor
     gemini-cli
-    cc-switch
     codex
     opencode
     claude-code
     docker-buildx
     wl-clipboard
+    wl-clip-persist # 保持剪贴板内容在源应用失焦后不丢失（Wayland 剪贴板所有权模型）
     wtype       # simulate keypress for walker clipboard paste
     cliphist
     uv  # provides uvx for running Python tools (e.g. astrbot)
@@ -49,7 +48,7 @@ in
     qqmusic
   ];
 
-  # Claude Code / Codex / Gemini / OpenCode providers: managed by CC Switch (~/.cc-switch).
+  # Claude Code / Codex / Gemini / OpenCode providers: env managed by ~/.cc-switch or manual config.
 
   services.udiskie = {
     enable = true;
@@ -61,8 +60,8 @@ in
   gtk = {
     enable = true;
     theme = {
-      name = "gruvbox-dark";
-      package = pkgs.gruvbox-dark-gtk;
+      name = "Adwaita-dark";
+      package = pkgs.gnome-themes-extra;
     };
     cursorTheme = {
       name = "W11-CC-V2.2-Dark-Default-wayland";
@@ -131,6 +130,20 @@ in
     };
     Service = {
       ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # wl-clip-persist: 在源应用失焦/关闭后保持剪贴板内容，解决 Wayland 下 QQ/微信等读不到最新剪贴板的问题
+  systemd.user.services.wl-clip-persist = {
+    Unit = {
+      Description = "Keep Wayland clipboard alive after source app loses focus";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.wl-clip-persist}/bin/wl-clip-persist --clipboard both";
       Restart = "on-failure";
     };
     Install.WantedBy = [ "graphical-session.target" ];
@@ -393,45 +406,6 @@ PY
   '';
   home.file.".local/bin/lo-launch".executable = true;
 
-  # CC Switch: wrapper so launch from Walker gets WAYLAND_DISPLAY etc.; fallbacks if session env is stale
-  home.file.".local/bin/cc-switch-wrapper".text = ''
-    #!/bin/sh
-    if command -v systemctl >/dev/null 2>&1; then
-      for line in $(systemctl --user show-environment 2>/dev/null); do
-        case "$line" in *=*) export "$line" ;; esac
-      done 2>/dev/null || true
-    fi
-    # 若 systemd 用户环境里没有 Wayland，用常见回退（避免运行一段时间后从 Walker 启动失败）
-    : "''${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
-    export XDG_RUNTIME_DIR
-    if [ -z "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/wayland-1" ]; then
-      export WAYLAND_DISPLAY=wayland-1
-    fi
-    if [ -z "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
-      export WAYLAND_DISPLAY=wayland-0
-    fi
-    # 对 CC Switch 禁用复杂输入法，避免 fcitx5/Rime 与 WebKitGTK 在 Wayland/XWayland 下导致卡死
-    unset GTK_IM_MODULE QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS
-    export GTK_IM_MODULE=gtk-im-context-simple
-    export XMODIFIERS=@im=none
-    # 在部分 Wayland WM（如 niri）下，强制走 X11 后端可以避免 AppImage + WebKitGTK 的输入焦点问题
-    export GDK_BACKEND=x11
-    exec ${pkgs.cc-switch}/bin/cc-switch "$@"
-  '';
-  home.file.".local/bin/cc-switch-wrapper".executable = true;
-
-  # CC Switch: desktop entry for Walker
-  xdg.dataFile."applications/cc-switch.desktop".text = ''
-    [Desktop Entry]
-    Name=CC Switch
-    Comment=Manage Claude Code, Codex, Gemini CLI, OpenCode providers
-    Exec=${config.home.homeDirectory}/.local/bin/cc-switch-wrapper
-    Terminal=false
-    Type=Application
-    Categories=Settings;Utility;
-    Keywords=cc-switch;claude;codex;gemini;opencode;ai;
-  '';
-
   # Steam: wrapper with /bin/sh; load systemd user env so launch from Walker (Elephant) gets WAYLAND_DISPLAY etc.
   home.file.".local/bin/steam-wrapper".text = ''
     #!/bin/sh
@@ -509,31 +483,138 @@ PY
     Comment[zh_CN]=微信桌面版
   '';
 
-  # X Minecraft Launcher (Flatpak): desktop entry so Walker shows it; run "flatpak install -y flathub app.xmcl.voxelum" once if not installed.
-  xdg.dataFile."applications/app.xmcl.voxelum.desktop".text = ''
-    [Desktop Entry]
-    Name=X Minecraft Launcher
-    Comment=Minecraft launcher with modpack support (Fabric, Forge, Quilt)
-    Exec=${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --file-forwarding app.xmcl.voxelum @@u %U @@
-    Terminal=false
-    Type=Application
-    Icon=app.xmcl.voxelum
-    Categories=Game;
-    Keywords=minecraft;launcher;mod;
-    X-Flatpak=app.xmcl.voxelum
+  # ── AppImage 应用（rebuild 时自动解压安装，幂等） ──────────────────────
+  # 源文件在仓库 appimages/ 目录，解压到 ~/.local/opt/<name>/
+  # activation 脚本：比较 AppImage 的 sha256，变了才重新解压，没变跳过
+  home.activation.installAppImages = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    _install_ai() {
+      local name="''${1:-}"
+      local src="''${2:-}"
+      local dest="${config.home.homeDirectory}/.local/opt/$name"
+      if [ ! -f "$src" ]; then
+        echo "AppImage not found: $src, skipping $name"
+        return 0
+      fi
+      local hash_file="$dest/.appimage-sha256"
+      local current_hash=""
+      current_hash=$(sha256sum "$src" | cut -d' ' -f1)
+      if [ -f "$hash_file" ] && [ "$(cat "$hash_file")" = "$current_hash" ]; then
+        echo "AppImage $name: already up to date"
+        return 0
+      fi
+      echo "AppImage $name: installing..."
+      rm -rf "$dest"
+      mkdir -p "$dest"
+      local tmp=""
+      tmp=$(mktemp -d)
+      (cd "$tmp" && "$src" --appimage-extract) >/dev/null 2>&1
+      cp -a "$tmp/squashfs-root/." "$dest/"
+      rm -rf "$tmp"
+      echo "$current_hash" > "$hash_file"
+      echo "AppImage $name: installed"
+    }
+
+    REPO="${config.home.homeDirectory}/nixos-config-repo/appimages"
+    _install_ai "xmcl"      "$REPO/xmcl.AppImage"
+    _install_ai "cursor"    "$REPO/cursor.AppImage"
+    _install_ai "cc-switch" "$REPO/cc-switch.AppImage"
+    _install_ai "osu"       "$REPO/osu.AppImage"
   '';
+
+  # Java wrapper for Minecraft: 注入 LD_LIBRARY_PATH 让 GLFW 能 dlopen 系统库，
+  # 并强制 X11 绕过 niri Wayland 兼容性问题
+  home.file.".local/bin/java-mc".text = ''
+    #!/usr/bin/env bash
+    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    unset WAYLAND_DISPLAY
+    export DISPLAY="''${DISPLAY:-:0}"
+    exec /home/ep-o1/.minecraftx/jre/java-runtime-delta/bin/java.real "$@"
+  '';
+  home.file.".local/bin/java-mc".executable = true;
+
+  # X Minecraft Launcher — bin: xmcl (Electron, root level)
   home.file.".local/bin/xmcl".text = ''
     #!/usr/bin/env bash
-    exec ${pkgs.flatpak}/bin/flatpak run --branch=stable --arch=x86_64 --file-forwarding app.xmcl.voxelum "$@"
+    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    exec "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" --no-sandbox "$@"
   '';
   home.file.".local/bin/xmcl".executable = true;
+  xdg.dataFile."applications/xmcl.desktop".text = ''
+    [Desktop Entry]
+    Name=X Minecraft Launcher
+    Comment=Minecraft launcher with modpack support
+    Exec=${config.home.homeDirectory}/.local/bin/xmcl %U
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/xmcl/xmcl.png
+    Categories=Game;
+    Keywords=minecraft;launcher;mod;
+  '';
+
+  # Cursor — bin: usr/share/cursor/cursor (Electron)
+  home.file.".local/bin/cursor".text = ''
+    #!/usr/bin/env bash
+    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    exec "${config.home.homeDirectory}/.local/opt/cursor/usr/share/cursor/cursor" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
+  '';
+  home.file.".local/bin/cursor".executable = true;
+  xdg.dataFile."applications/cursor.desktop".text = ''
+    [Desktop Entry]
+    Name=Cursor
+    Comment=AI Code Editor
+    Exec=${config.home.homeDirectory}/.local/bin/cursor --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime %F
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/cursor/co.anysphere.cursor.png
+    Categories=Development;IDE;
+    Keywords=cursor;code;editor;ai;
+    MimeType=text/plain;
+  '';
+
+  # CC Switch — bin: usr/bin/cc-switch (Electron)
+  home.file.".local/bin/cc-switch".text = ''
+    #!/usr/bin/env bash
+    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    exec "${config.home.homeDirectory}/.local/opt/cc-switch/usr/bin/cc-switch" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
+  '';
+  home.file.".local/bin/cc-switch".executable = true;
+  xdg.dataFile."applications/cc-switch.desktop".text = ''
+    [Desktop Entry]
+    Name=CC Switch
+    Comment=AI provider switcher for Claude Code, Codex, Gemini CLI, OpenCode
+    Exec=${config.home.homeDirectory}/.local/bin/cc-switch %U
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/cc-switch/cc-switch.png
+    Categories=Development;Utility;
+    Keywords=cc-switch;claude;codex;gemini;opencode;ai;
+    MimeType=x-scheme-handler/ccswitch;
+  '';
+
+  # osu! — bin: usr/bin/osu! (dotnet)
+  home.file.".local/bin/osu".text = ''
+    #!/usr/bin/env bash
+    exec "${config.home.homeDirectory}/.local/opt/osu/usr/bin/osu!" "$@"
+  '';
+  home.file.".local/bin/osu".executable = true;
+  xdg.dataFile."applications/osu.desktop".text = ''
+    [Desktop Entry]
+    Name=osu!
+    Comment=Rhythm is just a click away
+    Exec=${config.home.homeDirectory}/.local/bin/osu %U
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/osu/osu.png
+    Categories=Game;
+    Keywords=osu;rhythm;game;
+  '';
 
   # QQ (nixpkgs): desktop entry so Walker shows it; absolute Exec path.
   xdg.dataFile."applications/qq.desktop".text = ''
     [Desktop Entry]
     Name=QQ
     Name[zh_CN]=QQ
-    Exec=${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer %U
+    Exec=${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer --ozone-platform=wayland --enable-wayland-ime %U
     Terminal=false
     Type=Application
     Icon=qq
@@ -569,9 +650,9 @@ PY
     '';
   };
 
-  home.file.".config/noctalia/wallpaper.png".source = ../../wallpaper.png;
+  home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpaper.jpeg;
   home.file.".cache/noctalia/wallpapers.json".text = builtins.toJSON {
-    defaultWallpaper = "${config.home.homeDirectory}/.config/noctalia/wallpaper.png";
+    defaultWallpaper = "${config.home.homeDirectory}/.config/noctalia/wallpaper.jpeg";
   };
 
   programs.home-manager.enable = true;

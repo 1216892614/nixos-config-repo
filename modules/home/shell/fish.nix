@@ -7,8 +7,8 @@ in
   programs.fish = {
     enable = true;
 
-    # Ensure PATH includes these dirs: HM profile (codex, opencode, cc-switch, etc.) and common tool dirs
-    # Claude Code / Codex / Gemini API: use CC Switch to manage providers and env (no Nix-set ANTHROPIC_* here).
+    # Ensure PATH includes these dirs: HM profile (codex, opencode, etc.) and common tool dirs
+    # Claude Code / Codex / Gemini API: providers managed via env or manual config (no Nix-set ANTHROPIC_* here).
     # OpenJDK 21: JAVA_HOME for launchers (e.g. X Minecraft Launcher) and Java tools
     shellInit = ''
       fish_add_path -g ${config.home.profileDirectory}/bin $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
@@ -169,7 +169,7 @@ in
 
   programs.bat = {
     enable = true;
-    config.theme = "gruvbox-dark";
+    config.theme = "Nord";
   };
 
   programs.eza = {
@@ -194,7 +194,7 @@ in
   programs.btop = {
     enable = true;
     settings = {
-      color_theme = "gruvbox_dark";
+      color_theme = "nord";
       theme_background = false;
     };
   };

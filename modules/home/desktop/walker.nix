@@ -23,7 +23,7 @@ in
     };
 
     themes = {
-      ayu-dark = {
+      forest-night = {
         style = ''
           * {
             font-family: "Sarasa UI SC", sans-serif;

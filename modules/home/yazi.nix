@@ -1,18 +1,7 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  gruvbox-dark-yazi = pkgs.fetchFromGitHub {
-    owner = "poperigby";
-    repo = "gruvbox-dark-yazi";
-    rev = "a251bd2d88feb61dfe6d4c4583c3b0a969c41bdb";
-    hash = "sha256-4XRm23i9XpgAO+08iPM0xGppnIfuP+xzxzO6UMfvy28=";
-  };
-  # theme.toml with syntect_theme uncommented, pointing to deployed tmTheme
-  gruvbox-theme-toml = builtins.replaceStrings [
-    "# syntect_theme = \"~/.config/yazi/Gruvbox-Dark.tmTheme\""
-  ] [
-    "syntect_theme = \"~/.config/yazi/Gruvbox-Dark.tmTheme\""
-  ] (builtins.readFile "${gruvbox-dark-yazi}/theme.toml");
+  colors = import ../../lib/colors.nix;
 in
 {
   programs.yazi = {
@@ -46,8 +35,7 @@ in
       };
     };
 
-    # Gruvbox Dark theme from https://github.com/poperigby/gruvbox-dark-yazi
-    # (theme.toml and .tmTheme deployed below via xdg.configFile)
+    # Forest Night theme — colors derived from lib/colors.nix
 
     plugins = {
       clipboard = pkgs.fetchFromGitHub {
@@ -77,10 +65,91 @@ in
     };
   };
 
-  xdg.configFile."yazi/theme.toml" = {
-    text = gruvbox-theme-toml;
-  };
-  xdg.configFile."yazi/Gruvbox-Dark.tmTheme" = {
-    source = "${gruvbox-dark-yazi}/Gruvbox-Dark.tmTheme";
-  };
+  xdg.configFile."yazi/theme.toml".text = ''
+    # Forest Night — generated from lib/colors.nix
+    [manager]
+    cwd = { fg = "${colors.accent}" }
+
+    hovered = { fg = "${colors.bg}", bg = "${colors.accent}" }
+    preview_hovered = { underline = true }
+
+    find_keyword = { fg = "${colors.terminal.yellow}", italic = true }
+    find_position = { fg = "${colors.terminal.magenta}", bg = "reset", italic = true }
+
+    marker_selected = { fg = "${colors.accent}", bg = "${colors.accent}" }
+    marker_copied   = { fg = "${colors.terminal.green}", bg = "${colors.terminal.green}" }
+    marker_cut      = { fg = "${colors.terminal.red}", bg = "${colors.terminal.red}" }
+
+    tab_active   = { fg = "${colors.bg}", bg = "${colors.accent}" }
+    tab_inactive = { fg = "${colors.fg}", bg = "${colors.surface.lift}" }
+    tab_width    = 1
+
+    border_symbol = "│"
+    border_style  = { fg = "${colors.comment}" }
+
+    [status]
+    separator_open  = ""
+    separator_close = ""
+    separator_style = { fg = "${colors.surface.lift}", bg = "${colors.surface.lift}" }
+
+    mode_normal = { fg = "${colors.bg}", bg = "${colors.accent}", bold = true }
+    mode_select = { fg = "${colors.bg}", bg = "${colors.terminal.yellow}", bold = true }
+    mode_unset  = { fg = "${colors.bg}", bg = "${colors.terminal.red}", bold = true }
+
+    progress_label  = { fg = "${colors.fg}", bold = true }
+    progress_normal = { fg = "${colors.accent}", bg = "${colors.surface.lift}" }
+    progress_error  = { fg = "${colors.terminal.red}", bg = "${colors.surface.lift}" }
+
+    permissions_t = { fg = "${colors.accent}" }
+    permissions_r = { fg = "${colors.terminal.yellow}" }
+    permissions_w = { fg = "${colors.terminal.red}" }
+    permissions_x = { fg = "${colors.terminal.green}" }
+    permissions_s = { fg = "${colors.comment}" }
+
+    [input]
+    border   = { fg = "${colors.accent}" }
+    title    = {}
+    value    = {}
+    selected = { reversed = true }
+
+    [select]
+    border   = { fg = "${colors.accent}" }
+    active   = { fg = "${colors.terminal.magenta}" }
+    inactive = {}
+
+    [tasks]
+    border  = { fg = "${colors.accent}" }
+    title   = {}
+    hovered = { underline = true }
+
+    [which]
+    mask            = { bg = "${colors.surface.lift}" }
+    cand            = { fg = "${colors.terminal.cyan}" }
+    rest            = { fg = "${colors.comment}" }
+    desc            = { fg = "${colors.terminal.magenta}" }
+    separator       = "  "
+    separator_style = { fg = "${colors.comment}" }
+
+    [help]
+    on      = { fg = "${colors.terminal.magenta}" }
+    exec    = { fg = "${colors.terminal.cyan}" }
+    desc    = { fg = "${colors.comment}" }
+    hovered = { bg = "${colors.surface.lift}", bold = true }
+    footer  = { fg = "${colors.fg}", bg = "${colors.bg}" }
+
+    [filetype]
+    rules = [
+      { mime = "image/*", fg = "${colors.terminal.cyan}" },
+      { mime = "video/*", fg = "${colors.terminal.yellow}" },
+      { mime = "audio/*", fg = "${colors.terminal.yellow}" },
+      { mime = "application/zip",  fg = "${colors.terminal.magenta}" },
+      { mime = "application/gzip", fg = "${colors.terminal.magenta}" },
+      { mime = "application/x-tar", fg = "${colors.terminal.magenta}" },
+      { mime = "application/x-bzip2", fg = "${colors.terminal.magenta}" },
+      { mime = "application/x-7z-compressed", fg = "${colors.terminal.magenta}" },
+      { mime = "application/x-rar", fg = "${colors.terminal.magenta}" },
+      { name = "*", fg = "${colors.fg}" },
+      { name = "*/", fg = "${colors.accent}" },
+    ]
+  '';
 }

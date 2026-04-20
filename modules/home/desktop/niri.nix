@@ -31,11 +31,11 @@ in
       "Super+Space".action.spawn = [ "fcitx5-remote" "-t" ];
       "Super+G".action.spawn = [
         "sh" "-c"
-        ''f=$(mktemp --suffix=.png); grim -g "$(slurp)" "$f"; wl-copy < "$f"; satty --filename "$f"''
+        ''f=$(mktemp --suffix=.png); grim "$f"; satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
       ];
       "Super+Shift+G".action.spawn = [
         "sh" "-c"
-        ''f=$(mktemp --suffix=.png); grim -g "$(slurp)" "$f"; wl-copy < "$f"; satty --filename "$f"''
+        ''f=$(mktemp --suffix=.png); grim -g "$(slurp)" "$f"; satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
       ];
       "Print".action.spawn = [
         "sh" "-c"
@@ -126,7 +126,7 @@ in
     };
 
     window-rules = [
-      # 非活动窗口半透明，仅平铺窗口（浮动窗口不压暗，避免影响视频等）
+      # 非活动窗口半透明
       {
         matches = [
           { is-active = false; }

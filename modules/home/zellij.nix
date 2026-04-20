@@ -59,6 +59,7 @@ let
     };
   };
 
+  colors = import ../../lib/colors.nix;
 in
 {
   programs.zellij = {
@@ -66,7 +67,7 @@ in
     enableFishIntegration = false;
 
     settings = {
-      theme = "gruvbox-dark";
+      theme = "forest-night";
       default_shell = "fish";
       simplified_ui = true;
       pane_frames = false;
@@ -74,6 +75,21 @@ in
     };
 
     extraConfig = ''
+      themes {
+          forest-night {
+              fg "${colors.fg}"
+              bg "${colors.surface.lift}"
+              black "${colors.terminal.black}"
+              red "${colors.terminal.red}"
+              green "${colors.terminal.green}"
+              yellow "${colors.terminal.yellow}"
+              blue "${colors.terminal.blue}"
+              magenta "${colors.terminal.magenta}"
+              cyan "${colors.terminal.cyan}"
+              white "${colors.terminal.brightWhite}"
+              orange "${colors.accent}"
+          }
+      }
       keybinds clear-defaults=true {
           normal {
           }

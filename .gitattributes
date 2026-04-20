@@ -1,0 +1,2 @@
+# AppImage 二进制：不做 diff，不做 merge，只按文件名跟踪
+appimages/*.AppImage binary -diff -merge
