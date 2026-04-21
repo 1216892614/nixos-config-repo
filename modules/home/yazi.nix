@@ -20,7 +20,7 @@ in
       opener = {
         terminal = [
           {
-            run = ''kitty -e zellij --cwd "%s"'';
+            run = ''kitty --directory "%s" -e zellij'';
             orphan = true;
             desc = "Open in Zellij (kitty)";
             "for" = "linux";
@@ -30,7 +30,7 @@ in
 
       open = {
         prepend_rules = [
-          { mime = "inode/directory"; use = "terminal"; }
+          { url = "*/"; use = "terminal"; }
         ];
       };
     };

@@ -72,6 +72,7 @@ in
       simplified_ui = true;
       pane_frames = false;
       default_mode = "locked";
+      show_startup_tips = false;
     };
 
     extraConfig = ''
