@@ -535,8 +535,7 @@ PY
   # X Minecraft Launcher — bin: xmcl (Electron, root level)
   home.file.".local/bin/xmcl".text = ''
     #!/usr/bin/env bash
-    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    exec "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" --no-sandbox "$@"
+    exec "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" --no-sandbox --ozone-platform-hint=auto "$@"
   '';
   home.file.".local/bin/xmcl".executable = true;
   xdg.dataFile."applications/xmcl.desktop".text = ''
@@ -554,7 +553,6 @@ PY
   # Cursor — bin: usr/share/cursor/cursor (Electron)
   home.file.".local/bin/cursor".text = ''
     #!/usr/bin/env bash
-    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     exec "${config.home.homeDirectory}/.local/opt/cursor/usr/share/cursor/cursor" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
   '';
   home.file.".local/bin/cursor".executable = true;
@@ -574,7 +572,6 @@ PY
   # CC Switch — bin: usr/bin/cc-switch (Electron)
   home.file.".local/bin/cc-switch".text = ''
     #!/usr/bin/env bash
-    export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     exec "${config.home.homeDirectory}/.local/opt/cc-switch/usr/bin/cc-switch" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
   '';
   home.file.".local/bin/cc-switch".executable = true;

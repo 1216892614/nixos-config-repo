@@ -7,6 +7,7 @@ in
 {
   programs.niri.settings = {
     prefer-no-csd = true;
+    hotkey-overlay.skip-at-startup = true;
 
     outputs."*" = {
       scale = 2.0;
@@ -31,23 +32,23 @@ in
       "Super+Space".action.spawn = [ "fcitx5-remote" "-t" ];
       "Super+G".action.spawn = [
         "sh" "-c"
-        ''f=$(mktemp --suffix=.png); grim "$f"; satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
+        ''f=$(mktemp --suffix=.png); grim -s 1 -o "$(niri msg --json focused-output | ${pkgs.jq}/bin/jq -r '.name')" "$f" && satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
       ];
       "Super+Shift+G".action.spawn = [
         "sh" "-c"
-        ''f=$(mktemp --suffix=.png); grim -g "$(slurp)" "$f"; satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
+        ''f=$(mktemp --suffix=.png); grim -s 1 -g "$(slurp)" "$f"; satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
       ];
       "Print".action.spawn = [
         "sh" "-c"
-        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim "$f"; wl-copy < "$f"''
+        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim -s 1 "$f"; wl-copy < "$f"''
       ];
       "Ctrl+Print".action.spawn = [
         "sh" "-c"
-        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim "$f"; wl-copy < "$f"''
+        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim -s 1 "$f"; wl-copy < "$f"''
       ];
       "Alt+Print".action.spawn = [
         "sh" "-c"
-        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim -g "$(slurp)" "$f"; wl-copy < "$f"''
+        ''f="$HOME/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"; grim -s 1 -g "$(slurp)" "$f"; wl-copy < "$f"''
       ];
       "Super+Shift+R".action.spawn = [
         "sh" "-c"
