@@ -111,6 +111,8 @@ in
     wget
     wineWowPackages.stable
     winetricks
+    kuake        # Quark Cloud Drive CLI (夸克网盘)
+    baidupcs-go  # Baidu Pan CLI (百度网盘)
   ];
 
   programs.starship = {

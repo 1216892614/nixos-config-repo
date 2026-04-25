@@ -61,4 +61,18 @@ in
       };
     };
   };
+
+  # Memory pinning: keep walker + elephant in physical RAM.
+  # Walker (~20 MB) is the app launcher; elephant (~40 MB) is its backend.
+  # Swapping these causes noticeable delay when pressing Super+Return.
+  systemd.user.services.walker.Service = {
+    MemoryMin = "48M";
+    MemoryLow = "96M";
+    OOMScoreAdjust = "-600";
+  };
+  systemd.user.services.elephant.Service = {
+    MemoryMin = "64M";
+    MemoryLow = "128M";
+    OOMScoreAdjust = "-600";
+  };
 }

@@ -32,9 +32,11 @@
     };
 
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
+
+    maccel.url = "github:Gnarus-G/maccel";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, maccel, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -45,6 +47,7 @@
         niri.nixosModules.niri
         noctalia.nixosModules.default
         nix-flatpak.nixosModules.nix-flatpak
+        maccel.nixosModules.default
 
         {
           nixpkgs.overlays = [
