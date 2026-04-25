@@ -105,6 +105,11 @@ in
       Restart = "on-failure";
       RestartSec = "3";
       Environment = "QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx";
+      # Memory pinning: keep fcitx5 (~70 MB) in physical RAM.
+      # Swapping input method to NVMe causes visible typing lag.
+      MemoryMin = "128M";
+      MemoryLow = "200M";
+      OOMScoreAdjust = "-700";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };

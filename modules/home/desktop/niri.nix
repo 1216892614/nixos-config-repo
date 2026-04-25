@@ -9,6 +9,13 @@ in
     prefer-no-csd = true;
     hotkey-overlay.skip-at-startup = true;
 
+    # 鼠标：禁用 libinput 加速，由 maccel 内核模块接管
+    # maccel 在 evdev 层工作，niri/libinput 必须设为 flat 且 speed=0 避免双重加速
+    input.mouse = {
+      accel-profile = "flat";
+      accel-speed = 0.0;
+    };
+
     outputs."*" = {
       scale = 2.0;
     };

@@ -8,3 +8,13 @@ env.nix
 
 .vscode
 .cursor
+
+# Runtime artifacts — never commit
+.mixin.out/
+.ruff_cache/
+appimages/
+config/
+logs/
+squashfs-root/
+foolproof.json
+imgui.ini

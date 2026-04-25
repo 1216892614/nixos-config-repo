@@ -179,4 +179,13 @@ in
     source = patchedScreenRecorder;
     recursive = true;
   };
+
+  # Memory pinning: keep quickshell (~130 MB) in physical RAM.
+  # Swapping the status bar to NVMe causes UI feedback lag.
+  systemd.user.services.noctalia-shell.Service = {
+    MemoryMin = "200M";
+    MemoryLow = "300M";
+    OOMScoreAdjust = "-800";
+    CPUWeight = "150";
+  };
 }
