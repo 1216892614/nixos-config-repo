@@ -43,6 +43,7 @@ in
     wtype       # simulate keypress for walker clipboard paste
     cliphist
     uv  # provides uvx for running Python tools (e.g. astrbot)
+    fastfetch
     wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
     qq      # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
     qqmusic
@@ -105,11 +106,6 @@ in
       Restart = "on-failure";
       RestartSec = "3";
       Environment = "QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx";
-      # Memory pinning: keep fcitx5 (~70 MB) in physical RAM.
-      # Swapping input method to NVMe causes visible typing lag.
-      MemoryMin = "128M";
-      MemoryLow = "200M";
-      OOMScoreAdjust = "-700";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
@@ -152,6 +148,29 @@ in
       Restart = "on-failure";
     };
     Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # Figma Agent: serves local fonts to Figma web client (localhost:44950)
+  # NOTE: Figma 网页版检测到 Linux UA 会跳过 font helper 请求，
+  #       需要将浏览器 User-Agent 伪装为 Windows 才能生效。
+  xdg.configFile."figma-agent/config.json".text = builtins.toJSON {
+    use_system_fonts = true;
+    font_directories = [
+      "~/.local/share/fonts"
+    ];
+  };
+
+  systemd.user.services.figma-agent = {
+    Unit = {
+      Description = "Figma Agent — local font service";
+      After = [ "default.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.figma-agent-linux}/bin/figma-agent";
+      Restart = "on-failure";
+      RestartSec = "5";
+    };
+    Install.WantedBy = [ "default.target" ];
   };
 
   # AstrBot: Agentic IM chatbot (https://astrbot.app/, https://github.com/AstrBotDevs/AstrBot); run via uvx (first run may install)
