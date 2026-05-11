@@ -1,4 +1,30 @@
 final: prev: {
+  figma-agent-linux = prev.stdenv.mkDerivation rec {
+    pname = "figma-agent-linux";
+    version = "0.4.3";
+
+    src = prev.fetchurl {
+      url = "https://github.com/neetly/figma-agent-linux/releases/download/${version}/figma-agent-x86_64-unknown-linux-gnu";
+      sha256 = "sha256-hWYZOOVK1fbEr3EB16c3Wx8PnxMsDFF1MLOe6oOIZWw=";
+    };
+
+    dontUnpack = true;
+
+    installPhase = ''
+      mkdir -p $out/bin
+      cp $src $out/bin/figma-agent
+      chmod +x $out/bin/figma-agent
+    '';
+
+    meta = with prev.lib; {
+      description = "Lightweight local font service for Figma on Linux";
+      homepage = "https://github.com/neetly/figma-agent-linux";
+      license = licenses.mit;
+      platforms = [ "x86_64-linux" ];
+      mainProgram = "figma-agent";
+    };
+  };
+
   kuake = prev.buildGoModule {
     pname = "kuake";
     version = "1.4.5";

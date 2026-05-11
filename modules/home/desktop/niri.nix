@@ -141,8 +141,22 @@ in
         ];
         excludes = [
           { is-floating = true; }
+          { app-id = "^kitty$"; }
         ];
         opacity = 0.95;
+      }
+      # kitty: focus 0.9, unfocus 0.6
+      {
+        matches = [
+          { app-id = "^kitty$"; is-active = true; }
+        ];
+        opacity = 0.9;
+      }
+      {
+        matches = [
+          { app-id = "^kitty$"; is-active = false; }
+        ];
+        opacity = 0.6;
       }
       {
         matches = [

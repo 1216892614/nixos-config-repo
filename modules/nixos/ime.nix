@@ -8,8 +8,6 @@
     SDL_IM_MODULE = "fcitx";
     INPUT_METHOD = "fcitx";
     XMODIFIERS = "@im=fcitx";
-    # GLFW 应用（Minecraft/LWJGL、kitty 等）只支持 ibus 协议；fcitx5 兼容 ibus D-Bus 接口
-    GLFW_IM_MODULE = "ibus";
     # Java AWT 在 tiling WM 下需要此变量，否则窗口行为异常、输入法失效
     _JAVA_AWT_WM_NONREPARENTING = "1";
   };

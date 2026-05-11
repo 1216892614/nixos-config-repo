@@ -21,6 +21,7 @@ in
     ./yazi.nix
     ./recording.nix
     ./rime-custom.nix
+    ./opencode-lark.nix
   ];
 
   home.username = "ep-o1";
@@ -32,6 +33,7 @@ in
   };
 
   home.packages = with pkgs; [
+    (callPackage ../../pkgs/lark.nix {})
     google-chrome
     gemini-cli
     codex
@@ -50,6 +52,95 @@ in
   ];
 
   # Claude Code / Codex / Gemini / OpenCode providers: env managed by ~/.cc-switch or manual config.
+
+  # ── OpenCode: opencode.json + oh-my-openagent.json ──────────────────────
+  xdg.configFile."opencode/opencode.json".text = builtins.toJSON {
+    "$schema" = "https://opencode.ai/config.json";
+    permission = "allow";
+    model = "bigbigdog/claude-opus-4-6";
+    small_model = "deepseek/deepseek-chat";
+    plugin = [ "oh-my-openagent" ];
+    provider = {
+      bytecatcode = {
+        models = {
+          "claude-opus-4-6" = { name = "claude-opus-4-6"; };
+          "claude-sonnet-4-6" = { name = "claude-sonnet-4-6"; };
+        };
+        npm = "@ai-sdk/anthropic";
+        options = {
+          apiKey = env.opencodeBytekatApiKey or "";
+          baseURL = "https://bytecat.lamclod.cn/v1";
+        };
+      };
+      "bytecatcode-cn" = {
+        models = {
+          "GLM-5.1" = { name = "glm-5.1"; };
+        };
+        npm = "@ai-sdk/anthropic";
+        options = {
+          apiKey = env.opencodeBytekatCnApiKey or "";
+          baseURL = "https://bytecat.lamclod.cn/v1";
+        };
+      };
+      bigbigdog = {
+        npm = "@ai-sdk/openai-compatible";
+        name = "BigBigDog (OpenAI-compatible)";
+        options = {
+          apiKey = env.opencodeBigbigdogApiKey or "";
+          baseURL = "https://bigbigdog.up.railway.app/v1";
+        };
+        models = {
+          "claude-opus-4-6" = { name = "claude-opus-4-6"; };
+          "claude-sonnet-4-6" = { name = "claude-sonnet-4-6"; };
+          "gpt-5.3-codex" = { name = "gpt-5.3-codex"; };
+          "gpt-5.4" = { name = "gpt-5.4"; };
+          "gpt-5.4-mini" = { name = "gpt-5.4-mini"; };
+          "gpt-5.5" = { name = "gpt-5.5"; };
+          "gpt-5.3-codex-spark" = { name = "gpt-5.3-codex-spark"; };
+          "gemini-3-flash" = { name = "gemini-3-flash"; };
+          "gemini-3.1-flash-lite" = { name = "gemini-3.1-flash-lite"; };
+          "gemini-3.1-flash-lite-preview" = { name = "gemini-3.1-flash-lite-preview"; };
+          "gemini-3.1-pro-preview" = { name = "gemini-3.1-pro-preview"; };
+        };
+      };
+      deepseek = {
+        npm = "@ai-sdk/openai-compatible";
+        name = "DeepSeek";
+        options = {
+          apiKey = env.opencodeDeepseekApiKey or "";
+          baseURL = "https://api.deepseek.com/v1";
+        };
+        models = {
+          "deepseek-chat" = { name = "deepseek-chat"; };
+        };
+      };
+    };
+  };
+
+  xdg.configFile."opencode/oh-my-openagent.json".text = builtins.toJSON {
+    "$schema" = "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
+    agents = {
+      hephaestus = { model = "bigbigdog/claude-opus-4-6"; };
+      oracle = { model = "deepseek/deepseek-chat"; };
+      librarian = { model = "deepseek/deepseek-chat"; };
+      explore = { model = "deepseek/deepseek-chat"; };
+      multimodal-looker = { model = "bigbigdog/claude-opus-4-6"; };
+      prometheus = { model = "bigbigdog/claude-opus-4-6"; };
+      metis = { model = "bigbigdog/claude-opus-4-6"; };
+      momus = { model = "bigbigdog/claude-opus-4-6"; };
+      atlas = { model = "deepseek/deepseek-chat"; };
+    };
+    categories = {
+      visual-engineering = { model = "deepseek/deepseek-chat"; };
+      ultrabrain = { model = "deepseek/deepseek-chat"; };
+      deep = { model = "bigbigdog/gpt-5.5"; };
+      artistry = { model = "deepseek/deepseek-chat"; };
+      quick = { model = "deepseek/deepseek-chat"; };
+      unspecified-low = { model = "deepseek/deepseek-chat"; };
+      unspecified-high = { model = "deepseek/deepseek-chat"; };
+      writing = { model = "deepseek/deepseek-chat"; };
+    };
+  };
 
   services.udiskie = {
     enable = true;
@@ -506,6 +597,58 @@ PY
     Comment=WeChat Desktop
     Comment[zh_CN]=微信桌面版
   '';
+
+  # ── Deb 应用（rebuild 时自动解包安装，幂等） ──────────────────────────
+  # 目录结构：debs/<app-name>/*.deb（子目录名即应用名，deb 文件名随意）
+  # 解包到 ~/.local/opt/<app-name>/，按 sha256 幂等跳过
+  home.activation.installDebs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    _install_deb() {
+      local name="''${1:-}"
+      local src="''${2:-}"
+      local dest="${config.home.homeDirectory}/.local/opt/$name"
+      if [ ! -f "$src" ]; then
+        echo "Deb not found: $src, skipping $name"
+        return 0
+      fi
+      local hash_file="$dest/.deb-sha256"
+      local current_hash=""
+      current_hash=$(sha256sum "$src" | cut -d' ' -f1)
+      if [ -f "$hash_file" ] && [ "$(cat "$hash_file")" = "$current_hash" ]; then
+        echo "Deb $name: already up to date"
+        return 0
+      fi
+      echo "Deb $name: installing..."
+      rm -rf "$dest"
+      mkdir -p "$dest"
+      local tmp=""
+      tmp=$(mktemp -d)
+      ${pkgs.dpkg}/bin/dpkg-deb -x "$src" "$tmp"
+      cp -a "$tmp/." "$dest/"
+      rm -rf "$tmp"
+      # Patch ELF binaries
+      find "$dest" -type f -executable -exec sh -c '
+        file "$1" | grep -q "ELF.*executable" && ${pkgs.patchelf}/bin/patchelf --set-interpreter ${pkgs.glibc}/lib/ld-linux-x86-64.so.2 "$1" 2>/dev/null || true
+      ' _ {} \;
+      echo "$current_hash" > "$hash_file"
+      echo "Deb $name: installed"
+    }
+
+    DEB_REPO="${config.home.homeDirectory}/nixos-config-repo/debs"
+    if [ -d "$DEB_REPO" ]; then
+      for app_dir in "$DEB_REPO"/*/; do
+        [ -d "$app_dir" ] || continue
+        app_name="$(basename "$app_dir")"
+        # 取目录下最新的 .deb 文件
+        deb_file="$(ls -t "$app_dir"*.deb 2>/dev/null | head -1)"
+        if [ -n "$deb_file" ]; then
+          _install_deb "$app_name" "$deb_file"
+        else
+          echo "Deb $app_name: no .deb file found in $app_dir, skipping"
+        fi
+      done
+    fi
+  '';
+
 
   # ── AppImage 应用（rebuild 时自动解压安装，幂等） ──────────────────────
   # 源文件在仓库 appimages/ 目录，解压到 ~/.local/opt/<name>/

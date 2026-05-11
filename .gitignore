@@ -13,6 +13,7 @@ env.nix
 .mixin.out/
 .ruff_cache/
 appimages/
+debs/
 config/
 logs/
 squashfs-root/
