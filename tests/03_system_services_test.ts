@@ -1,4 +1,4 @@
-import { assertEquals, nixEval, CFG } from "./helpers.ts";
+import { assert, assertEquals, nixEval, nixEvalJson, CFG } from "./helpers.ts";
 
 Deno.test("openssh enabled on port 22", async () => {
   assertEquals(await nixEval(`${CFG}.services.openssh.enable`), "true");
@@ -6,6 +6,12 @@ Deno.test("openssh enabled on port 22", async () => {
 
 Deno.test("docker enabled", async () => {
   assertEquals(await nixEval(`${CFG}.virtualisation.docker.enable`), "true");
+});
+
+Deno.test("rustdesk service enabled", async () => {
+  const wantedBy = await nixEvalJson(`${CFG}.systemd.services.rustdesk.wantedBy`) as string[];
+  assert(wantedBy.includes("multi-user.target"), "rustdesk not wanted by multi-user.target");
+  assertEquals(await nixEval(`${CFG}.systemd.services.rustdesk.serviceConfig.ExecStart`), `${await nixEval("nixosConfigurations.desktop.pkgs.rustdesk.outPath")}/bin/rustdesk --service`);
 });
 
 Deno.test("mihomo TUN mode enabled", async () => {

@@ -6,6 +6,7 @@ Deno.test("home packages include expected software", async () => {
   );
   const expected = [
     "google-chrome", "code-cursor",
+    "rustdesk",
     "grim", "slurp", "satty", "wf-recorder", "wl-clipboard", "cliphist",
     "docker-buildx", "sccache",
     "cargo-edit", "cargo-watch",
