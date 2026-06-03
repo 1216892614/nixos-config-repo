@@ -4,7 +4,12 @@
 { config, lib, pkgs, ... }:
 
 let
-  env = import ../../env.nix;
+  envPath =
+    if builtins.pathExists ../../env.nix then
+      ../../env.nix
+    else
+      ../../env.nix.example;
+  env = import envPath;
 in
 {
   hardware.maccel = {

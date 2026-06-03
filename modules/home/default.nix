@@ -30,11 +30,13 @@ in
 
   home.sessionVariables = {
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
+    NOTION_TOKEN = env.notionToken or "";
   };
 
   home.packages = with pkgs; [
     (callPackage ../../pkgs/lark.nix {})
     google-chrome
+    rustdesk
     gemini-cli
     codex
     opencode
@@ -58,13 +60,14 @@ in
     "$schema" = "https://opencode.ai/config.json";
     permission = "allow";
     model = "bigbigdog/claude-opus-4-6";
-    small_model = "deepseek/deepseek-chat";
+    small_model = "deepseek/deepseek-v4-pro";
     plugin = [ "oh-my-openagent" ];
     provider = {
       bytecatcode = {
         models = {
+          "claude-opus-4-8" = { name = "claude-opus-4-8"; };
+          "claude-opus-4-7" = { name = "claude-opus-4-7"; };
           "claude-opus-4-6" = { name = "claude-opus-4-6"; };
-          "claude-sonnet-4-6" = { name = "claude-sonnet-4-6"; };
         };
         npm = "@ai-sdk/anthropic";
         options = {
@@ -87,11 +90,12 @@ in
         name = "BigBigDog (OpenAI-compatible)";
         options = {
           apiKey = env.opencodeBigbigdogApiKey or "";
-          baseURL = "https://bigbigdog.up.railway.app/v1";
+          baseURL = env.opencodeBigbigdogBaseUrl or "";
         };
         models = {
+          "claude-opus-4-8" = { name = "claude-opus-4-8"; };
+          "claude-opus-4-7" = { name = "claude-opus-4-7"; };
           "claude-opus-4-6" = { name = "claude-opus-4-6"; };
-          "claude-sonnet-4-6" = { name = "claude-sonnet-4-6"; };
           "gpt-5.3-codex" = { name = "gpt-5.3-codex"; };
           "gpt-5.4" = { name = "gpt-5.4"; };
           "gpt-5.4-mini" = { name = "gpt-5.4-mini"; };
@@ -111,7 +115,8 @@ in
           baseURL = "https://api.deepseek.com/v1";
         };
         models = {
-          "deepseek-chat" = { name = "deepseek-chat"; };
+          "deepseek-v4-pro" = { name = "deepseek-v4-pro"; };
+          "DeepSeek-V4-Pro" = { name = "deepseek-v4-pro"; };
         };
       };
     };
@@ -120,25 +125,25 @@ in
   xdg.configFile."opencode/oh-my-openagent.json".text = builtins.toJSON {
     "$schema" = "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
     agents = {
-      hephaestus = { model = "bigbigdog/claude-opus-4-6"; };
-      oracle = { model = "deepseek/deepseek-chat"; };
-      librarian = { model = "deepseek/deepseek-chat"; };
-      explore = { model = "deepseek/deepseek-chat"; };
+      hephaestus = { model = "bigbigdog/gpt-5.5"; };
+      oracle = { model = "deepseek/deepseek-v4-pro"; };
+      librarian = { model = "deepseek/deepseek-v4-pro"; };
+      explore = { model = "deepseek/deepseek-v4-pro"; };
       multimodal-looker = { model = "bigbigdog/claude-opus-4-6"; };
       prometheus = { model = "bigbigdog/claude-opus-4-6"; };
       metis = { model = "bigbigdog/claude-opus-4-6"; };
       momus = { model = "bigbigdog/claude-opus-4-6"; };
-      atlas = { model = "deepseek/deepseek-chat"; };
+      atlas = { model = "bigbigdog/claude-opus-4-6"; };
     };
     categories = {
-      visual-engineering = { model = "deepseek/deepseek-chat"; };
-      ultrabrain = { model = "deepseek/deepseek-chat"; };
+      visual-engineering = { model = "bigbigdog/claude-opus-4-6"; };
+      ultrabrain = { model = "deepseek/deepseek-v4-pro"; };
       deep = { model = "bigbigdog/gpt-5.5"; };
-      artistry = { model = "deepseek/deepseek-chat"; };
-      quick = { model = "deepseek/deepseek-chat"; };
-      unspecified-low = { model = "deepseek/deepseek-chat"; };
-      unspecified-high = { model = "deepseek/deepseek-chat"; };
-      writing = { model = "deepseek/deepseek-chat"; };
+      artistry = { model = "deepseek/deepseek-v4-pro"; };
+      quick = { model = "deepseek/deepseek-v4-pro"; };
+      unspecified-low = { model = "deepseek/deepseek-v4-pro"; };
+      unspecified-high = { model = "deepseek/deepseek-v4-pro"; };
+      writing = { model = "deepseek/deepseek-v4-pro"; };
     };
   };
 
@@ -522,6 +527,22 @@ PY
   home.file.".local/bin/lo-launch".executable = true;
 
   # Steam: wrapper with /bin/sh; load systemd user env so launch from Walker (Elephant) gets WAYLAND_DISPLAY etc.
+  #
+  # X11 fallback rationale:
+  #   On long-lived niri sessions the primary Xwayland (:0) accumulates X11
+  #   clients (each browser tab, IM, IDE, tray app, etc. opens 1+ X
+  #   connections; even a casual session can push past 200). The X server has
+  #   a hard cap of MAXCLIENTS = 256 client slots per server. When Steam
+  #   launches it spawns ~10–20 helpers (srt-logger, breakpad, webhelper,
+  #   pressure-vessel, fossilize, overlay), each of which opens an X
+  #   connection. If that pushes the count over 256 the X server returns
+  #   "Maximum number of clients reached" and Steam aborts during init with
+  #   the misleading XOpenIM() failure + breakpad assert.
+  #
+  # niri starts a *second* Xwayland on :1 specifically as a spare. We probe
+  # :0 first; if it's near saturation we transparently switch DISPLAY to :1
+  # so Steam gets a fresh client budget. Steam UI still renders on the niri
+  # Wayland compositor regardless of which Xwayland it talks to.
   home.file.".local/bin/steam-wrapper".text = ''
     #!/bin/sh
     if command -v systemctl >/dev/null 2>&1; then
@@ -529,6 +550,23 @@ PY
         case "$line" in *=*) export "$line" ;; esac
       done 2>/dev/null || true
     fi
+
+    # If DISPLAY=:0 is close to MAXCLIENTS (256), fall back to :1 (niri's
+    # spare Xwayland). Threshold is conservative: Steam itself opens ~20
+    # connections during init, so leave that headroom.
+    pick_display() {
+      [ -z "$DISPLAY" ] && return
+      sock=/tmp/.X11-unix/X1
+      [ -S "$sock" ] || return  # no spare available
+      cur=$(ss -x 2>/dev/null | grep -c "/tmp/\.X11-unix/X0")
+      if [ -n "$cur" ] && [ "$cur" -ge 230 ]; then
+        echo "[steam-wrapper] DISPLAY=:0 has $cur X clients (cap 256); switching to :1" >&2
+        DISPLAY=:1
+        export DISPLAY
+      fi
+    }
+    pick_display
+
     # Ensure we run NixOS Steam (programs.steam) so extraPackages/fonts are present.
     exec /run/current-system/sw/bin/steam "$@"
   '';
@@ -686,6 +724,7 @@ PY
     _install_ai "cursor"    "$REPO/cursor.AppImage"
     _install_ai "cc-switch" "$REPO/cc-switch.AppImage"
     _install_ai "osu"       "$REPO/osu.AppImage"
+    _install_ai "obsidian"  "$REPO/obsidian.AppImage"
   '';
 
   # Java wrapper for Minecraft: 注入 LD_LIBRARY_PATH 让 GLFW 能 dlopen 系统库，
@@ -771,6 +810,25 @@ PY
     Icon=${config.home.homeDirectory}/.local/opt/osu/osu.png
     Categories=Game;
     Keywords=osu;rhythm;game;
+  '';
+
+  # Obsidian — bin: obsidian (Electron)
+  home.file.".local/bin/obsidian".text = ''
+    #!/usr/bin/env bash
+    exec "${config.home.homeDirectory}/.local/opt/obsidian/obsidian" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
+  '';
+  home.file.".local/bin/obsidian".executable = true;
+  xdg.dataFile."applications/obsidian.desktop".text = ''
+    [Desktop Entry]
+    Name=Obsidian
+    Comment=Knowledge base and note-taking
+    Exec=${config.home.homeDirectory}/.local/bin/obsidian %U
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/obsidian/obsidian.png
+    Categories=Office;
+    Keywords=obsidian;notes;markdown;knowledge;
+    MimeType=x-scheme-handler/obsidian;
   '';
 
   # QQ (nixpkgs): desktop entry so Walker shows it; absolute Exec path.

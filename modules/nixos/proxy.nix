@@ -66,6 +66,10 @@ let
         ensure_dns_listen_localhost /etc/mihomo/config.yaml
         add_fake_ip_filter /etc/mihomo/config.yaml
         add_tun_exclude_localhost /etc/mihomo/config.yaml
+      else
+        # 无有效配置：停用 mihomo，切换直连
+        echo "nameserver 223.5.5.5" > /etc/resolv.conf
+        systemctl stop mihomo.service || true
       fi
     fi
     exit 0
