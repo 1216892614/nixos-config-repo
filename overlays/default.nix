@@ -53,6 +53,11 @@ final: prev: {
     };
   };
 
+  # clash-verge-rev 2.4.7: 覆盖 nixpkgs pin 的 2.4.6（其 cargo vendor 缺 tao-macros，
+  # 无法编译）。2.4.7 移除了有问题的 patch-cargo-lock.patch，可正常构建。
+  # 包定义取自 nixpkgs commit 6da45c9（clash-verge-rev: 2.4.6 -> 2.4.7）。
+  clash-verge-rev = prev.callPackage ../pkgs/clash-verge-rev/package.nix { };
+
   baidupcs-go = prev.buildGoModule {
     pname = "baidupcs-go";
     version = "3.6.2";

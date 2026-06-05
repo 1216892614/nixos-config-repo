@@ -10,6 +10,7 @@ in
 {
   imports = [
     ./desktop/niri.nix
+    ./desktop/clash-verge.nix
     ./desktop/noctalia.nix
     ./desktop/walker.nix
     ./shell/fish.nix
