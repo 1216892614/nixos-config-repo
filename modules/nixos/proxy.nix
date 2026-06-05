@@ -1,146 +1,50 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 
-let
-  envPath =
-    if builtins.pathExists ../../env.nix then
-      ../../env.nix
-    else
-      ../../env.nix.example;
-  env = import envPath;
+# Clash Verge Rev — 通过官方 NixOS 模块 programs.clash-verge 集成
+#
+# 该模块由 nixpkgs 维护，正确处理了：
+#   - serviceMode：以 root 运行 clash-verge-service（特权 IPC 助手），
+#     并把控制套接字 /run/clash-verge-rev/service.sock 的属组设为 cfg.group
+#     （默认 users），这样普通用户运行的 GUI 才能连上、开启 TUN。
+#   - tunMode：给 GUI 主程序设置 cap_net_admin 等 capability（security.wrappers）。
+#   - autoStart：生成 XDG 自启动项（比在 niri 里硬塞 spawn 更标准）。
+#
+# 默认开关（TUN / 系统代理 / 局域网 / ipv6 / 静默启动）由 home-manager 的
+# clash-verge.nix 首次播种到 verge.yaml / config.yaml，且之后仍可在 GUI 修改。
+#
+# 注意：clash-verge-rev 包本身由 overlays/default.nix 覆盖为 2.4.7
+#       （nixpkgs pin 的 2.4.6 因 tao-macros vendoring bug 无法编译）。
 
-  fetchConfig = pkgs.writeShellScript "fetch-mihomo-config" ''
-    mkdir -p /etc/mihomo
-    # 判断是否为有效 YAML（非 HTML 且 yq 可解析）
-    is_valid_yaml() {
-      local f="$1"
-      [ -f "$f" ] && [ -s "$f" ] || return 1
-      if ${pkgs.gnugrep}/bin/grep -qE '^\s*<!DOCTYPE|^\s*<html|^<\?xml' "$f" 2>/dev/null; then
-        return 1
-      fi
-      ${pkgs.yq-go}/bin/yq eval '.' "$f" >/dev/null 2>&1
-    }
-    add_fake_ip_filter() {
-      file="$1"
-      for d in "+.qq.com" "+.qq.com.cn" "+.tencent.com" "+.wechat.com" "+.weixin.qq.com" "+.wx.qq.com" "+.tim.qq.com"; do
-        if ! ${pkgs.gnugrep}/bin/grep -q "^[[:space:]]*- $d\$" "$file"; then
-          ${pkgs.gnused}/bin/sed -i "/^  fake-ip-filter:/a\\    - $d" "$file"
-        fi
-      done
-    }
-    # Ensure DNS listens on localhost:53 so system resolv.conf works.
-    ensure_dns_listen_localhost() {
-      file="$1"
-      if ! [ -f "$file" ] || ! [ -s "$file" ]; then return 0; fi
-      ${pkgs.yq-go}/bin/yq eval '
-        .dns = ((.dns | select(tag == "!!map")) // {})
-        | .dns.enable = true
-        | .dns.listen = "127.0.0.1:53"
-      ' -i "$file"
-    }
-    # TUN 与系统代理排除：localhost/127.0.0.1/::1 不走代理，避免本地服务（如 Vite/miniflare）write EPIPE
-    add_tun_exclude_localhost() {
-      file="$1"
-      if ! [ -f "$file" ] || ! [ -s "$file" ]; then return 0; fi
-      ${pkgs.yq-go}/bin/yq eval '
-        .tun = ((.tun | select(tag == "!!map")) // {})
-        | .tun.enable = true
-        | .tun["route-exclude-address"] = ((.tun["route-exclude-address"] // []) + ["127.0.0.0/8", "::1/128"])
-        | .tun["route-exclude-address"] |= unique
-      ' -i "$file"
-    }
-    tmp=$(mktemp)
-    cleanup() { rm -f "$tmp"; }
-    trap cleanup EXIT
-    use_fetched=
-    if ${pkgs.curl}/bin/curl -sL -o "$tmp" --connect-timeout 15 "${env.mihomoSubscribeUrl}" 2>/dev/null && [ -s "$tmp" ]; then
-      if is_valid_yaml "$tmp"; then
-        ensure_dns_listen_localhost "$tmp"
-        add_fake_ip_filter "$tmp"
-        add_tun_exclude_localhost "$tmp"
-        cp "$tmp" /etc/mihomo/config.yaml
-        use_fetched=1
-      fi
-    fi
-    if [ -z "$use_fetched" ]; then
-      if [ -f /etc/mihomo/config.yaml ] && [ -s /etc/mihomo/config.yaml ] && is_valid_yaml /etc/mihomo/config.yaml; then
-        ensure_dns_listen_localhost /etc/mihomo/config.yaml
-        add_fake_ip_filter /etc/mihomo/config.yaml
-        add_tun_exclude_localhost /etc/mihomo/config.yaml
-      else
-        # 无有效配置：停用 mihomo，切换直连
-        echo "nameserver 223.5.5.5" > /etc/resolv.conf
-        systemctl stop mihomo.service || true
-      fi
-    fi
-    exit 0
-  '';
-in
 {
-  # fetch 脚本用 yq 写 TUN exclude；保证运行时可执行
-  environment.systemPackages = [ pkgs.yq-go ];
-
-  services.mihomo = {
+  programs.clash-verge = {
     enable = true;
-    tunMode = true;
-    configFile = "/etc/mihomo/config.yaml";
-    webui = pkgs.metacubexd;
+    package = pkgs.clash-verge-rev;
+    serviceMode = true;   # 特权服务，供 GUI 开启 TUN（无需每次 sudo）
+    tunMode = true;       # 给 GUI 主程序设置 TUN 所需 capability
+    autoStart = true;     # 开机自启（XDG autostart）
+    group = "users";      # 允许 users 组访问 service 套接字（ep-o1 属于 users）
   };
 
-  systemd.services.mihomo.serviceConfig = {
-    AmbientCapabilities = lib.mkForce "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-    CapabilityBoundingSet = lib.mkForce "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-  };
-
-  systemd.services.mihomo-fetch-config = {
-    description = "Fetch mihomo config from subscribe URL";
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-    before = [ "mihomo.service" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = fetchConfig;
-      RemainAfterExit = true;
-    };
-  };
-
-  systemd.timers.mihomo-fetch-config = {
-    description = "Periodically update mihomo config (every hour)";
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "*-*-* *:00:00";
-      Persistent = true;
-    };
-  };
-
+  # ── TUN 模式相关防火墙 / 转发 ─────────────────────────────────────
   networking.firewall = {
-    # mihomo tun interface is usually named "Meta"; keep "Mihomo" for compatibility.
-    trustedInterfaces = [ "Meta" "Mihomo" ];
+    # clash 的 TUN 接口默认名为 "Meta"
+    trustedInterfaces = [ "Meta" ];
     extraReversePathFilterRules = ''
       iifname "Meta" accept
-      iifname "Mihomo" accept
     '';
-    allowedTCPPorts = [ env.mihomoMixedPort env.mihomoApiPort ];
-    allowedUDPPorts = [ env.mihomoMixedPort ];
+    # 局域网代理：放行 clash-verge-rev 默认混合端口 7897
+    # （如在 GUI 中改了端口，记得同步修改这里）
+    allowedTCPPorts = [ 7897 ];
+    allowedUDPPorts = [ 7897 ];
   };
 
-  services.resolved.enable = false;
-  networking.nameservers = [ "127.0.0.1" ];
-
-  # 全系统代理环境变量（走本机 mihomo）
-  environment.sessionVariables = {
-    http_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-    HTTP_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-    https_proxy = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-    HTTPS_PROXY = "http://127.0.0.1:${toString env.mihomoMixedPort}";
-    all_proxy = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-    ALL_PROXY = "socks5://127.0.0.1:${toString env.mihomoMixedPort}";
-    no_proxy = "localhost,127.0.0.1,::1";
-    NO_PROXY = "localhost,127.0.0.1,::1";
-  };
-
+  # TUN / 局域网代理需要内核开启 IP 转发（含 ipv6）
   boot.kernel.sysctl = {
     "net.ipv4.ip_forward" = 1;
     "net.ipv6.conf.all.forwarding" = 1;
   };
+
+  # DNS：由 systemd-resolved 兜底；clash 开启后会接管/劫持 DNS（fake-ip）
+  services.resolved.enable = true;
+  networking.nameservers = [ "223.5.5.5" "119.29.29.29" "8.8.8.8" ];
 }
