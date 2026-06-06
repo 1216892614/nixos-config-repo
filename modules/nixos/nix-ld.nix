@@ -9,7 +9,7 @@
       # C++ runtime
       stdenv.cc.cc.lib
 
-      # Electron / Chromium runtime deps (Cursor, XMCL, CC Switch)
+      # Electron / Chromium runtime deps (Cursor, XMCL)
       nss
       nspr
       expat
