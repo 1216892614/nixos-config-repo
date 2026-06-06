@@ -11,7 +11,7 @@ in
     (map (f: nixosModulesDir + "/${f}") nixosModuleFiles)
     ++ [ ./hardware-configuration.nix ];
 
-  networking.hostName = "nixos";
+  networking.hostName = "ep-laptop";
   system.stateVersion = "25.11";
 
   home-manager.users.ep-o1 = import ../../modules/home;
