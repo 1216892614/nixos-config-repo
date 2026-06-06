@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# X11 → Wayland clipboard sync (uses clipnotify to detect changes)
+# After syncing, pipes content to cliphist for history tracking.
+
+EMPTY_HASH="99aa06d3014798d86001c324468d497f"
+
+hash_data() { xxhsum -H128 2>/dev/null | awk '{print $1}'; }
+
+log() { echo "[$(date '+%H:%M:%S')] [x2w] $1"; }
+
+log "started, waiting for X11 clipboard changes..."
+
+while clipnotify; do
+    sleep 0.1
+
+    TYPE=$(xclip -selection clipboard -t TARGETS -o 2>/dev/null)
+    [ -z "$TYPE" ] && continue
+
+    # --- WeChat image (x-qt-image uri-list) ---
+    if [[ "$TYPE" =~ "text/uri-list" ]] && [[ "$TYPE" =~ "application/x-qt-image" ]]; then
+        W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+        X_HASH=$(xclip -o -sel clip -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t text/uri-list | tail -n +2 | wl-copy --type text/uri-list
+            log "synced: wechat image uri-list"
+        fi
+
+    # --- QQ sticker / rich image ---
+    elif [[ "$TYPE" =~ "x-special/gnome-copied-files" ]] && [[ "$TYPE" =~ "QQ_Unicode_RichEdit_Format" ]] && [[ "$TYPE" =~ "image/png" ]]; then
+        W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+        X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t x-special/gnome-copied-files | tail -n +2 | sed 's|^/|file:///|' | wl-copy --type text/uri-list
+            log "synced: QQ image/sticker"
+        fi
+
+    # --- PNG image ---
+    elif [[ "$TYPE" =~ "image/png" ]]; then
+        W_HASH=$(wl-paste -t image/png 2>/dev/null | hash_data)
+        X_HASH=$(xclip -o -sel clip -t image/png 2>/dev/null | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t image/png | wl-copy -t image/png
+            log "synced: image/png"
+        fi
+
+    # --- JPEG image ---
+    elif [[ "$TYPE" =~ "image/jpeg" ]]; then
+        W_HASH=$(wl-paste -t image/jpeg 2>/dev/null | hash_data)
+        X_HASH=$(xclip -o -sel clip -t image/jpeg 2>/dev/null | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t image/jpeg | wl-copy -t image/jpeg
+            log "synced: image/jpeg"
+        fi
+
+    # --- File links (gnome-copied-files) ---
+    elif [[ "$TYPE" =~ "x-special/gnome-copied-files" ]]; then
+        W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+        X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t x-special/gnome-copied-files | tail -n +2 | sed 's|^/|file:///|' | wl-copy --type text/uri-list
+            log "synced: file uri-list"
+        fi
+
+    # --- HTML rich text ---
+    elif [[ "$TYPE" =~ "text/html" ]]; then
+        W_HASH=$(timeout 1s wl-paste -t text/html 2>/dev/null | hash_data)
+        X_HASH=$(timeout 1s xclip -o -sel clip -t text/html 2>/dev/null | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ -n "$X_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t text/html | wl-copy -t text/html
+            log "synced: text/html"
+        fi
+
+    # --- Plain text (UTF8_STRING) ---
+    elif [[ "$TYPE" =~ "UTF8_STRING" ]]; then
+        W_HASH=$(wl-paste 2>/dev/null | tr -d '\n\r' | hash_data)
+        X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | hash_data)
+        if [[ "$X_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+            xclip -sel clip -o -t UTF8_STRING | wl-copy
+            log "synced: text/plain"
+        fi
+    fi
+done

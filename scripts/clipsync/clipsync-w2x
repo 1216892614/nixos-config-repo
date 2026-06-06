@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Wayland → X11 clipboard sync (invoked by wl-paste --watch)
+# Handles: text, image, html, uri-list
+
+EMPTY_HASH="99aa06d3014798d86001c324468d497f"
+
+hash_data() { xxhsum -H128 2>/dev/null | awk '{print $1}'; }
+
+log() { echo "[$(date '+%H:%M:%S')] [w2x] $1"; }
+
+TYPE=$(wl-paste --list-types 2>/dev/null)
+[ -z "$TYPE" ] && exit 0
+
+# --- WeChat image (x-qt-image) ---
+if [[ "$TYPE" =~ "application/x-qt-image" ]]; then
+    W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+    X_HASH=$(xclip -o -sel clip -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+    if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+        wl-paste -t text/uri-list | sed 's|^/|file:///|' | xclip -sel clip -t text/uri-list
+        log "synced: wechat uri-list → X11"
+    fi
+
+# --- File links (text/uri-list) ---
+elif [[ "$TYPE" =~ "text/uri-list" ]]; then
+    W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
+    X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | hash_data)
+    if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+        { echo "copy"; wl-paste -t text/uri-list | sed 's|^/|file:///|'; } | xclip -sel clip -t x-special/gnome-copied-files
+        log "synced: uri-list → X11 gnome-copied-files"
+    fi
+
+# --- HTML rich text ---
+elif [[ "$TYPE" =~ "text/html" ]]; then
+    W_HASH=$(timeout 1s wl-paste -t text/html 2>/dev/null | hash_data)
+    X_HASH=$(timeout 1s xclip -o -sel clip -t text/html 2>/dev/null | hash_data)
+    if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ -n "$W_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
+        wl-paste -t text/html | xclip -sel clip -t text/html
+        log "synced: text/html → X11"
+    fi
+
+# --- Image (PNG then JPEG) ---
+elif [[ "$TYPE" =~ "image/" ]]; then
+    TARGET_MIME="image/png"
+    W_HASH=$(timeout 1s wl-paste -t "$TARGET_MIME" 2>/dev/null | hash_data)
+    if [[ "$W_HASH" == "$EMPTY_HASH" ]] || [[ -z "$W_HASH" ]]; then
+        TARGET_MIME="image/jpeg"
+        W_HASH=$(timeout 1s wl-paste -t "$TARGET_MIME" 2>/dev/null | hash_data)
+    fi
+    if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ -n "$W_HASH" ]]; then
+        X_HASH=$(timeout 1s xclip -o -sel clip -t "$TARGET_MIME" 2>/dev/null | hash_data)
+        if [[ "$W_HASH" != "$X_HASH" ]]; then
+            wl-paste -t "$TARGET_MIME" | xclip -sel clip -t "$TARGET_MIME"
+            log "synced: $TARGET_MIME → X11"
+        fi
+    fi
+
+# --- Plain text ---
+elif [[ "$TYPE" =~ "text/plain" ]]; then
+    W_HASH=$(wl-paste -t text/plain 2>/dev/null | tr -d '\n\r' | hash_data)
+    if [[ "$W_HASH" != "$EMPTY_HASH" ]]; then
+        X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | hash_data)
+        if [[ "$W_HASH" != "$X_HASH" ]]; then
+            wl-paste | xclip -sel clip -t UTF8_STRING
+            log "synced: text → X11"
+        fi
+    fi
+fi
