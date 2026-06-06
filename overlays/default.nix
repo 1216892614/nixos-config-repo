@@ -58,6 +58,8 @@ final: prev: {
   # 包定义取自 nixpkgs commit 6da45c9（clash-verge-rev: 2.4.6 -> 2.4.7）。
   clash-verge-rev = prev.callPackage ../pkgs/clash-verge-rev/package.nix { };
 
+  clipsync = prev.callPackage ../pkgs/clipsync.nix { };
+
   baidupcs-go = prev.buildGoModule {
     pname = "baidupcs-go";
     version = "3.6.2";

@@ -238,7 +238,7 @@ in
     ];
 
     spawn-at-startup = [
-      { command = [ "xwayland-satellite" ]; }
+      # niri 25.08+ 自动管理 xwayland-satellite，无需手动 spawn
       # 把 DISPLAY 和输入法变量写入 systemd/DBus，供后续启动的应用继承（双保险：systemd 用户服务也会做）
       { command = [
           "${pkgs.stdenv.shell}"

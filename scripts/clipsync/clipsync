@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# clipsync - bidirectional clipboard bridge between X11 and Wayland
+# Supports: text, image (png/jpeg), HTML, uri-list (file copy)
+
+cleanup() {
+    kill $(jobs -p) 2>/dev/null
+    exit
+}
+
+trap cleanup SIGINT SIGTERM EXIT
+
+# X11 → Wayland (clipnotify-based watcher)
+clipsync-x2w &
+
+# Wayland → X11 (wl-paste --watch)
+wl-paste --watch clipsync-w2x &
+
+wait

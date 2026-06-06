@@ -44,7 +44,9 @@ in
     claude-code
     docker-buildx
     wl-clipboard
-    wl-clip-persist # 保持剪贴板内容在源应用失焦后不丢失（Wayland 剪贴板所有权模型）
+    xclip           # X11 clipboard access for clipsync bridge
+    clipnotify      # X11 clipboard change notifications for clipsync
+    clipsync        # bidirectional X11↔Wayland clipboard bridge
     wtype       # simulate keypress for walker clipboard paste
     cliphist
     uv  # provides uvx for running Python tools (e.g. astrbot)
@@ -233,16 +235,19 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # wl-clip-persist: 在源应用失焦/关闭后保持剪贴板内容，解决 Wayland 下 QQ/微信等读不到最新剪贴板的问题
-  systemd.user.services.wl-clip-persist = {
+  # clipsync: 双向剪贴板桥接（X11↔Wayland），替代 wl-clip-persist
+  # X11 app（QQ/WeChat/Steam）的复制操作通过此服务同步到 Wayland 端（cliphist 自动收录）
+  systemd.user.services.clipsync = {
     Unit = {
-      Description = "Keep Wayland clipboard alive after source app loses focus";
+      Description = "Bidirectional clipboard bridge (X11 ↔ Wayland)";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart = "${pkgs.wl-clip-persist}/bin/wl-clip-persist --clipboard both";
+      ExecStart = "${pkgs.clipsync}/bin/clipsync";
       Restart = "on-failure";
+      RestartSec = "3";
+      Environment = "DISPLAY=:0";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
