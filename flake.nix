@@ -89,5 +89,57 @@
         }
       ];
     };
+
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = { inherit inputs; };
+      modules = [
+        ./hosts/nixos
+
+        niri.nixosModules.niri
+        noctalia.nixosModules.default
+        nix-flatpak.nixosModules.nix-flatpak
+        maccel.nixosModules.default
+
+        {
+          nixpkgs.overlays = [
+            (import ./overlays/default.nix)
+            niri.overlays.niri
+          ];
+          programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;
+        }
+
+        home-manager.nixosModules.home-manager
+        {
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            backupFileExtension = "hm-bak2";
+            sharedModules = [
+              noctalia.homeModules.default
+              walker.homeManagerModules.default
+            ];
+            extraSpecialArgs = { inherit inputs; };
+          };
+        }
+
+        {
+          nix.settings = {
+            substituters = [
+              "https://walker.cachix.org"
+              "https://cache.garnix.io"
+            ];
+            trusted-public-keys = [
+              "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
+              "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+            ];
+            extra-substituters = [
+              "https://walker.cachix.org"
+              "https://cache.garnix.io"
+            ];
+          };
+        }
+      ];
+    };
   };
 }

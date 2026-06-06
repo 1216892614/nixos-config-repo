@@ -10,8 +10,8 @@ let
   rimeBase = pkgs.fetchFromGitHub {
     owner = "gaboolic";
     repo = "rime-shuangpin-fuzhuma";
-    rev = "main";
-    hash = "sha256-XE92YYrikT1TbfeXMCYiL9a3eo7mt/Dp3s6egiaE0R0=";
+    rev = "cb61af69888430e59f373cce82008c0e38bb8bfa"; # pin to specific commit to avoid hash mismatch
+    hash = "sha256-vR8q0bmU4UprtnN8k8cWVFRoJAec7q7n/Iloj28jhks=";
   };
 
   defaultCustom = pkgs.writeText "default.custom.yaml" ''
