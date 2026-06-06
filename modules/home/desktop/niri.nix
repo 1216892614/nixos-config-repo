@@ -3,8 +3,37 @@
 let
   colors = import ../../../lib/colors.nix;
   noctalia = cmd: "dbus-send --session --dest=org.freedesktop.Notifications --type=method_call /org/noctalia ${cmd}";
+
+  # niri-flake schema 尚未覆盖 blur / background-effect（26.04 新功能）
+  # 追加原始 KDL 到 finalConfig 输出
+  blurConfig = ''
+
+    // Background blur (dual kawase)
+    blur {
+        passes 3
+        offset 3
+        noise 0.02
+        saturation 1.5
+    }
+
+    // 全局启用背景模糊（排除浏览器、vlc）
+    window-rule {
+        exclude app-id="^google-chrome$"
+        exclude app-id="^chromium$"
+        exclude app-id="^firefox$"
+        exclude app-id="^vlc$"
+        background-effect {
+            blur true
+        }
+    }
+  '';
 in
 {
+  # 覆盖 niri-flake 的 xdg.configFile.niri-config.source
+  # 追加 blurConfig（niri-flake schema 不支持的 26.04 新功能）
+  xdg.configFile.niri-config.source = lib.mkForce
+    (pkgs.writeText "config.kdl" (config.programs.niri.finalConfig + blurConfig));
+
   programs.niri.settings = {
     prefer-no-csd = true;
     hotkey-overlay.skip-at-startup = true;
@@ -134,27 +163,31 @@ in
     };
 
     window-rules = [
-      # 非活动窗口半透明
+      # 所有窗口透明 + blur（排除浏览器、vlc、浮动窗口）
+      # focus 0.9, unfocus 0.6
       {
         matches = [
-          { is-active = false; }
+          { is-active = true; }
         ];
         excludes = [
+          { app-id = "^google-chrome$"; }
+          { app-id = "^chromium$"; }
+          { app-id = "^firefox$"; }
+          { app-id = "^vlc$"; }
           { is-floating = true; }
-          { app-id = "^kitty$"; }
-        ];
-        opacity = 0.95;
-      }
-      # kitty: focus 0.9, unfocus 0.6
-      {
-        matches = [
-          { app-id = "^kitty$"; is-active = true; }
         ];
         opacity = 0.9;
       }
       {
         matches = [
-          { app-id = "^kitty$"; is-active = false; }
+          { is-active = false; }
+        ];
+        excludes = [
+          { app-id = "^google-chrome$"; }
+          { app-id = "^chromium$"; }
+          { app-id = "^firefox$"; }
+          { app-id = "^vlc$"; }
+          { is-floating = true; }
         ];
         opacity = 0.6;
       }
@@ -172,6 +205,35 @@ in
         open-floating = true;
         default-column-width = { proportion = 0.5; };
         default-window-height = { proportion = 0.5; };
+      }
+
+      # Steam 通知弹窗 → 右下角（官方 wiki 方案）
+      {
+        matches = [
+          { app-id = "^steam$"; title = "^notificationtoasts_\\d+_desktop$"; }
+        ];
+        default-floating-position = {
+          x = 10;
+          y = 10;
+          relative-to = "bottom-right";
+        };
+      }
+
+      # QQ 悬浮卡片/通知弹窗 → 右上角，不抢焦点
+      {
+        matches = [
+          { app-id = "^QQ$"; }
+        ];
+        excludes = [
+          { title = "^QQ$"; }
+        ];
+        open-floating = true;
+        open-focused = false;
+        default-floating-position = {
+          x = 10;
+          y = 10;
+          relative-to = "top-right";
+        };
       }
     ];
 
