@@ -54,7 +54,7 @@ in
     qqmusic
   ];
 
-  # Claude Code / Codex / Gemini / OpenCode providers: env managed by ~/.cc-switch or manual config.
+  # Claude Code / Codex / Gemini / OpenCode providers: configured manually.
 
   # ── OpenCode: opencode.json + oh-my-openagent.json ──────────────────────
   xdg.configFile."opencode/opencode.json".text = builtins.toJSON {
@@ -91,7 +91,7 @@ in
         name = "BigBigDog (OpenAI-compatible)";
         options = {
           apiKey = env.opencodeBigbigdogApiKey or "";
-          baseURL = env.opencodeBigbigdogBaseUrl or "";
+          baseURL = "https://www.dogapi.cc/v1";
         };
         models = {
           "claude-opus-4-8" = { name = "claude-opus-4-8"; };
@@ -723,7 +723,6 @@ PY
     REPO="${config.home.homeDirectory}/nixos-config-repo/appimages"
     _install_ai "xmcl"      "$REPO/xmcl.AppImage"
     _install_ai "cursor"    "$REPO/cursor.AppImage"
-    _install_ai "cc-switch" "$REPO/cc-switch.AppImage"
     _install_ai "osu"       "$REPO/osu.AppImage"
     _install_ai "obsidian"  "$REPO/obsidian.AppImage"
   '';
@@ -774,25 +773,6 @@ PY
     Categories=Development;IDE;
     Keywords=cursor;code;editor;ai;
     MimeType=text/plain;
-  '';
-
-  # CC Switch — bin: usr/bin/cc-switch (Electron)
-  home.file.".local/bin/cc-switch".text = ''
-    #!/usr/bin/env bash
-    exec "${config.home.homeDirectory}/.local/opt/cc-switch/usr/bin/cc-switch" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
-  '';
-  home.file.".local/bin/cc-switch".executable = true;
-  xdg.dataFile."applications/cc-switch.desktop".text = ''
-    [Desktop Entry]
-    Name=CC Switch
-    Comment=AI provider switcher for Claude Code, Codex, Gemini CLI, OpenCode
-    Exec=${config.home.homeDirectory}/.local/bin/cc-switch %U
-    Terminal=false
-    Type=Application
-    Icon=${config.home.homeDirectory}/.local/opt/cc-switch/cc-switch.png
-    Categories=Development;Utility;
-    Keywords=cc-switch;claude;codex;gemini;opencode;ai;
-    MimeType=x-scheme-handler/ccswitch;
   '';
 
   # osu! — bin: usr/bin/osu! (dotnet)

@@ -42,7 +42,7 @@ cp env.nix.example env.nix
 
 `env.nix` 已加入 `.gitignore`，不会提交到仓库。
 
-AI 相关 base URL / API key（Claude Code、Codex、Gemini CLI、OpenCode）由 **CC Switch** 管理（`~/.cc-switch`），不在 `env.nix` 中设置环境变量。
+AI 相关 base URL / API key（Claude Code、Codex、Gemini CLI、OpenCode）请按你自己的使用方式手动配置；默认不在 `env.nix` 中设置环境变量。
 
 ## 目录结构
 
