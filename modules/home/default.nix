@@ -37,7 +37,7 @@ in
   home.packages = with pkgs; [
     (callPackage ../../pkgs/lark.nix {})
     google-chrome
-    rustdesk
+    rustdesk-flutter
     gemini-cli
     codex
     opencode
@@ -150,12 +150,14 @@ in
     };
   };
 
-  services.udiskie = {
-    enable = true;
-    automount = true;
-    notify = true;
-    tray = "auto";
-  };
+  # Disabled: replaced by modules/nixos/apfs-automount.nix which handles
+  # all external FS types (APFS, NTFS, exFAT, ext4, etc.) with unified naming
+  # services.udiskie = {
+  #   enable = true;
+  #   automount = true;
+  #   notify = true;
+  #   tray = "auto";
+  # };
 
   gtk = {
     enable = true;
@@ -274,6 +276,25 @@ in
     };
     Install.WantedBy = [ "default.target" ];
   };
+
+  # Symlink ~/.local/share/fonts → system font dir so apps with hardcoded
+  # font paths (RustDesk fontdb, etc.) can find CJK fonts on NixOS
+  home.activation.linkFonts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    fonts_dir="${config.home.homeDirectory}/.local/share/fonts"
+    target="/run/current-system/sw/share/X11/fonts"
+    if [ -L "$fonts_dir" ]; then
+      current=$(readlink "$fonts_dir")
+      if [ "$current" != "$target" ]; then
+        rm "$fonts_dir"
+        ln -s "$target" "$fonts_dir"
+      fi
+    elif [ ! -e "$fonts_dir" ]; then
+      mkdir -p "$(dirname "$fonts_dir")"
+      ln -s "$target" "$fonts_dir"
+    else
+      echo "Warning: $fonts_dir exists and is not a symlink, skipping"
+    fi
+  '';
 
   # AstrBot: Agentic IM chatbot (https://astrbot.app/, https://github.com/AstrBotDevs/AstrBot); run via uvx (first run may install)
   home.file.".local/bin/astrbot".text = ''

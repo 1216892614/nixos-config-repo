@@ -1,4 +1,4 @@
-import { assertEquals, nixEval, HM } from "./helpers.ts";
+import { assertEquals, nixEval, HM, CFG } from "./helpers.ts";
 
 Deno.test("fish shell enabled", async () => {
   assertEquals(await nixEval(`${HM}.programs.fish.enable`), "true");
@@ -69,6 +69,6 @@ Deno.test("walker launcher enabled", async () => {
   assertEquals(await nixEval(`${HM}.programs.walker.enable`), "true");
 });
 
-Deno.test("udiskie auto-mount enabled", async () => {
-  assertEquals(await nixEval(`${HM}.services.udiskie.enable`), "true");
+Deno.test("external automount service configured", async () => {
+  assertEquals(await nixEval(`${CFG}.systemd.services."external-automount@".serviceConfig.Type`), "oneshot");
 });
