@@ -86,7 +86,11 @@ in
         density = "compact";
 
         widgets.left = [
-          { id = "Launcher"; }
+          {
+            id = "CustomButton";
+            icon = "rocket";
+            leftClickExec = "walker";
+          }
         ];
         widgets.center = [
           {
@@ -96,7 +100,7 @@ in
           }
         ];
         widgets.right = [
-          { id = "screen-recorder"; }
+          { id = "plugin:screen-recorder"; }
           { id = "Tray"; }
           { id = "Brightness"; }
           { id = "Volume"; }
