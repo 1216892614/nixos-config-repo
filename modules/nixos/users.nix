@@ -19,5 +19,6 @@ in
 
   programs.fish.enable = true;
 
-  security.sudo.wheelNeedsPassword = false;
+  # sudo 需要认证（howdy 面部识别或密码）
+  security.sudo.wheelNeedsPassword = true;
 }

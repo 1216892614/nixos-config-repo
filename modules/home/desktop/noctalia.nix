@@ -76,6 +76,16 @@ in
         enabled = true;
         setWallpaperOnAllMonitors = true;
         fillMode = "cover";
+        # overview（Super+O）背景：使用壁纸的模糊版本
+        overviewEnabled = true;
+        overviewBlur = 0.4;
+        overviewTint = 0.3;
+      };
+
+      # 锁屏直接使用壁纸（不模糊）
+      general = {
+        lockScreenBlur = 0;
+        lockScreenTint = 0;
       };
 
       bar = {

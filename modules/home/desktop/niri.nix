@@ -6,7 +6,7 @@ let
 
   # niri-flake schema 尚未覆盖 blur / background-effect（26.04 新功能）
   # 追加原始 KDL 到 finalConfig 输出
-  blurConfig = ''
+  extraConfig = ''
 
     // Background blur (dual kawase)
     blur {
@@ -26,13 +26,19 @@ let
             blur true
         }
     }
+
+    // noctalia overview backdrop 放入 niri overview 背景层
+    layer-rule {
+        match namespace="^noctalia-overview-"
+        place-within-backdrop true
+    }
   '';
 in
 {
   # 覆盖 niri-flake 的 xdg.configFile.niri-config.source
-  # 追加 blurConfig（niri-flake schema 不支持的 26.04 新功能）
+  # 追加 extraConfig（niri-flake schema 不支持的 26.04 新功能：blur, layer-rule）
   xdg.configFile.niri-config.source = lib.mkForce
-    (pkgs.writeText "config.kdl" (config.programs.niri.finalConfig + blurConfig));
+    (pkgs.writeText "config.kdl" (config.programs.niri.finalConfig + extraConfig));
 
   programs.niri.settings = {
     prefer-no-csd = true;

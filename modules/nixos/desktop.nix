@@ -191,7 +191,9 @@ EOF
   '';
 
   boot = {
-    kernelModules = [ "v4l2loopback" "uvcvideo" "uinput" ];
+    # 注意：v4l2loopback 不能放在 kernelModules 里，否则 howdy 面部识别会失效
+    # 只放在 extraModulePackages 里让它按需加载
+    kernelModules = [ "uvcvideo" "uinput" ];
     extraModulePackages = with config.boot.kernelPackages; [
       v4l2loopback
     ];
