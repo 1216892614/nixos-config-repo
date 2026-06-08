@@ -882,7 +882,10 @@ PY
     '';
   };
 
-  home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpaper.jpeg;
+  home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpapers/endcard_02.jpg;
+  home.file.".config/noctalia/wallpapers/endcard_02.jpg".source = ../../wallpapers/endcard_02.jpg;
+  home.file.".config/noctalia/wallpapers/endcard_10.jpg".source = ../../wallpapers/endcard_10.jpg;
+  home.file.".config/noctalia/wallpapers/endcard_11.jpg".source = ../../wallpapers/endcard_11.jpg;
   home.file.".cache/noctalia/wallpapers.json".text = builtins.toJSON {
     defaultWallpaper = "${config.home.homeDirectory}/.config/noctalia/wallpaper.jpeg";
   };

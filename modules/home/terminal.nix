@@ -14,7 +14,7 @@ in
 
     settings = {
       symbol_map = "U+E000-U+F8FF,U+F0000-U+FFFFF Symbols Nerd Font Mono";
-      window_padding_width = 4;
+      window_padding_width = 0;
       confirm_os_window_close = 0;
       enable_audio_bell = false;
       cursor_shape = "block";

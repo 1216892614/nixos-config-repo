@@ -176,7 +176,7 @@ in
 
   programs.bat = {
     enable = true;
-    config.theme = "Nord";
+    config.theme = "Catppuccin Mocha";
   };
 
   programs.eza = {
@@ -201,7 +201,7 @@ in
   programs.btop = {
     enable = true;
     settings = {
-      color_theme = "nord";
+      color_theme = "catppuccin_mocha";
       theme_background = false;
     };
   };

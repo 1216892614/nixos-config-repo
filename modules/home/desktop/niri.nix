@@ -54,7 +54,7 @@ in
       focus-ring = {
         width = 2;
         active.color = colors.accent;
-        inactive.color = "#6c7380";
+        inactive.color = "#585b70";
       };
     };
 
@@ -180,7 +180,7 @@ in
         clip-to-geometry = true;
       }
       # 所有窗口透明 + blur（排除浏览器、vlc、浮动窗口）
-      # focus 0.9, unfocus 0.6
+      # focus 0.95, unfocus 0.82
       {
         matches = [
           { is-active = true; }
@@ -192,7 +192,7 @@ in
           { app-id = "^vlc$"; }
           { is-floating = true; }
         ];
-        opacity = 0.9;
+        opacity = 0.95;
       }
       {
         matches = [
@@ -205,7 +205,7 @@ in
           { app-id = "^vlc$"; }
           { is-floating = true; }
         ];
-        opacity = 0.6;
+        opacity = 0.82;
       }
       {
         matches = [

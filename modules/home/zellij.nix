@@ -67,7 +67,7 @@ in
     enableFishIntegration = false;
 
     settings = {
-      theme = "forest-night";
+      theme = "catppuccin-mocha";
       default_shell = "fish";
       simplified_ui = true;
       pane_frames = false;
@@ -77,9 +77,9 @@ in
 
     extraConfig = ''
       themes {
-          forest-night {
+          catppuccin-mocha {
               fg "${colors.fg}"
-              bg "${colors.surface.lift}"
+              bg "${colors.terminal.bg}"
               black "${colors.terminal.black}"
               red "${colors.terminal.red}"
               green "${colors.terminal.green}"
