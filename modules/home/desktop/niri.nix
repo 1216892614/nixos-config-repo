@@ -52,7 +52,7 @@ in
     layout = {
       gaps = 8;
       focus-ring = {
-        width = 4;
+        width = 2;
         active.color = colors.accent;
         inactive.color = "#6c7380";
       };
@@ -110,6 +110,10 @@ in
       "XF86AudioRaiseVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "increase" ];
       "XF86AudioLowerVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "decrease" ];
       "XF86AudioMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteOutput" ];
+      "XF86AudioMicMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteInput" ];
+
+      "XF86MonBrightnessUp".action.spawn = [ "brightnessctl" "set" "+5%" ];
+      "XF86MonBrightnessDown".action.spawn = [ "brightnessctl" "set" "5%-" ];
 
       "Super+H".action.focus-column-left = { };
       "Super+J".action.focus-window-down = { };
@@ -163,6 +167,13 @@ in
     };
 
     window-rules = [
+      # 所有窗口圆角
+      {
+        geometry-corner-radius =
+          let r = 16.0; in
+          { bottom-left = r; bottom-right = r; top-left = r; top-right = r; };
+        clip-to-geometry = true;
+      }
       # 所有窗口透明 + blur（排除浏览器、vlc、浮动窗口）
       # focus 0.9, unfocus 0.6
       {

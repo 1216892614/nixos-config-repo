@@ -43,6 +43,7 @@ in
     opencode
     claude-code
     docker-buildx
+    brightnessctl   # backlight control for laptop fn keys
     wl-clipboard
     xclip           # X11 clipboard access for clipsync bridge
     clipnotify      # X11 clipboard change notifications for clipsync
@@ -195,16 +196,17 @@ in
     color-scheme = "prefer-dark";
   };
 
-  # fcitx5/Rime: 用户服务 + 失败重启，避免运行一段时间后输入法挂掉
+  # fcitx5/Rime: 用户服务 + 无条件重启，避免运行一段时间后输入法挂掉或卡死
   systemd.user.services.fcitx5 = {
     Unit = {
       Description = "Fcitx5 input method (Rime)";
-      After = [ "graphical-session.target" "dbus-update-activation-environment.service" ];
+      After = [ "graphical-session.target" ];
       PartOf = [ "graphical-session.target" ];
     };
     Service = {
+      ExecStartPre = "${pkgs.bash}/bin/bash -c 'until [ -n \"$WAYLAND_DISPLAY\" ]; do sleep 0.2; done'";
       ExecStart = "/run/current-system/sw/bin/fcitx5";
-      Restart = "on-failure";
+      Restart = "always";
       RestartSec = "3";
       Environment = "QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx";
     };

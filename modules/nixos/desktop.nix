@@ -168,21 +168,8 @@ EOF
     vlc
   ];
 
-  # 把 DISPLAY 和输入法相关变量写入 systemd user / D-Bus 环境，重启后从登录就生效
-  # 必须用 Environment= 显式设值，否则 dbus-update-activation-environment 无值可导出
-  systemd.user.services.dbus-update-activation-environment = {
-    description = "Update D-Bus activation environment (DISPLAY + IM)";
-    wantedBy = [ "graphical-session.target" ];
-    after = [ "graphical-session.target" ];
-    serviceConfig.Type = "oneshot";
-    environment = {
-      QT_IM_MODULE = "fcitx";
-      SDL_IM_MODULE = "fcitx";
-      INPUT_METHOD = "fcitx";
-      XMODIFIERS = "@im=fcitx";
-    };
-    serviceConfig.ExecStart = "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_IM_MODULE SDL_IM_MODULE INPUT_METHOD XMODIFIERS";
-  };
+  # IM 环境变量由 niri spawn-at-startup 统一导入 systemd/DBus（见 niri.nix）
+  # 不再需要独立 oneshot 服务，避免与 niri spawn 竞争导致变量丢失
 
   programs.niri.enable = true;
 
