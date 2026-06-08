@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# smart-close: close focused window; if no windows remain for that app
+# AND the app has no StatusNotifierItem (tray icon), kill the process.
+# This mimics Windows behavior: tray apps stay alive, others exit.
+
+set -euo pipefail
+
+# Get focused window info (app-id and pid)
+focused=$(niri msg --json focused-window 2>/dev/null) || exit 0
+[ "$focused" = "null" ] && exit 0
+
+app_id=$(echo "$focused" | jq -r '.app_id // empty')
+pid=$(echo "$focused" | jq -r '.pid // empty')
+
+[ -z "$app_id" ] && exit 0
+[ -z "$pid" ] && exit 0
+
+# Close the window (normal WM close request)
+niri msg action close-window
+
+# Wait for the window to actually close
+sleep 0.5
+
+# Check if the app still has any remaining windows
+remaining=$(niri msg --json windows 2>/dev/null | jq --arg id "$app_id" '[.[] | select(.app_id == $id)] | length')
+
+if [ "${remaining:-0}" -gt 0 ]; then
+    # App still has windows open, nothing to do
+    exit 0
+fi
+
+# Check if process is still alive
+if ! kill -0 "$pid" 2>/dev/null; then
+    # Already exited on its own
+    exit 0
+fi
+
+# Check StatusNotifierItem (SNI) — the standard tray protocol.
+# If the app registered a tray icon, it wants to stay alive.
+has_tray=false
+
+sni_items=$(dbus-send --session --print-reply --dest=org.kde.StatusNotifierWatcher \
+    /StatusNotifierWatcher org.freedesktop.DBus.Properties.Get \
+    string:org.kde.StatusNotifierWatcher string:RegisteredStatusNotifierItems 2>/dev/null || true)
+
+if [ -n "$sni_items" ]; then
+    # SNI entries look like ":1.234/StatusNotifierItem" or "org.kde.StatusNotifierItem-PID-N"
+    # Match by PID in the bus name or by resolving bus names to PIDs
+    if echo "$sni_items" | grep -q "$pid"; then
+        has_tray=true
+    else
+        # Some apps register with bus name, not PID directly.
+        # Get the unique bus name of our process and check if it appears in SNI items.
+        bus_name=$(dbus-send --session --print-reply --dest=org.freedesktop.DBus \
+            /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner \
+            string:"org.kde.StatusNotifierItem-${pid}-1" 2>/dev/null | grep -o '":[^"]*"' | tr -d '"' || true)
+
+        if [ -n "$bus_name" ] && echo "$sni_items" | grep -q "$bus_name"; then
+            has_tray=true
+        fi
+
+        # Fallback: iterate registered items and resolve their PIDs
+        if [ "$has_tray" = false ]; then
+            while IFS= read -r item; do
+                # Extract bus name (part before /)
+                item_bus="${item%%/*}"
+                item_pid=$(dbus-send --session --print-reply --dest=org.freedesktop.DBus \
+                    /org/freedesktop/DBus org.freedesktop.DBus.GetConnectionUnixProcessID \
+                    string:"$item_bus" 2>/dev/null | grep -o 'uint32 [0-9]*' | awk '{print $2}' || true)
+                if [ "$item_pid" = "$pid" ]; then
+                    has_tray=true
+                    break
+                fi
+                # Also check if tray belongs to a child of the target process
+                if [ -n "$item_pid" ] && [ -f "/proc/$item_pid/status" ]; then
+                    item_ppid=$(awk '/^PPid:/ {print $2}' "/proc/$item_pid/status" 2>/dev/null || true)
+                    if [ "$item_ppid" = "$pid" ]; then
+                        has_tray=true
+                        break
+                    fi
+                fi
+            done < <(echo "$sni_items" | grep -o '"[^"]*StatusNotifier[^"]*"' | tr -d '"')
+        fi
+    fi
+fi
+
+if [ "$has_tray" = true ]; then
+    # App has a tray icon — it declared it wants to live in background
+    exit 0
+fi
+
+# No tray, no remaining windows — kill the process tree
+kill -TERM -- -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true

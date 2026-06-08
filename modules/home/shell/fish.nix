@@ -17,6 +17,11 @@ in
       set -gx PKG_CONFIG_PATH "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig"
     '';
 
+    interactiveShellInit = ''
+      # Zellij completions (dynamic subcommands like `zellij attach <tab>`)
+      eval (zellij setup --generate-completion fish | string collect)
+    '';
+
     plugins = [
       {
         name = "nvm.fish";

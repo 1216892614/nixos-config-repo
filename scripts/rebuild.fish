@@ -23,5 +23,6 @@ sudo systemctl stop nixos-rebuild-switch-to-configuration.service >/dev/null 2>&
 sudo systemctl reset-failed nixos-rebuild-switch-to-configuration.service >/dev/null 2>&1
 sudo systemctl daemon-reload >/dev/null 2>&1
 
-sudo nixos-rebuild switch --flake $dst#desktop
+set -l host (hostname)
+sudo nixos-rebuild switch --flake $dst#$host
 and systemctl --user restart pipewire wireplumber 2>/dev/null

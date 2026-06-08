@@ -32,6 +32,14 @@
 
     # Steam is sensitive to fontconfig defaults; rely on fontconfig fallback instead.
     fontDir.enable = true;
-    fontconfig.enable = true;
+    fontconfig = {
+      enable = true;
+      defaultFonts = {
+        sansSerif = [ "Sarasa UI SC" "Source Han Sans SC" "WenQuanYi Zen Hei" ];
+        serif = [ "Source Han Serif SC" "Sarasa UI SC" ];
+        monospace = [ "Sarasa Mono SC" "Source Han Mono SC" ];
+        emoji = [ "Noto Color Emoji" ];
+      };
+    };
   };
 }

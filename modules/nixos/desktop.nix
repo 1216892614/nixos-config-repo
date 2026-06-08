@@ -66,7 +66,7 @@ in
 
     serviceConfig = {
       Type = "simple";
-      ExecStart = "${pkgs.rustdesk}/bin/rustdesk --service";
+      ExecStart = "${pkgs.rustdesk-flutter}/bin/rustdesk --service";
       # Stop both the tray and the server subprocesses on shutdown.
       ExecStop = "${pkgs.procps}/bin/pkill -f 'rustdesk --'";
       PIDFile = "/run/rustdesk.pid";
@@ -140,7 +140,7 @@ EOF
     ensure_options "$cfg_root/RustDesk2.toml"
 
     if [ -n "$pw" ]; then
-      ${pkgs.rustdesk}/lib/rustdesk/rustdesk --password "$pw" >/dev/null 2>&1 || true
+      ${pkgs.rustdesk-flutter}/lib/rustdesk/rustdesk --password "$pw" >/dev/null 2>&1 || true
     fi
 
     if [ -f "$cfg_root/RustDesk.toml" ]; then
