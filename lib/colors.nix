@@ -51,4 +51,11 @@
     lift = "#313244";   # surface0
     over = "#45475a";   # surface1
   };
+
+  # UI semantic tokens — change these when switching themes
+  bar = {
+    bg     = "#000000";   # statusbar background (pure black)
+    fg     = "#ffffff";   # statusbar foreground (pure white)
+  };
+  inactive = "#585b70";   # inactive borders/rings (surface2)
 }

@@ -66,90 +66,130 @@ in
   };
 
   xdg.configFile."yazi/theme.toml".text = ''
-    # Forest Night — generated from lib/colors.nix
-    [manager]
-    cwd = { fg = "${colors.accent}" }
+    # Catppuccin Mocha — ayu-dark structure, mocha palette
+    [mgr]
+    cwd = { fg = "${colors.comment}" }
 
-    hovered = { fg = "${colors.bg}", bg = "${colors.accent}" }
+    hovered         = { reversed = true }
     preview_hovered = { underline = true }
 
-    find_keyword = { fg = "${colors.terminal.yellow}", italic = true }
-    find_position = { fg = "${colors.terminal.magenta}", bg = "reset", italic = true }
+    find_keyword  = { fg = "${colors.terminal.yellow}", bold = true, italic = true, underline = true }
+    find_position = { fg = "${colors.terminal.magenta}", bold = true, italic = true }
 
-    marker_selected = { fg = "${colors.accent}", bg = "${colors.accent}" }
-    marker_copied   = { fg = "${colors.terminal.green}", bg = "${colors.terminal.green}" }
-    marker_cut      = { fg = "${colors.terminal.red}", bg = "${colors.terminal.red}" }
+    marker_copied   = { fg = "${colors.bg}", bg = "${colors.terminal.green}" }
+    marker_cut      = { fg = "${colors.bg}", bg = "${colors.terminal.red}" }
+    marker_marked   = { fg = "${colors.bg}", bg = "${colors.terminal.blue}" }
+    marker_selected = { fg = "${colors.bg}", bg = "${colors.terminal.yellow}" }
 
-    tab_active   = { fg = "${colors.bg}", bg = "${colors.accent}" }
-    tab_inactive = { fg = "${colors.fg}", bg = "${colors.surface.lift}" }
-    tab_width    = 1
+    count_copied   = { fg = "${colors.bg}", bg = "${colors.terminal.green}" }
+    count_cut      = { fg = "${colors.comment}", bg = "${colors.terminal.red}" }
+    count_selected = { fg = "${colors.bg}", bg = "${colors.terminal.yellow}" }
 
-    border_symbol = "│"
-    border_style  = { fg = "${colors.comment}" }
+    border_symbol = " "
+
+    [tabs]
+    active   = { fg = "${colors.bg}", bg = "${colors.accent}", bold = true }
+    inactive = { fg = "${colors.accent}", bg = "${colors.bg}" }
+    sep_inner = { open = "", close = "" }
+    sep_outer = { open = "", close = "" }
+
+    [mode]
+    normal_main = { fg = "${colors.bg}", bg = "${colors.accent}", bold = true }
+    normal_alt  = { fg = "${colors.terminal.blue}", bg = "${colors.surface.lift}", bold = true }
+
+    select_main = { fg = "${colors.bg}", bg = "${colors.terminal.blue}", bold = true }
+    select_alt  = { fg = "${colors.bg}", bg = "${colors.terminal.blue}", bold = true }
+
+    unset_main = { fg = "${colors.bg}", bg = "${colors.terminal.red}", bold = true }
+    unset_alt  = { fg = "${colors.bg}", bg = "${colors.terminal.red}", bold = true }
 
     [status]
-    separator_open  = ""
-    separator_close = ""
-    separator_style = { fg = "${colors.surface.lift}", bg = "${colors.surface.lift}" }
+    overall   = {}
+    sep_left  = { open = "", close = "" }
+    sep_right = { open = "", close = "" }
 
-    mode_normal = { fg = "${colors.bg}", bg = "${colors.accent}", bold = true }
-    mode_select = { fg = "${colors.bg}", bg = "${colors.terminal.yellow}", bold = true }
-    mode_unset  = { fg = "${colors.bg}", bg = "${colors.terminal.red}", bold = true }
+    progress_label  = { fg = "${colors.bg}", bold = true }
+    progress_normal = { fg = "${colors.accent}", bg = "${colors.bg}" }
+    progress_error  = { fg = "${colors.terminal.red}", bg = "${colors.bg}" }
 
-    progress_label  = { fg = "${colors.fg}", bold = true }
-    progress_normal = { fg = "${colors.accent}", bg = "${colors.surface.lift}" }
-    progress_error  = { fg = "${colors.terminal.red}", bg = "${colors.surface.lift}" }
-
-    permissions_t = { fg = "${colors.accent}" }
-    permissions_r = { fg = "${colors.terminal.yellow}" }
-    permissions_w = { fg = "${colors.terminal.red}" }
-    permissions_x = { fg = "${colors.terminal.green}" }
-    permissions_s = { fg = "${colors.comment}" }
-
-    [input]
-    border   = { fg = "${colors.accent}" }
-    title    = {}
-    value    = {}
-    selected = { reversed = true }
+    perm_type  = { fg = "${colors.fg}" }
+    perm_write = { fg = "${colors.terminal.red}" }
+    perm_exec  = { fg = "${colors.terminal.green}" }
+    perm_read  = { fg = "${colors.terminal.blue}" }
+    perm_sep   = { fg = "${colors.comment}" }
 
     [select]
     border   = { fg = "${colors.accent}" }
-    active   = { fg = "${colors.terminal.magenta}" }
-    inactive = {}
+    active   = { fg = "${colors.terminal.red}", bold = true }
+    inactive = { fg = "${colors.comment}", bg = "${colors.bg}" }
+
+    [input]
+    border = { fg = "${colors.accent}" }
+    value  = { fg = "${colors.comment}" }
+
+    [completion]
+    border = { fg = "${colors.accent}", bg = "${colors.bg}" }
 
     [tasks]
     border  = { fg = "${colors.accent}" }
-    title   = {}
-    hovered = { underline = true }
+    title   = { fg = "${colors.comment}" }
+    hovered = { fg = "${colors.terminal.green}", underline = true }
 
     [which]
-    mask            = { bg = "${colors.surface.lift}" }
-    cand            = { fg = "${colors.terminal.cyan}" }
-    rest            = { fg = "${colors.comment}" }
-    desc            = { fg = "${colors.terminal.magenta}" }
-    separator       = "  "
+    cols = 3
+    mask            = { bg = "${colors.bg}" }
+    cand            = { fg = "${colors.accent}" }
+    rest            = { fg = "${colors.bg}" }
+    desc            = { fg = "${colors.comment}" }
+    separator       = " > "
     separator_style = { fg = "${colors.comment}" }
 
     [help]
-    on      = { fg = "${colors.terminal.magenta}" }
-    exec    = { fg = "${colors.terminal.cyan}" }
-    desc    = { fg = "${colors.comment}" }
-    hovered = { bg = "${colors.surface.lift}", bold = true }
-    footer  = { fg = "${colors.fg}", bg = "${colors.bg}" }
+    on     = { fg = "${colors.accent}" }
+    run    = { fg = "${colors.terminal.green}" }
+    footer = { fg = "${colors.bg}", bg = "${colors.comment}" }
+
+    [notify]
+    title_info  = { fg = "${colors.terminal.green}" }
+    title_warn  = { fg = "${colors.terminal.yellow}" }
+    title_error = { fg = "${colors.terminal.red}" }
 
     [filetype]
     rules = [
-      { mime = "image/*", fg = "${colors.terminal.cyan}" },
-      { mime = "video/*", fg = "${colors.terminal.yellow}" },
-      { mime = "audio/*", fg = "${colors.terminal.yellow}" },
-      { mime = "application/zip",  fg = "${colors.terminal.magenta}" },
-      { mime = "application/gzip", fg = "${colors.terminal.magenta}" },
-      { mime = "application/x-tar", fg = "${colors.terminal.magenta}" },
-      { mime = "application/x-bzip2", fg = "${colors.terminal.magenta}" },
-      { mime = "application/x-7z-compressed", fg = "${colors.terminal.magenta}" },
-      { mime = "application/x-rar", fg = "${colors.terminal.magenta}" },
-      { name = "*", fg = "${colors.fg}" },
-      { name = "*/", fg = "${colors.accent}" },
+      # directories
+      { url = "*/", fg = "${colors.terminal.blue}" },
+
+      # executables
+      { url = "*", is = "exec", fg = "${colors.terminal.green}" },
+
+      # images
+      { mime = "image/*", fg = "${colors.terminal.yellow}" },
+
+      # media
+      { mime = "{audio,video}/*", fg = "${colors.terminal.green}" },
+
+      # archives
+      { mime = "application/{,g}zip", fg = "${colors.terminal.red}" },
+      { mime = "application/x-{tar,bzip*,7z-compressed,xz,rar}", fg = "${colors.terminal.red}" },
+
+      # documents
+      { mime = "application/{pdf,doc,rtf,vnd.*}", fg = "${colors.terminal.blue}" },
+
+      # scripts and code
+      { mime = "application/{x-shellscript,x-python,x-ruby,x-javascript}", fg = "${colors.terminal.yellow}" },
+      { mime = "text/x-{c,c++}", fg = "${colors.terminal.blue}" },
+
+      # config files
+      { url = "*.json", fg = "${colors.terminal.yellow}" },
+      { url = "*.yml", fg = "${colors.terminal.blue}" },
+      { url = "*.toml", fg = "${colors.terminal.magenta}" },
+
+      # special files
+      { url = "*", is = "orphan", bg = "${colors.bg}" },
+      { url = "*", is = "dummy", bg = "${colors.bg}" },
+
+      # fallback
+      { url = "*/", fg = "${colors.terminal.blue}" },
     ]
   '';
 }

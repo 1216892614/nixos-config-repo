@@ -67,6 +67,7 @@ in
     model = "bigbigdog/claude-opus-4-6";
     small_model = "deepseek/deepseek-v4-pro";
     plugin = [ "oh-my-openagent" ];
+    theme = "catppuccin";
     provider = {
       bytecatcode = {
         models = {

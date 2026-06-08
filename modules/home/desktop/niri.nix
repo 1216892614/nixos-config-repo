@@ -54,7 +54,7 @@ in
       focus-ring = {
         width = 2;
         active.color = colors.accent;
-        inactive.color = "#585b70";
+        inactive.color = colors.inactive;
       };
     };
 
