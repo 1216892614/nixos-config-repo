@@ -183,6 +183,13 @@ EOF
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;
 
+  # HP laptop function key fixups (via hwdb)
+  # Remap HP WMI hotkeys scancode 0x21a8 (KEY_PROG2) → KEY_PLAYPAUSE
+  services.udev.extraHwdb = ''
+    evdev:name:HP WMI hotkeys:*
+     KEYBOARD_KEY_21a8=playpause
+  '';
+
   boot = {
     kernelModules = [ "v4l2loopback" "uvcvideo" "uinput" ];
     extraModulePackages = with config.boot.kernelPackages; [

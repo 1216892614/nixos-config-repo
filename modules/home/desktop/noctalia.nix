@@ -78,15 +78,34 @@ in
         fillMode = "cover";
       };
 
-      bar.widgets.right = [
-        { id = "Tray"; }
-        { id = "NotificationHistory"; }
-        { id = "Battery"; }
-        { id = "Volume"; }
-        { id = "Brightness"; }
-        { id = "screen-recorder"; }
-        { id = "ControlCenter"; }
-      ];
+      bar = {
+        showCapsule = false;        # 移除 widget 背景胶囊
+        backgroundOpacity = 1.0;    # 纯色背景（不透明）
+        widgetSpacing = 2;          # 缩小间距，macOS 风格
+        contentPadding = 1;
+        density = "compact";
+
+        widgets.left = [
+          { id = "Launcher"; }
+        ];
+        widgets.center = [
+          {
+            id = "Workspace";
+            labelMode = "none";     # 移除 1/2/3 数字
+            pillSize = 0.4;         # 最小点
+          }
+        ];
+        widgets.right = [
+          { id = "screen-recorder"; }
+          { id = "Tray"; }
+          { id = "Brightness"; }
+          { id = "Volume"; }
+          { id = "Battery"; }
+          { id = "NotificationHistory"; }
+          { id = "Clock"; }
+          { id = "ControlCenter"; }
+        ];
+      };
     };
 
     plugins = {
@@ -130,12 +149,12 @@ in
       mOnError = colors.bg;
       mErrorContainer = colors.surface.lift;
       mOnErrorContainer = colors.error;
-      mBackground = colors.bg;
-      mOnBackground = colors.fg;
-      mSurface = colors.surface.base;
-      mOnSurface = colors.fg;
-      mSurfaceVariant = colors.surface.over;
-      mOnSurfaceVariant = colors.comment;
+      mBackground = "#000000";
+      mOnBackground = "#ffffff";
+      mSurface = "#000000";          # 顶栏纯黑背景
+      mOnSurface = "#ffffff";        # 图标/文字纯白
+      mSurfaceVariant = "#000000";   # capsule 背景（已关闭，兜底）
+      mOnSurfaceVariant = "#ffffff";
       mOutline = colors.gutter;
       mOutlineVariant = colors.surface.over;
       mInverseSurface = colors.fg;

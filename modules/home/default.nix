@@ -44,6 +44,7 @@ in
     claude-code
     docker-buildx
     brightnessctl   # backlight control for laptop fn keys
+    playerctl       # MPRIS media player control for fn keys
     wl-clipboard
     xclip           # X11 clipboard access for clipsync bridge
     clipnotify      # X11 clipboard change notifications for clipsync

@@ -115,6 +115,11 @@ in
       "XF86MonBrightnessUp".action.spawn = [ "brightnessctl" "set" "+5%" ];
       "XF86MonBrightnessDown".action.spawn = [ "brightnessctl" "set" "5%-" ];
 
+      "XF86AudioPlay".action.spawn = [ "playerctl" "play-pause" ];
+      "XF86AudioPause".action.spawn = [ "playerctl" "play-pause" ];
+      "XF86AudioNext".action.spawn = [ "playerctl" "next" ];
+      "XF86AudioPrev".action.spawn = [ "playerctl" "previous" ];
+
       "Super+H".action.focus-column-left = { };
       "Super+J".action.focus-window-down = { };
       "Super+K".action.focus-window-up = { };
