@@ -60,6 +60,8 @@ final: prev: {
 
   clipsync = prev.callPackage ../pkgs/clipsync.nix { };
 
+  pam-howdy-animated = prev.callPackage ../pkgs/pam-howdy-animated { };
+
   baidupcs-go = prev.buildGoModule {
     pname = "baidupcs-go";
     version = "3.6.2";

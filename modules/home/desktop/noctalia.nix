@@ -97,18 +97,12 @@ in
 
         widgets.left = [
           {
-            id = "CustomButton";
-            icon = "rocket";
-            leftClickExec = "walker";
-          }
-        ];
-        widgets.center = [
-          {
             id = "Workspace";
             labelMode = "none";     # 移除 1/2/3 数字
             pillSize = 0.4;         # 最小点
           }
         ];
+        widgets.center = [];
         widgets.right = [
           { id = "plugin:screen-recorder"; }
           { id = "Tray"; }

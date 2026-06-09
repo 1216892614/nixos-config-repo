@@ -1,0 +1,18 @@
+[package]
+name = "pam-howdy-animated"
+version = "0.1.0"
+edition = "2021"
+description = "PAM module wrapping howdy with camera-style terminal animation"
+
+[lib]
+name = "pam_howdy_animated"
+crate-type = ["cdylib"]
+
+[dependencies]
+libloading = "0.8"
+libc = "0.2"
+
+[profile.release]
+opt-level = "s"
+strip = true
+lto = true

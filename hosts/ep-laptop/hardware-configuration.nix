@@ -44,8 +44,10 @@
     control = "sufficient";
     settings = {
       core = {
-        detection_notice = true; # 提示正在进行面部检测
+        detection_notice = false; # 动画模块已替代提示，关闭 howdy 自身输出
+        timeout_notice = false; # 超时也不输出文字
         no_confirmation = true; # 识别成功无需按 Enter
+        suppress_unknown = true; # 抑制未知用户警告输出
         abort_if_ssh = true; # SSH 不触发面部识别
         abort_if_lid_closed = true; # 合盖时不触发
       };
@@ -69,37 +71,50 @@
     device = "video3";
   };
 
-  # PAM 集成：为各认证场景启用面部识别
+  # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
+  # pam_howdy_animated.so 在终端场景显示摄像机风格动画，非终端静默透传
   security.pam.services = {
     # sudo 提权
-    sudo.howdy = {
-      enable = true;
-      control = "sufficient";
+    sudo = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
-    # polkit 图形提权（部分应用查看密码等）
-    polkit-1.howdy = {
-      enable = true;
-      control = "sufficient";
+    # polkit 图形提权
+    polkit-1 = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
     # GDM 登录
-    gdm-password.howdy = {
-      enable = true;
-      control = "sufficient";
+    gdm-password = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
     # TTY 终端登录
-    login.howdy = {
-      enable = true;
-      control = "sufficient";
+    login = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
     # 锁屏解锁（GNOME/GDM）
-    gdm-fingerprint.howdy = {
-      enable = true;
-      control = "sufficient";
+    gdm-fingerprint = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
-    # systemd --user 需要认证的场景
-    systemd-user.howdy = {
-      enable = true;
-      control = "sufficient";
+    # systemd --user 认证
+    systemd-user = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
   };
 }
