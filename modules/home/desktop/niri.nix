@@ -16,11 +16,12 @@ let
         saturation 1.5
     }
 
-    // 全局启用背景模糊（排除浏览器、vlc）
+    // 全局启用背景模糊（排除浏览器、vlc、输入法）
     window-rule {
         exclude app-id="^google-chrome$"
         exclude app-id="^chromium$"
         exclude app-id="^vlc$"
+        exclude app-id="^fcitx"
         background-effect {
             blur true
         }
@@ -187,19 +188,34 @@ in
           { bottom-left = r; bottom-right = r; top-left = r; top-right = r; };
         clip-to-geometry = true;
       }
-      # 所有窗口透明 + blur（排除浏览器、vlc、浮动窗口）
-      # focus 0.85, unfocus 0.72
+      # 所有窗口透明 + blur（排除浏览器、vlc、浮动窗口、输入法）
+      # focused 1.0（不透明，避免输入法候选框变透明）
+      # active（非 focused）0.90, inactive 0.85
       {
         matches = [
-          { is-active = true; }
+          { is-focused = true; }
         ];
         excludes = [
           { app-id = "^google-chrome$"; }
           { app-id = "^chromium$"; }
           { app-id = "^vlc$"; }
+          { app-id = "^fcitx"; }
           { is-floating = true; }
         ];
-        opacity = 0.85;
+        opacity = 1.0;
+      }
+      {
+        matches = [
+          { is-active = true; is-focused = false; }
+        ];
+        excludes = [
+          { app-id = "^google-chrome$"; }
+          { app-id = "^chromium$"; }
+          { app-id = "^vlc$"; }
+          { app-id = "^fcitx"; }
+          { is-floating = true; }
+        ];
+        opacity = 0.90;
       }
       {
         matches = [
@@ -209,9 +225,10 @@ in
           { app-id = "^google-chrome$"; }
           { app-id = "^chromium$"; }
           { app-id = "^vlc$"; }
+          { app-id = "^fcitx"; }
           { is-floating = true; }
         ];
-        opacity = 0.72;
+        opacity = 0.85;
       }
       {
         matches = [
