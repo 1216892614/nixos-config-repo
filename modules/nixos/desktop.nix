@@ -183,6 +183,26 @@ EOF
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;
 
+  # 电源自动切换：离电 → power-saver + 亮度70%，接电 → balanced + 亮度100%
+  services.udev.extraRules = let
+    power-switch = pkgs.writeShellScript "power-switch" ''
+      BACKLIGHT="/sys/class/backlight/amdgpu_bl1"
+      MAX=$(cat "$BACKLIGHT/max_brightness")
+
+      if [ "$(cat /sys/class/power_supply/ACAD/online 2>/dev/null || cat /sys/class/power_supply/AC0/online 2>/dev/null || echo 1)" = "1" ]; then
+        # 接电
+        ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced
+        echo "$MAX" > "$BACKLIGHT/brightness"
+      else
+        # 离电
+        ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver
+        echo "$((MAX * 70 / 100))" > "$BACKLIGHT/brightness"
+      fi
+    '';
+  in ''
+    SUBSYSTEM=="power_supply", ATTR{type}=="Mains", RUN+="${power-switch}"
+  '';
+
   # HP laptop function key fixups (via hwdb)
   # Remap HP WMI hotkeys scancode 0x21a8 (KEY_PROG2) → KEY_PLAYPAUSE
   services.udev.extraHwdb = ''

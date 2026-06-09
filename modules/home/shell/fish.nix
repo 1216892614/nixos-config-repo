@@ -201,8 +201,66 @@ in
   programs.btop = {
     enable = true;
     settings = {
-      color_theme = "catppuccin_mocha";
+      color_theme = "custom";
       theme_background = false;
     };
   };
+
+  xdg.configFile."btop/themes/custom.theme".text = ''
+    # Theme: Catppuccin Mocha (custom from colors.nix)
+
+    theme[main_bg]="${colors.bg}"
+    theme[main_fg]="${colors.fg}"
+    theme[title]="${colors.fg}"
+    theme[hi_fg]="${colors.terminal.cyan}"
+    theme[selected_bg]="${colors.selection}"
+    theme[selected_fg]="${colors.fg}"
+    theme[inactive_fg]="${colors.comment}"
+    theme[proc_misc]="${colors.terminal.cyan}"
+    theme[cpu_box]="${colors.surface.lift}"
+    theme[mem_box]="${colors.surface.lift}"
+    theme[net_box]="${colors.surface.lift}"
+    theme[proc_box]="${colors.surface.lift}"
+    theme[div_line]="${colors.surface.lift}"
+
+    # Temperature graph: green -> yellow -> red
+    theme[temp_start]="${colors.terminal.green}"
+    theme[temp_mid]="${colors.terminal.yellow}"
+    theme[temp_end]="${colors.terminal.red}"
+
+    # CPU graph: green -> yellow -> red
+    theme[cpu_start]="${colors.terminal.green}"
+    theme[cpu_mid]="${colors.terminal.yellow}"
+    theme[cpu_end]="${colors.terminal.red}"
+
+    # Mem/Disk free: green -> yellow -> red
+    theme[free_start]="${colors.terminal.green}"
+    theme[free_mid]="${colors.terminal.yellow}"
+    theme[free_end]="${colors.terminal.red}"
+
+    # Mem/Disk cached: blue -> magenta -> red
+    theme[cached_start]="${colors.terminal.blue}"
+    theme[cached_mid]="${colors.terminal.magenta}"
+    theme[cached_end]="${colors.terminal.red}"
+
+    # Mem/Disk available: cyan -> blue -> magenta
+    theme[available_start]="${colors.terminal.cyan}"
+    theme[available_mid]="${colors.terminal.blue}"
+    theme[available_end]="${colors.terminal.magenta}"
+
+    # Mem/Disk used: green -> yellow -> red
+    theme[used_start]="${colors.terminal.green}"
+    theme[used_mid]="${colors.terminal.yellow}"
+    theme[used_end]="${colors.terminal.red}"
+
+    # Download: cyan -> blue -> magenta
+    theme[download_start]="${colors.terminal.cyan}"
+    theme[download_mid]="${colors.terminal.blue}"
+    theme[download_end]="${colors.terminal.magenta}"
+
+    # Upload: green -> yellow -> red
+    theme[upload_start]="${colors.terminal.green}"
+    theme[upload_mid]="${colors.terminal.yellow}"
+    theme[upload_end]="${colors.terminal.red}"
+  '';
 }
