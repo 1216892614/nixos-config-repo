@@ -69,7 +69,10 @@ in
 
     binds = {
       "Super+Return".action.spawn = [ "walker" ];
-      "Super+T".action.spawn = [ "kitty" "-e" "zellij" ];
+      "Super+T".action.spawn = [
+        "kitty" "-e" "bash" "-c"
+        ''SESSION="kiro-$$"; trap "zellij kill-session \"$SESSION\" 2>/dev/null" EXIT; zellij attach --create "$SESSION"''
+      ];
       "Super+Y".action.spawn = [ "kitty" "-e" "yazi" ];
       "Super+Q".action.close-window = { };
       "Super+V".action.spawn = [ "walker" "-m" "clipboard" ];
