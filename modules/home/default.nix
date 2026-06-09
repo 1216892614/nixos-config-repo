@@ -281,6 +281,31 @@ in
     Install.WantedBy = [ "default.target" ];
   };
 
+  # Chrome: 默认启用垂直标签栏（仅首次 seed，不覆盖用户后续修改）
+  home.activation.seedChromeVerticalTabs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    prefs_file="${config.home.homeDirectory}/.config/google-chrome/Default/Preferences"
+    if [ -f "$prefs_file" ]; then
+      if ! ${pkgs.python3}/bin/python3 -c "
+import json, sys
+with open('$prefs_file') as f:
+    p = json.load(f)
+if p.get('tab_strip', {}).get('tab_strip_layout_type') is not None:
+    sys.exit(1)
+p.setdefault('tab_strip', {})['tab_strip_layout_type'] = 1
+with open('$prefs_file', 'w') as f:
+    json.dump(p, f)
+"; then
+        echo "chrome: vertical tabs already configured, skipping"
+      else
+        echo "chrome: enabled vertical tabs (tab_strip_layout_type=1)"
+      fi
+    else
+      run mkdir -p "$(dirname "$prefs_file")"
+      echo '{"tab_strip":{"tab_strip_layout_type":1}}' > "$prefs_file"
+      echo "chrome: created Preferences with vertical tabs enabled"
+    fi
+  '';
+
   # Symlink ~/.local/share/fonts → system font dir so apps with hardcoded
   # font paths (RustDesk fontdb, etc.) can find CJK fonts on NixOS
   home.activation.linkFonts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

@@ -10,8 +10,8 @@ let
 
     // Background blur (dual kawase)
     blur {
-        passes 3
-        offset 3
+        passes 5
+        offset 2
         noise 0.02
         saturation 1.5
     }
@@ -20,7 +20,6 @@ let
     window-rule {
         exclude app-id="^google-chrome$"
         exclude app-id="^chromium$"
-        exclude app-id="^firefox$"
         exclude app-id="^vlc$"
         background-effect {
             blur true
@@ -31,6 +30,9 @@ let
     layer-rule {
         match namespace="^noctalia-overview-"
         place-within-backdrop true
+        background-effect {
+            blur true
+        }
     }
   '';
 in
@@ -186,7 +188,7 @@ in
         clip-to-geometry = true;
       }
       # 所有窗口透明 + blur（排除浏览器、vlc、浮动窗口）
-      # focus 0.95, unfocus 0.82
+      # focus 0.85, unfocus 0.72
       {
         matches = [
           { is-active = true; }
@@ -194,11 +196,10 @@ in
         excludes = [
           { app-id = "^google-chrome$"; }
           { app-id = "^chromium$"; }
-          { app-id = "^firefox$"; }
           { app-id = "^vlc$"; }
           { is-floating = true; }
         ];
-        opacity = 0.95;
+        opacity = 0.85;
       }
       {
         matches = [
@@ -207,11 +208,10 @@ in
         excludes = [
           { app-id = "^google-chrome$"; }
           { app-id = "^chromium$"; }
-          { app-id = "^firefox$"; }
           { app-id = "^vlc$"; }
           { is-floating = true; }
         ];
-        opacity = 0.82;
+        opacity = 0.72;
       }
       {
         matches = [
