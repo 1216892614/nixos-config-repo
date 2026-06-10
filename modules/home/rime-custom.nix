@@ -49,15 +49,15 @@ let
 in
 {
   # ── fcitx5 主题（Catppuccin Mocha 配色）────────────────────────────
-  # 主题文件 → ~/.local/share/fcitx5/themes/ForestNight/theme.conf
-  xdg.dataFile."fcitx5/themes/ForestNight/theme.conf".source = ./fcitx5-theme-forest-night.conf;
+  # 主题文件 → ~/.local/share/fcitx5/themes/CatppuccinMocha/theme.conf
+  xdg.dataFile."fcitx5/themes/CatppuccinMocha/theme.conf".source = ./fcitx5-theme-catppuccin-mocha.conf;
 
   # ClassicUI 配置：选用主题 + 竖排候选 + 光标跟随
   # PerScreenDPI 确保 HiDPI 下候选窗口大小正确
   # ForceWaylandDPI=0 让 fcitx5 使用 Wayland 报告的 scale factor
   xdg.configFile."fcitx5/conf/classicui.conf".text = ''
     # 主题
-    Theme=ForestNight
+    Theme=CatppuccinMocha
     # 竖排候选词（更不容易被遮挡，且视觉更紧凑）
     Vertical Candidate List=True
     # 跟随光标定位候选窗口

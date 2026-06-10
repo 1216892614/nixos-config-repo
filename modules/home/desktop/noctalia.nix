@@ -86,6 +86,10 @@ in
       general = {
         lockScreenBlur = 0;
         lockScreenTint = 0;
+        # 锁屏显示时立即开始 PAM 认证（触发 howdy 面部识别）
+        autoStartAuth = true;
+        # 挂起时自动锁屏
+        lockOnSuspend = true;
       };
 
       bar = {
@@ -205,5 +209,33 @@ in
   home.file.".config/noctalia/plugins/screen-recorder" = {
     source = patchedScreenRecorder;
     recursive = true;
+  };
+
+  # Noctalia Shell 使用专用 PAM service（带 howdy 面部识别），不用默认的 login
+  systemd.user.services.noctalia-shell.Service.Environment = [
+    "NOCTALIA_PAM_SERVICE=noctalia"
+  ];
+
+  # 启动后立即锁屏（等待 Noctalia Shell IPC 就绪）
+  systemd.user.services.noctalia-lock-on-start = {
+    Unit = {
+      Description = "Lock screen on session start";
+      After = [ "noctalia-shell.service" ];
+      BindsTo = [ "noctalia-shell.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = toString (pkgs.writeShellScript "noctalia-lock-on-start" ''
+        cmd="/etc/profiles/per-user/ep-o1/bin/noctalia-shell"
+        for _ in $(seq 1 30); do
+          "$cmd" ipc call lockScreen lock 2>/dev/null && exit 0
+          sleep 0.2
+        done
+      '');
+      RemainAfterExit = true;
+    };
+    Install = {
+      WantedBy = [ "noctalia-shell.service" ];
+    };
   };
 }

@@ -35,7 +35,7 @@ in
       };
     };
 
-    # Forest Night theme — colors derived from lib/colors.nix
+    # Catppuccin Mocha theme — colors derived from lib/colors.nix
 
     plugins = {
       clipboard = pkgs.fetchFromGitHub {

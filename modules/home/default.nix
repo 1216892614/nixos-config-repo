@@ -15,6 +15,7 @@ in
     ./desktop/walker.nix
     ./shell/fish.nix
     ./dev/git.nix
+    ./dev/zed.nix
     ./dev/cursor.nix
     ./dev/languages.nix
     ./terminal.nix
@@ -49,7 +50,7 @@ in
     xclip           # X11 clipboard access for clipsync bridge
     clipnotify      # X11 clipboard change notifications for clipsync
     clipsync        # bidirectional X11↔Wayland clipboard bridge
-    wtype       # simulate keypress for walker clipboard paste
+    clippaste       # smart clipboard paste (text via wtype stdin, image via shortcut)
     cliphist
     uv  # provides uvx for running Python tools (e.g. astrbot)
     fastfetch
@@ -279,6 +280,53 @@ in
       RestartSec = "5";
     };
     Install.WantedBy = [ "default.target" ];
+  };
+
+  # Chrome: 不使用 gnome-keyring，改用内置密码存储
+  # 避免启动时弹出 keyring 解锁对话框（面部识别登录时 keyring 不会自动解锁）
+  # 访问密码管理器时 Chrome 走 polkit 认证 → 支持 howdy 人脸识别
+  xdg.desktopEntries.google-chrome = {
+    name = "Google Chrome";
+    genericName = "Web Browser";
+    comment = "Access the Internet";
+    exec = "google-chrome-stable --password-store=basic %U";
+    terminal = false;
+    icon = "google-chrome";
+    type = "Application";
+    categories = [ "Network" "WebBrowser" ];
+    mimeType = [
+      "application/pdf" "application/rdf+xml" "application/rss+xml"
+      "application/xhtml+xml" "application/xhtml_xml" "application/xml"
+      "image/gif" "image/jpeg" "image/png" "image/webp"
+      "text/html" "text/xml"
+      "x-scheme-handler/http" "x-scheme-handler/https"
+      "x-scheme-handler/google-chrome"
+    ];
+    startupNotify = true;
+    actions = {
+      new-window = {
+        name = "New Window";
+        exec = "google-chrome-stable --password-store=basic";
+      };
+      new-private-window = {
+        name = "New Incognito Window";
+        exec = "google-chrome-stable --password-store=basic --incognito";
+      };
+    };
+  };
+
+  # ChatGPT: Chrome app 模式启动
+  xdg.dataFile."icons/hicolor/scalable/apps/chatgpt.svg".source = "${inputs.self}/icons/chatgpt.svg";
+  xdg.desktopEntries.chatgpt = {
+    name = "ChatGPT";
+    genericName = "AI Assistant";
+    comment = "OpenAI ChatGPT";
+    exec = "google-chrome-stable --password-store=basic --app=https://chatgpt.com/";
+    terminal = false;
+    icon = "chatgpt";
+    type = "Application";
+    categories = [ "Network" ];
+    startupNotify = true;
   };
 
   # Chrome: 默认启用垂直标签栏（仅首次 seed，不覆盖用户后续修改）

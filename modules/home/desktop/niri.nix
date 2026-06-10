@@ -117,7 +117,7 @@ in
       "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
       "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
       "Super+L".action.focus-column-right = { };
-      "Super+Ctrl+Shift+L".action.spawn = [ "noctalia-shell" "ipc" "call" "lockScreen" "toggle" ];
+      "Super+Ctrl+Shift+L".action.spawn = [ "noctalia-shell" "ipc" "call" "lockScreen" "lock" ];
 
       "XF86AudioRaiseVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "increase" ];
       "XF86AudioLowerVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "decrease" ];
@@ -232,6 +232,31 @@ in
           { is-floating = true; }
         ];
         opacity = 0.85;
+      }
+      # kitty / zed / cursor / qq / qqmusic / chatgpt: focused 0.95 透明 + blur, unfocused 0.80
+      {
+        matches = [
+          { app-id = "^kitty$"; is-focused = true; }
+          { app-id = "^dev\\.zed\\."; is-focused = true; }
+          { app-id = "^zed$"; is-focused = true; }
+          { app-id = "^cursor$"; is-focused = true; }
+          { app-id = "^QQ$"; is-focused = true; }
+          { app-id = "^qqmusic$"; is-focused = true; }
+          { app-id = "^chrome-chatgpt\\.com__-"; is-focused = true; }
+        ];
+        opacity = 0.95;
+      }
+      {
+        matches = [
+          { app-id = "^kitty$"; is-focused = false; }
+          { app-id = "^dev\\.zed\\."; is-focused = false; }
+          { app-id = "^zed$"; is-focused = false; }
+          { app-id = "^cursor$"; is-focused = false; }
+          { app-id = "^QQ$"; is-focused = false; }
+          { app-id = "^qqmusic$"; is-focused = false; }
+          { app-id = "^chrome-chatgpt\\.com__-"; is-focused = false; }
+        ];
+        opacity = 0.80;
       }
       {
         matches = [

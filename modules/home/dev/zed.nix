@@ -1,14 +1,15 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
+  env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else {};
   colors = import ../../../lib/colors.nix;
 
-  # Zed theme generated from lib/colors.nix (Forest Night)
-  forestNightTheme = {
-    name = "Forest Night";
+  # Zed theme generated from lib/colors.nix (Catppuccin Mocha)
+  catppuccinMochaTheme = {
+    name = "Catppuccin Mocha";
     author = "ep-o1";
     themes = [{
-      name = "Forest Night";
+      name = "Catppuccin Mocha";
       appearance = "dark";
       style = {
         # Editor
@@ -133,8 +134,8 @@ in
       auto_update = false;
       theme = {
         mode = "dark";
-        dark = "Forest Night";
-        light = "Forest Night";
+        dark = "Catppuccin Mocha";
+        light = "Catppuccin Mocha";
       };
       buffer_font_family = "Sarasa Mono SC";
       buffer_font_size = 14;
@@ -154,15 +155,159 @@ in
         metrics = false;
         diagnostics = false;
       };
+
+      # ── LLM Providers ──────────────────────────────────────────────────────
+      language_models = {
+        # DeepSeek (direct API)
+        deepseek = {
+          api_url = "https://api.deepseek.com";
+          available_models = [
+            {
+              name = "deepseek-v4-pro";
+              display_name = "DeepSeek V4 Pro";
+              max_tokens = 1000000;
+              max_output_tokens = 384000;
+            }
+          ];
+        };
+
+        # OpenAI-compatible providers
+        openai_compatible = {
+          # BigBigDog — Claude/GPT/Gemini relay
+          bigbigdog = {
+            api_url = "https://www.dogapi.cc/v1";
+            available_models = [
+              {
+                name = "claude-opus-4-8";
+                display_name = "Claude Opus 4.8";
+                max_tokens = 200000;
+              }
+              {
+                name = "claude-opus-4-7";
+                display_name = "Claude Opus 4.7";
+                max_tokens = 200000;
+              }
+              {
+                name = "claude-opus-4-6";
+                display_name = "Claude Opus 4.6";
+                max_tokens = 200000;
+              }
+              {
+                name = "gpt-5.3-codex";
+                display_name = "GPT 5.3 Codex";
+                max_tokens = 272000;
+              }
+              {
+                name = "gpt-5.4";
+                display_name = "GPT 5.4";
+                max_tokens = 272000;
+              }
+              {
+                name = "gpt-5.4-mini";
+                display_name = "GPT 5.4 Mini";
+                max_tokens = 272000;
+              }
+              {
+                name = "gpt-5.5";
+                display_name = "GPT 5.5";
+                max_tokens = 272000;
+              }
+              {
+                name = "gemini-3-flash";
+                display_name = "Gemini 3 Flash";
+                max_tokens = 1000000;
+              }
+              {
+                name = "gemini-3.1-pro-preview";
+                display_name = "Gemini 3.1 Pro";
+                max_tokens = 1000000;
+              }
+            ];
+          };
+
+          # ByteCatCode — Anthropic relay
+          bytecatcode = {
+            api_url = "https://bytecat.lamclod.cn/v1";
+            available_models = [
+              {
+                name = "claude-opus-4-8";
+                display_name = "ByteCat Claude Opus 4.8";
+                max_tokens = 200000;
+              }
+              {
+                name = "claude-opus-4-7";
+                display_name = "ByteCat Claude Opus 4.7";
+                max_tokens = 200000;
+              }
+              {
+                name = "claude-opus-4-6";
+                display_name = "ByteCat Claude Opus 4.6";
+                max_tokens = 200000;
+              }
+            ];
+          };
+        };
+      };
     };
   };
 
-  # Install Forest Night theme
-  xdg.configFile."zed/themes/forest-night.json".text = builtins.toJSON forestNightTheme;
-
-  # Set zed as default EDITOR/VISUAL
+  # Set API keys via environment variables for Zed LLM providers
+  # Zed reads: DEEPSEEK_API_KEY, BIGBIGDOG_API_KEY, BYTECATCODE_API_KEY
   home.sessionVariables = {
-    EDITOR = "zeditor --wait";
-    VISUAL = "zeditor --wait";
+    EDITOR = "zed --wait";
+    VISUAL = "zed --wait";
+    DEEPSEEK_API_KEY = env.opencodeDeepseekApiKey or "";
+    BIGBIGDOG_API_KEY = env.opencodeBigbigdogApiKey or "";
+    BYTECATCODE_API_KEY = env.opencodeBytekatApiKey or "";
   };
+
+  # Expose `zeditor` CLI alias (the package ships `bin/zed`)
+  home.file.".local/bin/zeditor" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      exec zed "$@"
+    '';
+  };
+
+  # Expose `zed-server` for headless / remote development usage
+  home.file.".local/bin/zed-server" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      exec zed --foreground "$@"
+    '';
+  };
+
+  # Desktop entry so Walker can discover Zed
+  xdg.dataFile."applications/zed.desktop".text = ''
+    [Desktop Entry]
+    Name=Zed
+    Comment=High-performance code editor
+    Exec=zed %U
+    Terminal=false
+    Type=Application
+    Icon=zed
+    Categories=Development;IDE;TextEditor;
+    Keywords=zed;editor;code;
+    MimeType=text/plain;application/x-zerosize;x-scheme-handler/zed;
+    Actions=NewWorkspace;
+
+    [Desktop Action NewWorkspace]
+    Exec=zed --new %U
+    Name=Open a new workspace
+  '';
+
+  # Set Zed as default application for text files
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/plain" = "zed.desktop";
+      "application/x-zerosize" = "zed.desktop";
+      "x-scheme-handler/zed" = "zed.desktop";
+    };
+  };
+
+  # Install Catppuccin Mocha theme (generated from lib/colors.nix)
+  xdg.configFile."zed/themes/catppuccin-mocha.json".text = builtins.toJSON catppuccinMochaTheme;
 }

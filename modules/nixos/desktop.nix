@@ -9,18 +9,60 @@ let
   env = import envPath;
   rustdeskUser = env.username or "ep-o1";
   rustdeskPassword = env.rustdeskPermanentPassword or "";
+
+  colors = import ../../lib/colors.nix;
 in
 {
   security.polkit.enable = true;
 
+  # 禁用 niri-flake 自带的 KDE polkit agent（缺少 QML 模块导致崩溃，且不支持自动 howdy 认证）
+  systemd.user.services.niri-flake-polkit.enable = false;
+
+  # 使用 polkit-gnome agent 替代：polkitd 通过 PAM (polkit-1 service) 验证，
+  # PAM 栈中 howdy (sufficient) 会自动尝试人脸识别，成功则免密码
+  systemd.user.services.polkit-gnome-agent = {
+    description = "Polkit GNOME Authentication Agent";
+    wantedBy = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+  };
+
+  # polkit 127+ 的 agent-helper 运行在严格沙箱中，
+  # 导致 howdy 无法访问 IR 摄像头和模型文件。放宽沙箱以支持人脸识别。
+  systemd.services."polkit-agent-helper@" = {
+    serviceConfig = {
+      PrivateDevices = lib.mkForce false;
+      DevicePolicy = lib.mkForce "auto";
+      DeviceAllow = lib.mkForce "";
+      PrivateNetwork = lib.mkForce false;
+      ProtectHome = lib.mkForce false;
+      ProtectSystem = lib.mkForce "full";  # 允许读 /dev, /sys 等
+      NoNewPrivileges = lib.mkForce false;
+      ProtectKernelModules = lib.mkForce false;
+      SystemCallFilter = lib.mkForce "";   # 不过滤系统调用（v4l2 ioctl 需要）
+    };
+  };
+
   services.gnome.gnome-keyring.enable = true;
 
-  # 显示管理器：提供图形登录界面，niri-flake 已将 niri 会话注册到 sessionPackages
-  services.displayManager.gdm = {
+  # ─── 自动登录：greetd + 直接启动 niri（无密码、无 greeter）───
+  services.greetd = {
     enable = true;
-    wayland = true;
+    settings = {
+      default_session = {
+        command = "niri-session";
+        user = rustdeskUser;
+      };
+    };
   };
-  services.displayManager.defaultSession = "niri";
+
+  # 开机后直接进入 niri → Noctalia Shell 负责锁屏认证（howdy + 密码）
 
   xdg.portal = {
     enable = true;

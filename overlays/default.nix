@@ -60,6 +60,8 @@ final: prev: {
 
   clipsync = prev.callPackage ../pkgs/clipsync.nix { };
 
+  clippaste = prev.callPackage ../pkgs/clippaste.nix { };
+
   pam-howdy-animated = prev.callPackage ../pkgs/pam-howdy-animated { };
 
   baidupcs-go = prev.buildGoModule {
