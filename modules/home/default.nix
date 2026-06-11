@@ -72,6 +72,7 @@ in
     provider = {
       bytecatcode = {
         models = {
+          "claude-fable-5" = { name = "claude-fable-5"; };
           "claude-opus-4-8" = { name = "claude-opus-4-8"; };
           "claude-opus-4-7" = { name = "claude-opus-4-7"; };
           "claude-opus-4-6" = { name = "claude-opus-4-6"; };
@@ -100,6 +101,7 @@ in
           baseURL = "https://www.dogapi.cc/v1";
         };
         models = {
+          "claude-fable-5" = { name = "claude-fable-5"; };
           "claude-opus-4-8" = { name = "claude-opus-4-8"; };
           "claude-opus-4-7" = { name = "claude-opus-4-7"; };
           "claude-opus-4-6" = { name = "claude-opus-4-6"; };

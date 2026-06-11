@@ -178,6 +178,11 @@ in
             api_url = "https://www.dogapi.cc/v1";
             available_models = [
               {
+                name = "claude-fable-5";
+                display_name = "Claude Fable 5";
+                max_tokens = 200000;
+              }
+              {
                 name = "claude-opus-4-8";
                 display_name = "Claude Opus 4.8";
                 max_tokens = 200000;
@@ -229,6 +234,11 @@ in
           bytecatcode = {
             api_url = "https://bytecat.lamclod.cn/v1";
             available_models = [
+              {
+                name = "claude-fable-5";
+                display_name = "ByteCat Claude Fable 5";
+                max_tokens = 200000;
+              }
               {
                 name = "claude-opus-4-8";
                 display_name = "ByteCat Claude Opus 4.8";
