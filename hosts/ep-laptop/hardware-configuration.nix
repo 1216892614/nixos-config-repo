@@ -74,7 +74,8 @@
   # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
   # pam_howdy_animated.so 在终端场景显示摄像机风格动画，非终端静默透传
   security.pam.services = {
-    greetd = {};
+    # greetd 自动登录 —— 禁用 pam_gnome_keyring（由 unlock-gnome-keyring user service 负责解锁）
+    greetd.enableGnomeKeyring = lib.mkForce false;
     # sudo 提权
     sudo = {
       howdy.enable = true;
@@ -172,8 +173,9 @@
 
         PASSWORD=$(cat "$SECRET_FILE")
 
-        # 解锁 gnome-keyring（如果 login.keyring 不存在会自动创建）
-        echo -n "$PASSWORD" | ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --unlock > /dev/null 2>&1
+        # 用 --replace 替换已运行的实例并解锁
+        # （PAM 的 pam_gnome_keyring.so auto_start 会先启动一个未解锁的实例）
+        echo -n "$PASSWORD" | ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --replace --unlock > /dev/null 2>&1
 
         # 销毁密钥文件
         rm -f "$SECRET_FILE" 2>/dev/null || true
