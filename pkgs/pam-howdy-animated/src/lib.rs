@@ -6,7 +6,9 @@
 //! When a TTY is available (terminal sudo), it shows:
 //!   SCANNING → CHECK (success) or FAIL (failure)
 //!
-//! When no TTY is available (GDM, polkit), it silently delegates to pam_howdy.
+//! When no TTY is available (lock screen, polkit), it delegates to pam_howdy
+//! with PAM_SILENT flag to suppress error messages that would confuse
+//! GUI PAM clients (e.g., Noctalia Shell lock screen).
 
 mod animation;
 mod howdy;
@@ -17,6 +19,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use howdy::{PAM_IGNORE, PAM_SUCCESS};
+
+/// PAM flag: suppress messages from modules
+const PAM_SILENT: c_int = 0x8000;
 
 /// Check if we have access to a controlling terminal
 fn has_tty() -> bool {
@@ -64,15 +69,24 @@ pub unsafe extern "C" fn pam_sm_authenticate(
     };
 
     if !has_tty() {
-        // No terminal available (GDM, polkit, etc.) — silent pass-through
-        return howdy::call_pam_howdy(&howdy_path, pamh, flags);
+        // No terminal available (lock screen, polkit, etc.)
+        // Pass PAM_SILENT to suppress howdy's error messages (e.g., "Failure, timeout reached")
+        // which would otherwise be relayed to GUI PAM clients and cause confusion.
+        let result = howdy::call_pam_howdy(&howdy_path, pamh, flags | PAM_SILENT);
+        // In non-TTY mode: if howdy fails, return PAM_IGNORE instead of PAM_AUTH_ERR.
+        // This prevents GUI lock screens from counting it as a failed attempt,
+        // allowing clean fallback to password without triggering retry loops.
+        if result != PAM_SUCCESS {
+            return PAM_IGNORE;
+        }
+        return result;
     }
 
     // Terminal available — show animation
     let anim = match animation::Animation::from_dev_tty() {
         Some(a) => a,
         None => {
-            // Can't open tty for animation, fall back to silent
+            // Can't open tty for animation, fall back to direct call
             return howdy::call_pam_howdy(&howdy_path, pamh, flags);
         }
     };

@@ -17,9 +17,7 @@ type PamSmAuthenticate =
 const HOWDY_PAM_BUILD_PATH: Option<&str> = option_env!("PAM_HOWDY_PATH");
 
 /// Fallback paths to search at runtime
-const HOWDY_PAM_PATHS: &[&str] = &[
-    "/run/current-system/sw/lib/security/pam_howdy.so",
-];
+const HOWDY_PAM_PATHS: &[&str] = &["/run/current-system/sw/lib/security/pam_howdy.so"];
 
 /// Find the howdy PAM module path.
 /// Priority: module args → build-time path → env var → known paths.
@@ -62,11 +60,7 @@ pub fn find_howdy_pam_path(args: &[String]) -> Option<String> {
 /// # Safety
 /// This function loads a shared library and calls a C function.
 /// The pamh handle must be valid.
-pub unsafe fn call_pam_howdy(
-    howdy_path: &str,
-    pamh: *mut libc::c_void,
-    flags: c_int,
-) -> c_int {
+pub unsafe fn call_pam_howdy(howdy_path: &str, pamh: *mut libc::c_void, flags: c_int) -> c_int {
     // Load the howdy PAM library
     let lib = match Library::new(howdy_path) {
         Ok(lib) => lib,

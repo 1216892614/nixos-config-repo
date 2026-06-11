@@ -15,12 +15,12 @@ const RESET: &str = "\x1b[0m";
 /// Dot colors for pulse animation (dim → bright → burst → dim)
 /// Accent red at varying intensity, peak is a "burst" star
 const DOT_COLORS: &[&str] = &[
-    "\x1b[38;2;88;91;112m",    // surface2 (very dim)
-    "\x1b[38;2;140;80;100m",   // dim red
-    "\x1b[38;2;200;110;140m",  // medium red
-    "\x1b[38;2;243;139;168m",  // full accent red — burst frame (✱)
-    "\x1b[38;2;200;110;140m",  // medium red (descending)
-    "\x1b[38;2;140;80;100m",   // dim red
+    "\x1b[38;2;88;91;112m",   // surface2 (very dim)
+    "\x1b[38;2;140;80;100m",  // dim red
+    "\x1b[38;2;200;110;140m", // medium red
+    "\x1b[38;2;243;139;168m", // full accent red — burst frame (✱)
+    "\x1b[38;2;200;110;140m", // medium red (descending)
+    "\x1b[38;2;140;80;100m",  // dim red
 ];
 
 /// Dot glyphs: small → expanding → star burst → contracting
@@ -50,9 +50,7 @@ const FAIL_DISPLAY_MS: u64 = 500;
 
 /// Render the pill — only the dot gets color, text stays normal FG
 fn render_pill(dot_color: &str, dot_glyph: &str, label: &str) -> String {
-    format!(
-        "{CLEAR_LINE}  {BG} {dot_color}{dot_glyph}  {FG}{label:<8}{RESET}",
-    )
+    format!("{CLEAR_LINE}  {BG} {dot_color}{dot_glyph}  {FG}{label:<8}{RESET}",)
 }
 
 /// Represents the animation state on a TTY file descriptor

@@ -1,25 +1,5 @@
 { config, lib, pkgs, modulesPath, ... }:
 
-let
-  # PAM session hook：认证成功后读取 /run/keyring-secret 解锁 gnome-keyring，然后销毁密钥文件
-  unlockKeyringScript = pkgs.writeShellScript "unlock-keyring" ''
-    # 只在用户 session 中运行（非 root）
-    [ "$PAM_USER" = "root" ] && exit 0
-
-    SECRET_FILE="/run/keyring-secret"
-    [ -f "$SECRET_FILE" ] || exit 0
-
-    # 读取密码
-    PASSWORD=$(cat "$SECRET_FILE")
-
-    # 解锁 gnome-keyring（通过 stdin 传入密码）
-    export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(${pkgs.coreutils}/bin/id -u "$PAM_USER")/bus"
-    echo -n "$PASSWORD" | ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --unlock > /dev/null 2>&1 || true
-
-    # 销毁密钥文件：解锁完成后从 RAM 中删除，此后无法再获取密码
-    rm -f "$SECRET_FILE"
-  '';
-in
 {
   imports =
     [ (modulesPath + "/installer/scan/not-detected.nix")
@@ -76,7 +56,7 @@ in
         # 使用稳定的 by-path 路径，防止设备号因 v4l2loopback 等漂移
         device_path = "/dev/v4l/by-path/pci-0000:03:00.4-usb-0:1:1.2-video-index0";
         certainty = 3.5; # 识别阈值，越低越严格
-        timeout = 5; # 识别超时秒数
+        timeout = 3; # 识别超时秒数（降低以加快 fallback 到密码）
         dark_threshold = 60;
         recording_plugin = "opencv";
         device_format = "v4l2";
@@ -85,24 +65,16 @@ in
   };
 
   # IR 发射器：确保红外 LED 在开机/唤醒后启动
-  # 首次需运行: sudo linux-enable-ir-emitter configure
+  # 首次需运行: sudo linux-enable-ir-emitter configure --device /dev/video2
   services.linux-enable-ir-emitter = {
     enable = true;
-    device = "video3";
+    device = "video2"; # video2 = IR capture, video3 = IR metadata
   };
 
   # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
   # pam_howdy_animated.so 在终端场景显示摄像机风格动画，非终端静默透传
   security.pam.services = {
-    # greetd 自动登录时解锁 keyring（开机首次 session）
-    greetd = {
-      rules.session.keyring-unlock = {
-        order = 12700;
-        control = "optional";
-        modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-        args = [ "seteuid" (toString unlockKeyringScript) ];
-      };
-    };
+    greetd = {};
     # sudo 提权
     sudo = {
       howdy.enable = true;
@@ -124,19 +96,12 @@ in
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
-    # Noctalia Shell 锁屏专用（面部识别 + 密码 fallback + keyring 自动解锁）
+    # Noctalia Shell 锁屏专用（面部识别 + 密码 fallback）
     noctalia = {
       howdy.enable = true;
       howdy.control = "sufficient";
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
-      # 认证通过后（无论 howdy 还是密码）自动解锁 gnome-keyring
-      rules.session.keyring-unlock = {
-        order = 12700;
-        control = "optional";
-        modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-        args = [ "seteuid" (toString unlockKeyringScript) ];
-      };
     };
     # systemd --user 认证
     systemd-user = {
@@ -153,7 +118,7 @@ in
   # 1. 磁盘上：keyring 密码用 systemd-creds 加密（绑定本机 TPM/host key）
   #    → 文件：/var/lib/keyring-secret.encrypted
   # 2. 开机时：systemd service 解密到 /run/keyring-secret（tmpfs, RAM only, 0400 root）
-  # 3. PAM 认证成功后（howdy/密码）：读取 /run/keyring-secret → 解锁 gnome-keyring → 删除文件
+  # 3. 用户 session 启动后：user service 读取密码 → 解锁 gnome-keyring → 删除文件
   # 4. 文件删除后：即使 root 也无法再获取密码（只在 RAM 中存在过）
   #
   # 首次部署：activation script 生成随机密码 + 加密存储 + 重建 keyring
@@ -175,10 +140,43 @@ in
           exit 0
         fi
 
-        # 解密到 tmpfs（RAM only）
-        ${pkgs.systemd}/bin/systemd-creds decrypt "$ENCRYPTED" "$RUNTIME"
+        # 解密到 tmpfs（RAM only），只有 ep-o1 用户可读
+        ${pkgs.systemd}/bin/systemd-creds decrypt --name=keyring-secret "$ENCRYPTED" "$RUNTIME"
         chmod 0400 "$RUNTIME"
-        chown root:root "$RUNTIME"
+        chown ep-o1:users "$RUNTIME"
+      '';
+    };
+  };
+
+  # 用户 session 启动后自动解锁 gnome-keyring
+  systemd.user.services.unlock-gnome-keyring = {
+    description = "Unlock gnome-keyring with decrypted password";
+    wantedBy = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" "gnome-keyring-daemon.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = pkgs.writeShellScript "unlock-keyring-user" ''
+        SECRET_FILE="/run/keyring-secret"
+
+        # 等待密钥文件（最多 5 秒）
+        for i in $(seq 1 50); do
+          [ -f "$SECRET_FILE" ] && break
+          sleep 0.1
+        done
+
+        if [ ! -f "$SECRET_FILE" ]; then
+          echo "No keyring secret available, skipping unlock."
+          exit 0
+        fi
+
+        PASSWORD=$(cat "$SECRET_FILE")
+
+        # 解锁 gnome-keyring（如果 login.keyring 不存在会自动创建）
+        echo -n "$PASSWORD" | ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --unlock > /dev/null 2>&1
+
+        # 销毁密钥文件
+        rm -f "$SECRET_FILE" 2>/dev/null || true
       '';
     };
   };
@@ -210,6 +208,7 @@ in
         # 同时写一份到 /run 供本次 boot 使用
         echo -n "$PLAIN" > /run/keyring-secret
         chmod 0400 /run/keyring-secret
+        chown ep-o1:users /run/keyring-secret
       fi
     '';
   };

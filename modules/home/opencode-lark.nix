@@ -57,10 +57,16 @@ in
   };
 
   # ── Lark CLI (@larksuite/cli): npm install to ~/.local ───────────────────
+  # NOTE: npm install runs at activation time (boot). To avoid blocking boot
+  # for minutes when network is unavailable or postinstall fails, we put
+  # node on PATH and add a short timeout.
   home.activation.installLarkCli = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if ! command -v lark-cli >/dev/null 2>&1 && ! [ -x "${config.home.homeDirectory}/.local/bin/lark-cli" ]; then
       echo "Installing @larksuite/cli..."
-      ${pkgs.nodejs_24}/bin/npm install -g @larksuite/cli --prefix "${config.home.homeDirectory}/.local" 2>&1 || true
+      PATH="${pkgs.nodejs_24}/bin:$PATH" \
+        timeout 30 ${pkgs.nodejs_24}/bin/npm install -g @larksuite/cli \
+          --prefix "${config.home.homeDirectory}/.local" 2>&1 || \
+        echo "lark-cli: install failed or timed out, will retry next activation"
     else
       echo "lark-cli: already installed"
     fi

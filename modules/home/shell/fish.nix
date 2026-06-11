@@ -20,6 +20,17 @@ in
     interactiveShellInit = ''
       # Zellij completions (dynamic subcommands like `zellij attach <tab>`)
       eval (zellij setup --generate-completion fish | string collect)
+
+      # howdy 已安装但未录入人脸时提醒初始化
+      if command -sq howdy
+        and test -d /var/lib/howdy/models
+        and test (count (find /var/lib/howdy/models -maxdepth 1 -name "*.dat" 2>/dev/null)) -eq 0
+        set_color yellow
+        echo "[howdy] 未录入人脸模型，面部识别不可用。请运行："
+        echo "  ir-emitter-cfg  # 如果 IR emitter 需要配置"
+        echo "  sudo howdy add"
+        set_color normal
+      end
     '';
 
     plugins = [
@@ -39,6 +50,7 @@ in
       cat = "bat";
       find = "fd";
       grep = "rg";
+      ir-emitter-cfg = "nix shell nixpkgs#xorg.xhost -c sh -c 'xhost +SI:localuser:root && sudo linux-enable-ir-emitter configure'";
     };
 
     functions.lo = ''
