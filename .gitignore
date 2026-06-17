@@ -17,4 +17,4 @@ config/
 logs/
 squashfs-root/
 foolproof.json
-imgui.ini
+imgui.inihosts/*/hardware-configuration.nix
