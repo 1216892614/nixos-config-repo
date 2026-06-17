@@ -116,7 +116,7 @@ in
       ];
       "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
       "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
-      "Super+L".action.focus-column-right = { };
+      "Super+L".action.focus-column-or-monitor-right = { };
       "Super+Ctrl+Shift+L".action.spawn = [ "noctalia-shell" "ipc" "call" "lockScreen" "lock" ];
 
       "XF86AudioRaiseVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "increase" ];
@@ -132,24 +132,44 @@ in
       "XF86AudioNext".action.spawn = [ "playerctl" "next" ];
       "XF86AudioPrev".action.spawn = [ "playerctl" "previous" ];
 
-      "Super+H".action.focus-column-left = { };
-      "Super+J".action.focus-window-down = { };
-      "Super+K".action.focus-window-up = { };
-      "Super+Shift+L".action.move-column-right = { };
+      "Super+H".action.focus-column-or-monitor-left = { };
+      "Super+J".action.focus-window-or-monitor-down = { };
+      "Super+K".action.focus-window-or-monitor-up = { };
+      "Super+Shift+L".action.move-column-right-or-to-monitor-right = { };
 
-      "Super+Shift+H".action.move-column-left = { };
+      "Super+Shift+H".action.move-column-left-or-to-monitor-left = { };
       "Super+Shift+J".action.move-window-down = { };
       "Super+Shift+K".action.move-window-up = { };
 
-      "Super+Left".action.focus-column-left = { };
-      "Super+Down".action.focus-window-down = { };
-      "Super+Up".action.focus-window-up = { };
-      "Super+Right".action.focus-column-right = { };
+      "Super+Left".action.focus-column-or-monitor-left = { };
+      "Super+Down".action.focus-window-or-monitor-down = { };
+      "Super+Up".action.focus-window-or-monitor-up = { };
+      "Super+Right".action.focus-column-or-monitor-right = { };
 
-      "Super+Shift+Left".action.move-column-left = { };
+      "Super+Shift+Left".action.move-column-left-or-to-monitor-left = { };
       "Super+Shift+Down".action.move-window-down = { };
       "Super+Shift+Up".action.move-window-up = { };
-      "Super+Shift+Right".action.move-column-right = { };
+      "Super+Shift+Right".action.move-column-right-or-to-monitor-right = { };
+
+      "Super+Ctrl+Alt+H".action.focus-monitor-left = { };
+      "Super+Ctrl+Alt+J".action.focus-monitor-down = { };
+      "Super+Ctrl+Alt+K".action.focus-monitor-up = { };
+      "Super+Ctrl+Alt+L".action.focus-monitor-right = { };
+
+      "Super+Ctrl+Alt+Left".action.focus-monitor-left = { };
+      "Super+Ctrl+Alt+Down".action.focus-monitor-down = { };
+      "Super+Ctrl+Alt+Up".action.focus-monitor-up = { };
+      "Super+Ctrl+Alt+Right".action.focus-monitor-right = { };
+
+      "Super+Ctrl+Alt+Shift+H".action.move-column-to-monitor-left = { };
+      "Super+Ctrl+Alt+Shift+J".action.move-column-to-monitor-down = { };
+      "Super+Ctrl+Alt+Shift+K".action.move-column-to-monitor-up = { };
+      "Super+Ctrl+Alt+Shift+L".action.move-column-to-monitor-right = { };
+
+      "Super+Ctrl+Alt+Shift+Left".action.move-column-to-monitor-left = { };
+      "Super+Ctrl+Alt+Shift+Down".action.move-column-to-monitor-down = { };
+      "Super+Ctrl+Alt+Shift+Up".action.move-column-to-monitor-up = { };
+      "Super+Ctrl+Alt+Shift+Right".action.move-column-to-monitor-right = { };
 
       "Super+bracketleft".action.consume-or-expel-window-left = { };
       "Super+bracketright".action.consume-or-expel-window-right = { };
