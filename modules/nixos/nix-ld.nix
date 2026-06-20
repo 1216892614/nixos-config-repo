@@ -32,18 +32,18 @@
       egl-wayland
       wayland
       libxkbcommon
-      xorg.libX11
-      xorg.libXcursor
-      xorg.libXrandr
-      xorg.libXinerama
-      xorg.libXi
-      xorg.libXext
-      xorg.libXfixes
-      xorg.libXrender
-      xorg.libXtst
-      xorg.libxcb
-      xorg.libXcomposite
-      xorg.libXdamage
+       libx11
+       libxcursor
+       libxrandr
+       libxinerama
+       libxi
+       libxext
+       libxfixes
+       libxrender
+       libxtst
+       libxcb
+       libxcomposite
+       libxdamage
       vulkan-loader
 
       # Wayland window decoration (libdecor for GLFW)

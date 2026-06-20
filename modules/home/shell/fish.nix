@@ -50,7 +50,7 @@ in
       cat = "bat";
       find = "fd";
       grep = "rg";
-      ir-emitter-cfg = "nix shell nixpkgs#xorg.xhost -c sh -c 'xhost +SI:localuser:root && sudo linux-enable-ir-emitter configure'";
+      ir-emitter-cfg = "nix shell nixpkgs#xhost -c sh -c 'xhost +SI:localuser:root && sudo linux-enable-ir-emitter configure'";
     };
 
     functions.lo = ''
@@ -126,7 +126,7 @@ in
     unzip
     p7zip
     wget
-    wineWowPackages.stable
+    wineWow64Packages.stable
     winetricks
     kuake        # Quark Cloud Drive CLI (夸克网盘)
     baidupcs-go  # Baidu Pan CLI (百度网盘)

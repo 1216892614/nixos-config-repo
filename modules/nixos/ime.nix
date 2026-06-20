@@ -21,6 +21,13 @@
         fcitx5-gtk
         fcitx5-rime
       ];
+      # 移除单 Shift 切换输入法，避免误触；仅保留 Super+Space
+      settings.globalOptions = {
+        "Hotkey/TriggerKeys" = { "0" = "Super+space"; };
+        "Hotkey/EnumerateForwardKeys" = { "0" = ""; };
+        "Hotkey/EnumerateBackwardKeys" = { "0" = ""; };
+        "Hotkey/EnumerateSkipFirst" = { "0" = "False"; };
+      };
       # 默认组加入 Rime，才能用 Super+Space 切到 Rime，再 F4/Ctrl+` 选摩奇方案
       settings.inputMethod = {
         "Groups/0" = {

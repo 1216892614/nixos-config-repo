@@ -2,6 +2,7 @@
 
 let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
+  steamPulseFix = pkgs.callPackage ../../pkgs/steam-pulse-fix.nix {};
   w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" {} ''
     mkdir -p $out/share/icons
     cp -R "${inputs.self}/icons/W11-CC-V2.2-Dark-Default-wayland" "$out/share/icons/W11-CC-V2.2-Dark-Default-wayland"
@@ -18,12 +19,12 @@ in
     ./dev/zed.nix
     ./dev/cursor.nix
     ./dev/languages.nix
+    ./dev/skills-manager.nix
     ./terminal.nix
     ./zellij.nix
     ./yazi.nix
     ./recording.nix
     ./rime-custom.nix
-    ./opencode-lark.nix
   ];
 
   home.username = "ep-o1";
@@ -36,7 +37,6 @@ in
   };
 
   home.packages = with pkgs; [
-    (callPackage ../../pkgs/lark.nix {})
     google-chrome
     rustdesk-flutter
     gemini-cli
@@ -240,6 +240,23 @@ in
     Service = {
       ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store";
       Restart = "on-failure";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # xwayland-spare: 备用 Xwayland 实例 (:1)
+  # 主 Xwayland (:0) 有 256 客户端硬上限，QQ/WeChat/Chrome 等长期运行后易耗尽。
+  # Steam 等重量级 X11 应用启动时通过 steam-wrapper 自动检测并切到 :1。
+  systemd.user.services.xwayland-spare = {
+    Unit = {
+      Description = "Spare Xwayland instance (:1) for client overflow";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.xwayland-satellite}/bin/xwayland-satellite :1";
+      Restart = "on-failure";
+      RestartSec = "3";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
@@ -673,6 +690,10 @@ PY
     }
     pick_display
 
+    # Fix: Steam's bundled libaudio.so (2012) crashes in pa_card_info callback
+    # with PipeWire. Intercept pa_context_get_card_info_list to make it a no-op.
+    export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix.so''${LD_PRELOAD:+:$LD_PRELOAD}"
+
     # Ensure we run NixOS Steam (programs.steam) so extraPackages/fonts are present.
     exec /run/current-system/sw/bin/steam "$@"
   '';
@@ -830,6 +851,7 @@ PY
     _install_ai "cursor"    "$REPO/cursor.AppImage"
     _install_ai "osu"       "$REPO/osu.AppImage"
     _install_ai "obsidian"  "$REPO/obsidian.AppImage"
+    _install_ai "skills-manager" "$REPO/skills-manager.AppImage"
   '';
 
   # Java wrapper for Minecraft: 注入 LD_LIBRARY_PATH 让 GLFW 能 dlopen 系统库，

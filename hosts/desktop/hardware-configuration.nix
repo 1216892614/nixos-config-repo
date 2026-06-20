@@ -37,8 +37,10 @@
     extraPackages = with pkgs; [ nvidia-vaapi-driver ];
   };
 
-  # Route audio to P2710V monitor via DisplayPort (HDMI/DP 2).
-  # Applied on first login or after: systemctl --user restart wireplumber
+  # Route audio to NVIDIA HDMI outputs (two monitors with speakers/headphones).
+  # - HDMI 1 (24G2W1G4 / AOC): 耳机
+  # - HDMI 2 (P2710V / Dell): 音响
+  # 默认使用 P2710V (音响)，可通过 pactl/pavucontrol 切换到 24G2W1G4 (耳机)
   services.pipewire.wireplumber.extraConfig."50-hdmi-default" = {
     "default.configured.audio.sink" = "alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1";
     "monitor.alsa.rules" = [
@@ -49,7 +51,7 @@
         actions.update-props = {
           "api.acp.auto-profile" = true;
           "api.acp.auto-port" = true;
-          "device.profile" = "output:hdmi-stereo-extra1";
+          # 不锁定 device.profile，允许用户自由切换 HDMI 1/2
         };
       }
       {
@@ -61,19 +63,70 @@
           "api.acp.auto-port" = true;
         };
       }
-      {
-        matches = [
-          { "node.name" = "alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1"; }
-        ];
-        actions.update-props = {
-          "priority.session" = 2000;
-          "priority.driver" = 2000;
-        };
-      }
     ];
   };
 
   hardware.enableRedistributableFirmware = true;
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+
+  # ─── Howdy 面部识别（Logitech BRIO IR 摄像头）─────────────────────
+  services.howdy = {
+    enable = true;
+    control = "sufficient";
+    settings = {
+      core = {
+        detection_notice = false;
+        timeout_notice = false;
+        no_confirmation = true;
+        suppress_unknown = true;
+        abort_if_ssh = true;
+        abort_if_lid_closed = true;
+      };
+      video = {
+        # Logitech BRIO IR stream (index2 = 340x340 GREY)
+        # 使用 by-id 路径（基于序列号），不随 USB 端口/控制器变化
+        device_path = "/dev/v4l/by-id/usb-046d_Logitech_BRIO_1964BE5F-video-index2";
+        certainty = 3.5;
+        timeout = 3;
+        dark_threshold = 60;
+        recording_plugin = "opencv";
+        device_format = "v4l2";
+      };
+    };
+  };
+
+  # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
+  security.pam.services = {
+    sudo = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
+    polkit-1 = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
+    google-chrome = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
+    noctalia = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
+    systemd-user = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
+  };
 }
