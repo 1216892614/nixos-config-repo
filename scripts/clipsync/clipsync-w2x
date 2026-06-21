@@ -30,7 +30,18 @@ elif [[ "$TYPE" =~ "text/uri-list" ]]; then
         log "synced: uri-list → X11 gnome-copied-files"
     fi
 
-# --- HTML rich text ---
+# --- Plain text (prioritized over text/html for Qt app compatibility) ---
+elif [[ "$TYPE" =~ "text/plain" ]]; then
+    W_HASH=$(timeout $TIMEOUT wl-paste -t text/plain 2>/dev/null | tr -d '\n\r' | hash_data)
+    if [[ "$W_HASH" != "$EMPTY_HASH" ]]; then
+        X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | hash_data)
+        if [[ "$W_HASH" != "$X_HASH" ]]; then
+            timeout $TIMEOUT wl-paste -t text/plain | xclip -sel clip &
+            log "synced: text → X11"
+        fi
+    fi
+
+# --- HTML rich text (only when plain text is NOT available) ---
 elif [[ "$TYPE" =~ "text/html" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/html 2>/dev/null | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t text/html 2>/dev/null | hash_data)
@@ -52,17 +63,6 @@ elif [[ "$TYPE" =~ "image/" ]]; then
         if [[ "$W_HASH" != "$X_HASH" ]]; then
             timeout $TIMEOUT wl-paste -t "$TARGET_MIME" | timeout $TIMEOUT xclip -sel clip -t "$TARGET_MIME" -loops 1
             log "synced: $TARGET_MIME → X11"
-        fi
-    fi
-
-# --- Plain text ---
-elif [[ "$TYPE" =~ "text/plain" ]]; then
-    W_HASH=$(timeout $TIMEOUT wl-paste -t text/plain 2>/dev/null | tr -d '\n\r' | hash_data)
-    if [[ "$W_HASH" != "$EMPTY_HASH" ]]; then
-        X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | hash_data)
-        if [[ "$W_HASH" != "$X_HASH" ]]; then
-            timeout $TIMEOUT wl-paste | timeout $TIMEOUT xclip -sel clip -t UTF8_STRING -loops 1
-            log "synced: text → X11"
         fi
     fi
 fi
