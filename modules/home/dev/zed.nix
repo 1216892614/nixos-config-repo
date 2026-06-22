@@ -4,12 +4,12 @@ let
   env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else {};
   colors = import ../../../lib/colors.nix;
 
-  # Zed theme generated from lib/colors.nix (Catppuccin Mocha)
-  catppuccinMochaTheme = {
-    name = "Catppuccin Mocha";
+  # Zed theme generated from lib/colors.nix (Moss & Fern)
+  mossFernTheme = {
+    name = "Moss and Fern";
     author = "ep-o1";
     themes = [{
-      name = "Catppuccin Mocha";
+      name = "Moss and Fern";
       appearance = "dark";
       style = {
         # Editor
@@ -134,8 +134,8 @@ in
       auto_update = false;
       theme = {
         mode = "dark";
-        dark = "Catppuccin Mocha";
-        light = "Catppuccin Mocha";
+        dark = "Moss and Fern";
+        light = "Moss and Fern";
       };
       buffer_font_family = "Sarasa Mono SC";
       buffer_font_size = 14;
@@ -318,6 +318,6 @@ in
     };
   };
 
-  # Install Catppuccin Mocha theme (generated from lib/colors.nix)
-  xdg.configFile."zed/themes/catppuccin-mocha.json".text = builtins.toJSON catppuccinMochaTheme;
+  # Install Moss & Fern theme (generated from lib/colors.nix)
+  xdg.configFile."zed/themes/moss-fern.json".text = builtins.toJSON mossFernTheme;
 }

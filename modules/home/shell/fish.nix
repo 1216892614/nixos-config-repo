@@ -188,7 +188,7 @@ in
 
   programs.bat = {
     enable = true;
-    config.theme = "Catppuccin Mocha";
+    config.theme = "base16";
   };
 
   programs.eza = {
@@ -219,7 +219,7 @@ in
   };
 
   xdg.configFile."btop/themes/custom.theme".text = ''
-    # Theme: Catppuccin Mocha (custom from colors.nix)
+    # Theme: Moss & Fern (custom from colors.nix)
 
     theme[main_bg]="${colors.bg}"
     theme[main_fg]="${colors.fg}"

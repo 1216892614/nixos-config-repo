@@ -7,6 +7,18 @@ let
     mkdir -p $out/share/icons
     cp -R "${inputs.self}/icons/W11-CC-V2.2-Dark-Default-wayland" "$out/share/icons/W11-CC-V2.2-Dark-Default-wayland"
   '';
+  # WhiteSur 打包的 icon-theme.cache 是无效的（magic bytes 不对），GTK 无法解析导致图标回退到 hicolor。
+  # 重新生成有效的 gtk icon cache。
+  whitesurIconTheme = pkgs.whitesur-icon-theme.overrideAttrs (old: {
+    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.gtk3 ];
+    postFixup = (old.postFixup or "") + ''
+      for theme in $out/share/icons/WhiteSur*; do
+        if [ -f "$theme/index.theme" ]; then
+          gtk-update-icon-cache --force --quiet "$theme"
+        fi
+      done
+    '';
+  });
 in
 {
   imports = [
@@ -34,6 +46,7 @@ in
   home.sessionVariables = {
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
     NOTION_TOKEN = env.notionToken or "";
+    QT_ICON_THEME = "WhiteSur-dark";
   };
 
   home.packages = with pkgs; [
@@ -68,7 +81,6 @@ in
     model = "bigbigdog/claude-opus-4-6";
     small_model = "deepseek/deepseek-v4-pro";
     plugin = [ "oh-my-openagent" ];
-    theme = "catppuccin";
     provider = {
       bytecatcode = {
         models = {
@@ -131,6 +143,87 @@ in
     };
   };
 
+  xdg.configFile."opencode/tui.json".text = builtins.toJSON {
+    "$schema" = "https://opencode.ai/tui.json";
+    theme = "moss-fern";
+  };
+
+  xdg.configFile."opencode/themes/moss-fern.json".text = builtins.toJSON {
+    "$schema" = "https://opencode.ai/theme.json";
+    defs = {
+      base = "#1c1f1c";
+      mantle = "#161916";
+      surface0 = "#262926";
+      surface1 = "#343734";
+      surface2 = "#484b46";
+      text = "#b5b9ae";
+      subtext0 = "#aaaea3";
+      subtext1 = "#9da196";
+      overlay0 = "#686c62";
+      overlay1 = "#767a70";
+      accent = "#8e9878";
+      red = "#a07575";
+      green = "#839970";
+      yellow = "#a09670";
+      blue = "#7590a0";
+      magenta = "#9a7d8a";
+      cyan = "#709088";
+      lavender = "#867a93";
+    };
+    theme = {
+      primary = "accent";
+      secondary = "blue";
+      accent = "cyan";
+      error = "red";
+      warning = "yellow";
+      success = "green";
+      info = "blue";
+      text = "text";
+      textMuted = "overlay0";
+      background = "base";
+      backgroundPanel = "mantle";
+      backgroundElement = "surface0";
+      border = "surface1";
+      borderActive = "surface2";
+      borderSubtle = "surface0";
+      diffAdded = "green";
+      diffRemoved = "red";
+      diffContext = "overlay0";
+      diffHunkHeader = "overlay0";
+      diffHighlightAdded = "green";
+      diffHighlightRemoved = "red";
+      diffAddedBg = "surface0";
+      diffRemovedBg = "surface0";
+      diffContextBg = "mantle";
+      diffLineNumber = "surface1";
+      diffAddedLineNumberBg = "surface0";
+      diffRemovedLineNumberBg = "surface0";
+      markdownText = "text";
+      markdownHeading = "accent";
+      markdownLink = "blue";
+      markdownLinkText = "cyan";
+      markdownCode = "green";
+      markdownBlockQuote = "overlay0";
+      markdownEmph = "yellow";
+      markdownStrong = "accent";
+      markdownHorizontalRule = "surface1";
+      markdownListItem = "accent";
+      markdownListEnumeration = "cyan";
+      markdownImage = "blue";
+      markdownImageText = "cyan";
+      markdownCodeBlock = "text";
+      syntaxComment = "overlay0";
+      syntaxKeyword = "lavender";
+      syntaxFunction = "blue";
+      syntaxVariable = "cyan";
+      syntaxString = "green";
+      syntaxNumber = "magenta";
+      syntaxType = "cyan";
+      syntaxOperator = "blue";
+      syntaxPunctuation = "subtext0";
+    };
+  };
+
   xdg.configFile."opencode/oh-my-openagent.json".text = builtins.toJSON {
     "$schema" = "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
     agents = {
@@ -176,8 +269,8 @@ in
       package = w11CursorTheme;
     };
     iconTheme = {
-      name = "Adwaita";
-      package = pkgs.adwaita-icon-theme;
+      name = "WhiteSur-dark";
+      package = whitesurIconTheme;
     };
     gtk3.extraConfig.gtk-application-prefer-dark-theme = true;
     gtk4.extraConfig.gtk-application-prefer-dark-theme = true;
@@ -199,6 +292,58 @@ in
 
   dconf.settings."org/gnome/desktop/interface" = {
     color-scheme = "prefer-dark";
+  };
+
+  # ── Portal-GTK 竞态修复 ─────────────────────────────────────────────────
+  # 问题：xdg-desktop-portal-gtk 被 D-Bus activation 拉起时，WAYLAND_DISPLAY
+  # 可能还没传入 systemd 用户环境，导致它连 :0 失败后标记 failed，后续每次
+  # D-Bus 调用超时 25s × 3 = 75s 阻塞所有 GTK 应用。
+  # 修法：ExecCondition 轮询等 WAYLAND_DISPLAY；Restart=on-failure 保证崩溃后重试。
+  xdg.configFile."systemd/user/xdg-desktop-portal-gtk.service.d/wayland-gate.conf".text = ''
+    [Service]
+    ExecCondition=${pkgs.bash}/bin/bash -c 'for i in $(seq 1 50); do if systemctl --user show-environment 2>/dev/null | grep -q "^WAYLAND_DISPLAY="; then exit 0; fi; sleep 0.1; done; echo "portal-gtk: WAYLAND_DISPLAY not found after 5s" >&2; exit 1'
+    Restart=on-failure
+    RestartSec=1
+  '';
+
+  # ── 启动诊断：记录 graphical-session 各服务就绪时间 ──────────────────
+  # 查看结果：journalctl --user -u boot-diag -b
+  # 排查完毕后可删除此服务
+  systemd.user.services.boot-diag = {
+    Unit = {
+      Description = "Boot timing diagnostics";
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "boot-diag" ''
+        echo "=== Boot Diagnostics $(date -Iseconds) ==="
+        echo ""
+        echo "--- systemd-analyze blame --user ---"
+        ${pkgs.systemd}/bin/systemd-analyze blame --user 2>&1 | head -30 || true
+        echo ""
+        echo "--- systemd-analyze critical-chain --user ---"
+        ${pkgs.systemd}/bin/systemd-analyze critical-chain --user --no-pager 2>&1 || true
+        echo ""
+        echo "--- Pending jobs (if any) ---"
+        systemctl --user list-jobs --no-pager 2>&1 || echo "(none)"
+        echo ""
+        echo "--- Portal status ---"
+        systemctl --user status xdg-desktop-portal.service --no-pager 2>&1 | head -15 || true
+        echo ""
+        echo "--- Walker status ---"
+        systemctl --user status walker.service --no-pager 2>&1 | head -15 || true
+        echo ""
+        echo "--- D-Bus activation times (portal backends) ---"
+        journalctl --user -b -u xdg-desktop-portal.service --no-pager 2>&1 | tail -20 || true
+        echo ""
+        echo "--- gnome-keyring ---"
+        systemctl --user status gnome-keyring-daemon.service --no-pager 2>&1 | head -10 || true
+        echo ""
+        echo "=== END ==="
+      '';
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
   # fcitx5/Rime: 用户服务 + 无条件重启，避免运行一段时间后输入法挂掉或卡死
@@ -980,7 +1125,8 @@ PY
     '';
   };
 
-  home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpapers/endcard_02.jpg;
+  home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpapers/moss-fern.jpg;
+  home.file.".config/noctalia/wallpapers/moss-fern.jpg".source = ../../wallpapers/moss-fern.jpg;
   home.file.".config/noctalia/wallpapers/endcard_02.jpg".source = ../../wallpapers/endcard_02.jpg;
   home.file.".config/noctalia/wallpapers/endcard_10.jpg".source = ../../wallpapers/endcard_10.jpg;
   home.file.".config/noctalia/wallpapers/endcard_11.jpg".source = ../../wallpapers/endcard_11.jpg;

@@ -35,7 +35,7 @@ in
       };
     };
 
-    # Catppuccin Mocha theme — colors derived from lib/colors.nix
+    # Moss & Fern theme — colors derived from lib/colors.nix
 
     plugins = {
       clipboard = pkgs.fetchFromGitHub {
@@ -66,7 +66,7 @@ in
   };
 
   xdg.configFile."yazi/theme.toml".text = ''
-    # Catppuccin Mocha — ayu-dark structure, mocha palette
+    # Moss & Fern — ayu-dark structure, moss palette
     [mgr]
     cwd = { fg = "${colors.comment}" }
 

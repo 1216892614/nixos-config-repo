@@ -10,6 +10,16 @@ let
   };
   # 补丁：录制时顶栏红色方块 + tooltip 显示录制时长 (mm:ss)
   # 解压后可能是 $src/screen-recorder 或 $src/noctalia-plugins-*/screen-recorder
+  # Dock: 修复 hover 放大图标被裁剪（clip: true → clip: dock.interactive）
+  # 只在需要滚动时才裁剪，hover scale 不再被吃掉
+  noctaliaBase = inputs.noctalia.packages.${pkgs.system}.default;
+  patchedNoctaliaShell = noctaliaBase.overrideAttrs (old: {
+    postFixup = (old.postFixup or "") + ''
+      substituteInPlace $out/share/noctalia-shell/Modules/Dock/DockContent.qml \
+        --replace-fail 'clip: true' 'clip: dock.interactive'
+    '';
+  });
+
   patchedScreenRecorder = pkgs.runCommand "noctalia-screen-recorder-patched" { src = pluginSrc; } ''
     set -e
     mkdir -p "$out"
@@ -69,6 +79,7 @@ in
 {
   programs.noctalia-shell = {
     enable = true;
+    package = patchedNoctaliaShell;
     systemd.enable = true;
 
     settings = {
@@ -117,6 +128,10 @@ in
           { id = "Clock"; }
           { id = "ControlCenter"; }
         ];
+      };
+
+      dock = {
+        backgroundOpacity = 0;      # 移除背景和边框，纯透明展示图标
       };
     };
 

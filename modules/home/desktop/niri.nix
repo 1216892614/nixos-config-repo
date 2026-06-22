@@ -60,6 +60,13 @@ in
 
     layout = {
       gaps = 8;
+      preset-column-widths = [
+        { proportion = 0.25; }
+        { proportion = 1.0 / 3.0; }
+        { proportion = 0.5; }
+        { proportion = 2.0 / 3.0; }
+        { proportion = 1.0; }
+      ];
       focus-ring = {
         width = 2;
         active.color = colors.accent;
@@ -292,6 +299,14 @@ in
         open-floating = true;
         default-column-width = { proportion = 0.5; };
         default-window-height = { proportion = 0.5; };
+      }
+
+      # ChatGPT webapp → 默认 1/4 屏幕宽度
+      {
+        matches = [
+          { app-id = "^chrome-chatgpt\\.com__-"; }
+        ];
+        default-column-width = { proportion = 0.25; };
       }
 
       # Steam 通知弹窗 → 右下角（官方 wiki 方案）

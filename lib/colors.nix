@@ -1,61 +1,62 @@
-# Catppuccin Mocha palette
+# Moss & Fern — desaturated yellow-green dark theme
+# Chromatic colors: HSL saturation ~10-18%, muted foggy aesthetic
 {
-  bg         = "#1e1e2e";
-  fg         = "#cdd6f4";
-  line       = "#181825";
-  selection  = "#45475a";
-  accent     = "#f38ba8";   # red
-  comment    = "#6c7086";   # overlay0
-  gutter     = "#7f849c";   # overlay1
+  bg         = "#1c1f1c";
+  fg         = "#b5b9ae";
+  line       = "#161916";
+  selection  = "#363b36";
+  accent     = "#8e9878";   # yellow-green grey
+  comment    = "#686c62";   # overlay0
+  gutter     = "#767a70";   # overlay1
 
-  keyword    = "#cba6f7";   # mauve
-  func       = "#89b4fa";   # blue
-  string     = "#a6e3a1";   # green
-  constant   = "#f5c2e7";   # pink
-  tag        = "#89dceb";   # sky
-  entity     = "#89dceb";   # sky
-  regexp     = "#94e2d5";   # teal
-  markup     = "#f38ba8";   # red
-  operator   = "#94e2d5";   # teal
-  error      = "#f38ba8";   # red
+  keyword    = "#867a93";   # dusty lavender
+  func       = "#758891";   # steel grey
+  string     = "#7e9070";   # sage grey
+  constant   = "#937d87";   # mauve grey
+  tag        = "#6f8b8b";   # teal grey
+  entity     = "#6f8b8b";   # teal grey
+  regexp     = "#6f8b82";   # sea grey
+  markup     = "#957272";   # brick grey
+  operator   = "#6f8b82";   # sea grey
+  error      = "#957272";   # brick grey
 
   terminal = {
-    bg            = "#1e1e2e";   # base
-    fg            = "#cdd6f4";   # text
-    cursor        = "#f5e0dc";   # rosewater
-    black         = "#45475a";   # surface1
-    red           = "#f38ba8";
-    green         = "#a6e3a1";
-    yellow        = "#f9e2af";
-    blue          = "#89b4fa";
-    magenta       = "#f5c2e7";   # pink
-    cyan          = "#94e2d5";   # teal
-    white         = "#bac2de";   # subtext1
-    brightBlack   = "#585b70";   # surface2
-    brightRed     = "#f38ba8";
-    brightGreen   = "#a6e3a1";
-    brightYellow  = "#f9e2af";
-    brightBlue    = "#89b4fa";
-    brightMagenta = "#f5c2e7";
-    brightCyan    = "#94e2d5";
-    brightWhite   = "#a6adc8";   # subtext0
+    bg            = "#1c1f1c";   # base
+    fg            = "#b5b9ae";   # text
+    cursor        = "#ccc8be";   # warm neutral
+    black         = "#343734";   # surface1
+    red           = "#a07575";
+    green         = "#839970";
+    yellow        = "#a09670";
+    blue          = "#7590a0";
+    magenta       = "#9a7d8a";   # mauve
+    cyan          = "#709088";   # sea
+    white         = "#9da196";   # subtext1
+    brightBlack   = "#484b46";   # surface2
+    brightRed     = "#ad8282";
+    brightGreen   = "#90a67d";
+    brightYellow  = "#ada37d";
+    brightBlue    = "#829dab";
+    brightMagenta = "#a78a97";
+    brightCyan    = "#7d9d95";
+    brightWhite   = "#aaaea3";   # subtext0
   };
 
-  added    = "#a6e3a1";   # green
-  modified = "#89b4fa";   # blue
-  removed  = "#f38ba8";   # red
+  added    = "#839970";   # green
+  modified = "#7590a0";   # blue
+  removed  = "#a07575";   # red
 
   surface = {
-    sunk = "#181825";   # mantle
-    base = "#1e1e2e";   # base
-    lift = "#313244";   # surface0
-    over = "#45475a";   # surface1
+    sunk = "#161916";   # mantle
+    base = "#1c1f1c";   # base
+    lift = "#262926";   # surface0
+    over = "#343734";   # surface1
   };
 
-  # UI semantic tokens — change these when switching themes
+  # UI semantic tokens
   bar = {
-    bg     = "#000000";   # statusbar background (pure black)
-    fg     = "#ffffff";   # statusbar foreground (pure white)
+    bg     = "#0e100e";   # statusbar background
+    fg     = "#d0d4ca";   # statusbar foreground
   };
-  inactive = "#585b70";   # inactive borders/rings (surface2)
+  inactive = "#484b46";   # inactive borders/rings (surface2)
 }

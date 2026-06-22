@@ -1,0 +1,12 @@
+{
+  "active_plan": "/home/ep-o1/nixos-config-repo/.sisyphus/plans/noctalia-v5-dynamic-island.md",
+  "started_at": "2026-06-22T06:10:13.892Z",
+  "session_ids": [
+    "ses_114f47ec9ffeUwHWgqqeZA0nVg"
+  ],
+  "session_origins": {
+    "ses_114f47ec9ffeUwHWgqqeZA0nVg": "direct"
+  },
+  "plan_name": "noctalia-v5-dynamic-island",
+  "agent": "atlas"
+}
