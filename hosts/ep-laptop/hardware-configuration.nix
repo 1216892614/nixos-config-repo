@@ -76,6 +76,13 @@
   security.pam.services = {
     # greetd 自动登录 —— 禁用 pam_gnome_keyring（由 unlock-gnome-keyring user service 负责解锁）
     greetd.enableGnomeKeyring = lib.mkForce false;
+    # Noctalia v5 锁屏硬编码使用 login PAM service
+    login = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
     # sudo 提权
     sudo = {
       howdy.enable = true;

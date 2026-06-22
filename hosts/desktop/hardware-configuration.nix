@@ -98,6 +98,12 @@
 
   # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
   security.pam.services = {
+    login = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+    };
     sudo = {
       howdy.enable = true;
       howdy.control = "sufficient";
