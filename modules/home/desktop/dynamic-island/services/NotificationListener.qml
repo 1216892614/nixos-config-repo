@@ -51,8 +51,9 @@ QtObject {
 
         if (line.match(/^\s*int32 /)) {
             _capturing = false
-            if (_strings.length >= 4)
-                onNotification(_strings[0], _strings[3], _strings[2])
+            if (_strings.length >= 3)
+                // D-Bus Notify strings: [0]=app_name, [1]=app_icon, [2]=summary, [3]=body
+                onNotification(_strings[0], _strings[2], _strings[1])
         }
     }
 
