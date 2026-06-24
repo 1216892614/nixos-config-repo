@@ -1,0 +1,6 @@
+T3 QA: Howdy integration research
+Research doc exists: YES
+Schemes proposed: 6
+PAM config exists: YES
+howdy binary: /run/current-system/sw/bin/howdy
+PASS

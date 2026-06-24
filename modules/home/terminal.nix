@@ -28,7 +28,7 @@ in
       cursor = colors.terminal.cursor;
       cursor_text_color = colors.bg;
       selection_background = colors.selection;
-      selection_foreground = colors.fg;
+      selection_foreground = "#ffffff";
 
       color0 = colors.terminal.black;
       color1 = colors.terminal.red;

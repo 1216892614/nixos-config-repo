@@ -35,6 +35,17 @@ let
             blur true
         }
     }
+
+    // statusbar / bar 只显示 widget 胶囊，禁用 layer-shell 背景效果
+    layer-rule {
+        match namespace="status-bar"
+        match namespace="noctalia-bar-content"
+        match namespace="noctalia-background"
+        background-effect {
+            blur false
+            xray false
+        }
+    }
   '';
 in
 {

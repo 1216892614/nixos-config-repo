@@ -1,0 +1,5 @@
+T2 QA: IPC mapping completeness
+niri.nix IPC calls: 0
+Mapping table entries: 8
+v4->v5 commands covered: controlCenter, settings, lockScreen, volume increase/decrease, muteOutput, muteInput
+PASS

@@ -1,0 +1,5 @@
+T7 QA: Config syntax valid
+programs.noctalia.settings defined: 1 refs
+bar main configured: YES
+center widgets empty: 1 ref to empty center
+PASS

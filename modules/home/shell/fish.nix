@@ -108,6 +108,33 @@ in
       return $status
     '';
 
+    functions.pi = ''
+      if test (count $argv) -gt 1
+        echo "usage: pi [<cols>x<rows>]" >&2
+        return 1
+      end
+
+      for cmd in zellij omp
+        if not command -sq $cmd
+          echo "pi: required command not found: $cmd" >&2
+          return 127
+        end
+      end
+
+      set -l launcher "$HOME/.local/bin/omp-launch"
+      if not test -x "$launcher"
+        echo "pi: helper not found or not executable: $launcher" >&2
+        return 1
+      end
+
+      if test (count $argv) -eq 1
+        command "$launcher" $argv[1]
+      else
+        command "$launcher"
+      end
+      return $status
+    '';
+
   };
 
   home.packages = with pkgs; [

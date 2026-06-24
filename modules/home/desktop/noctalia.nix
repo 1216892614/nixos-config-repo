@@ -12,11 +12,16 @@ let
   # 解压后可能是 $src/screen-recorder 或 $src/noctalia-plugins-*/screen-recorder
   # Dock: 修复 hover 放大图标被裁剪（clip: true → clip: dock.interactive）
   # 只在需要滚动时才裁剪，hover scale 不再被吃掉
+  avatarImage = ../../../icons/avatar.png;
+
   noctaliaBase = inputs.noctalia.packages.${pkgs.system}.default;
   patchedNoctaliaShell = noctaliaBase.overrideAttrs (old: {
     postFixup = (old.postFixup or "") + ''
       substituteInPlace $out/share/noctalia-shell/Modules/Dock/DockContent.qml \
         --replace-fail 'clip: true' 'clip: dock.interactive'
+
+      substituteInPlace $out/share/noctalia-shell/Modules/MainScreen/Backgrounds/BarBackground.qml \
+        --replace-fail 'fillColor: Qt.rgba(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a * opacityFactor)' 'fillColor: "transparent"'
     '';
   });
 
@@ -95,6 +100,7 @@ in
 
       # 锁屏直接使用壁纸（不模糊）
       general = {
+        avatarImage = toString avatarImage;
         lockScreenBlur = 0;
         lockScreenTint = 0;
         # 锁屏显示时立即开始 PAM 认证（触发 howdy 面部识别）
@@ -104,8 +110,8 @@ in
       };
 
       bar = {
-        showCapsule = false;        # 移除 widget 背景胶囊
-        backgroundOpacity = 1.0;    # 纯色背景（不透明）
+        showCapsule = false;        # 移除 widget 胶囊背景，直接浮在壁纸上
+        backgroundOpacity = 0;      # 移除顶栏背景（透明）
         widgetSpacing = 2;          # 缩小间距，macOS 风格
         contentPadding = 1;
         density = "compact";
@@ -117,21 +123,25 @@ in
             pillSize = 0.4;         # 最小点
           }
         ];
-        widgets.center = [];
+        widgets.center = [
+          { id = "Clock"; }
+        ];
         widgets.right = [
-          { id = "plugin:screen-recorder"; }
           { id = "Tray"; }
-          { id = "Brightness"; }
+          { id = "plugin:screen-recorder"; }
           { id = "Volume"; }
           { id = "Battery"; }
           { id = "NotificationHistory"; }
-          { id = "Clock"; }
-          { id = "ControlCenter"; }
         ];
       };
 
       dock = {
         backgroundOpacity = 0;      # 移除背景和边框，纯透明展示图标
+      };
+
+      ui = {
+        panelsAttachedToBar = false; # 面板四周圆角，不与顶栏融合
+        settingsPanelMode = "centered"; # settings 面板也用独立圆角（与 controlCenter 一致）
       };
     };
 

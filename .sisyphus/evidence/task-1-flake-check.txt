@@ -1,0 +1,5 @@
+T1 QA: Flake check
+Command: nix flake check --no-build
+
+noctalia-qs references: 0
+PASS

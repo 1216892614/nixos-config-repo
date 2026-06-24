@@ -1,0 +1,6 @@
+T12 QA: Quickshell binary available
+QS store path: /nix/store/1yn4png63dfrhrk7mpq3drbzd7facmr3-quickshell-0.2.1/bin/qs
+/nix/store/1yn4png63dfrhrk7mpq3drbzd7facmr3-quickshell-0.2.1/bin/quickshell
+/nix/store/1yn4png63dfrhrk7mpq3drbzd7facmr3-quickshell-0.2.1/bin/.quickshell-wrapped
+QS version: quickshell 0.2.1, revision tag-v0.2.1, distributed by: Nixpkgs
+PASS

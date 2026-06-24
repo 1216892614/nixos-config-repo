@@ -64,6 +64,8 @@ final: prev: {
 
   pam-howdy-animated = prev.callPackage ../pkgs/pam-howdy-animated { };
 
+  omp = prev.callPackage ../pkgs/omp.nix { };
+
   baidupcs-go = prev.buildGoModule {
     pname = "baidupcs-go";
     version = "3.6.2";

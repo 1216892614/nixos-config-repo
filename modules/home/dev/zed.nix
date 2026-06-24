@@ -266,9 +266,9 @@ in
   home.sessionVariables = {
     EDITOR = "zed --wait";
     VISUAL = "zed --wait";
-    DEEPSEEK_API_KEY = env.opencodeDeepseekApiKey or "";
-    BIGBIGDOG_API_KEY = env.opencodeBigbigdogApiKey or "";
-    BYTECATCODE_API_KEY = env.opencodeBytekatApiKey or "";
+    DEEPSEEK_API_KEY = env.deepseekApiKey or "";
+    BIGBIGDOG_API_KEY = env.bigbigdogApiKey or "";
+    BYTECATCODE_API_KEY = env.bytekatApiKey or "";
   };
 
   # Expose `zeditor` CLI alias (the package ships `bin/zed`)

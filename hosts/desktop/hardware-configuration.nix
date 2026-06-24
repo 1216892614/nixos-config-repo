@@ -104,6 +104,17 @@
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
+    # niri 内置 session-lock 使用此 PAM service 认证（2026-06 unstable 新增）
+    niri = {
+      howdy.enable = true;
+      howdy.control = "sufficient";
+      rules.auth.howdy.modulePath = lib.mkForce
+        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+      # 锁屏不需要 account 检查（密码过期等），且 pam_unix acct_mgmt
+      # 在非 root 进程中会因 pam 1.7 bug 导致 segfault
+      rules.account.unix.modulePath = lib.mkForce
+        "${pkgs.pam}/lib/security/pam_permit.so";
+    };
     sudo = {
       howdy.enable = true;
       howdy.control = "sufficient";
@@ -127,6 +138,9 @@
       howdy.control = "sufficient";
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
+      # 同上：避免 pam_unix acct_mgmt segfault
+      rules.account.unix.modulePath = lib.mkForce
+        "${pkgs.pam}/lib/security/pam_permit.so";
     };
     systemd-user = {
       howdy.enable = true;

@@ -91,7 +91,7 @@ in
         };
         npm = "@ai-sdk/anthropic";
         options = {
-          apiKey = env.opencodeBytekatApiKey or "";
+          apiKey = env.opencodeBytekatApiKey or (env.bytekatApiKey or "");
           baseURL = "https://bytecat.lamclod.cn/v1";
         };
       };
@@ -101,7 +101,7 @@ in
         };
         npm = "@ai-sdk/anthropic";
         options = {
-          apiKey = env.opencodeBytekatCnApiKey or "";
+          apiKey = env.opencodeBytekatCnApiKey or (env.bytekatCnApiKey or "");
           baseURL = "https://bytecat.lamclod.cn/v1";
         };
       };
@@ -109,8 +109,8 @@ in
         npm = "@ai-sdk/openai-compatible";
         name = "BigBigDog (OpenAI-compatible)";
         options = {
-          apiKey = env.opencodeBigbigdogApiKey or "";
-          baseURL = "https://www.dogapi.cc/v1";
+          apiKey = env.opencodeBigbigdogApiKey or (env.bigbigdogApiKey or "");
+          baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.dogapi.cc/v1");
         };
         models = {
           "claude-fable-5" = { name = "claude-fable-5"; };
@@ -132,7 +132,7 @@ in
         npm = "@ai-sdk/openai-compatible";
         name = "DeepSeek";
         options = {
-          apiKey = env.opencodeDeepseekApiKey or "";
+          apiKey = env.opencodeDeepseekApiKey or (env.deepseekApiKey or "");
           baseURL = "https://api.deepseek.com/v1";
         };
         models = {

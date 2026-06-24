@@ -1,0 +1,6 @@
+T4 QA: Quickshell packaging
+Research doc exists: YES
+flake URLs found: 10
+QS binary exists: /nix/store/1yn4png63dfrhrk7mpq3drbzd7facmr3-quickshell-0.2.1/bin/qs
+QS version: quickshell 0.2.1, revision tag-v0.2.1, distributed by: Nixpkgs
+PASS
