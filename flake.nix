@@ -15,9 +15,15 @@
     };
 
     noctalia = {
-      url = "github:noctalia-dev/noctalia";
+      url = "github:noctalia-dev/noctalia-shell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    noctalia-qs = {
+      url = "github:noctalia-dev/noctalia-qs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     elephant.url = "github:abenz1267/elephant";
 
     walker = {
@@ -32,7 +38,7 @@
     zed.url = "github:zed-industries/zed";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, noctalia, walker, elephant, nix-flatpak, maccel, zed, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, maccel, zed, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -73,17 +79,14 @@
         {
           nix.settings = {
             substituters = [
-              "https://noctalia.cachix.org"
               "https://walker.cachix.org"
               "https://cache.garnix.io"
             ];
             trusted-public-keys = [
-              "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
               "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
               "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
             ];
             extra-substituters = [
-              "https://noctalia.cachix.org"
               "https://walker.cachix.org"
               "https://cache.garnix.io"
             ];
@@ -131,17 +134,14 @@
         {
           nix.settings = {
             substituters = [
-              "https://noctalia.cachix.org"
               "https://walker.cachix.org"
               "https://cache.garnix.io"
             ];
             trusted-public-keys = [
-              "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
               "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
               "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
             ];
             extra-substituters = [
-              "https://noctalia.cachix.org"
               "https://walker.cachix.org"
               "https://cache.garnix.io"
             ];

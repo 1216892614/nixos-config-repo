@@ -25,7 +25,6 @@ in
     ./desktop/niri.nix
     ./desktop/clash-verge.nix
     ./desktop/noctalia.nix
-    ./desktop/dynamic-island
     ./desktop/walker.nix
     ./shell/fish.nix
     ./dev/git.nix
@@ -60,7 +59,6 @@ in
     docker-buildx
     brightnessctl   # backlight control for laptop fn keys
     playerctl       # MPRIS media player control for fn keys
-    quickshell      # Qt6/Wayland shell framework for Dynamic Island
     wl-clipboard
     xclip           # X11 clipboard access for clipsync bridge
     clipnotify      # X11 clipboard change notifications for clipsync

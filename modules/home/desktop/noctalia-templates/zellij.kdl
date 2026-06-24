@@ -1,0 +1,15 @@
+themes {
+    noctalia {
+        fg "{{colors.on_surface.default.hex}}"
+        bg "{{colors.surface.default.hex}}"
+        black "{{colors.terminal_normal_black.default.hex}}"
+        red "{{colors.terminal_normal_red.default.hex}}"
+        green "{{colors.terminal_normal_green.default.hex}}"
+        yellow "{{colors.terminal_normal_yellow.default.hex}}"
+        blue "{{colors.terminal_normal_blue.default.hex}}"
+        magenta "{{colors.terminal_normal_magenta.default.hex}}"
+        cyan "{{colors.terminal_normal_cyan.default.hex}}"
+        white "{{colors.terminal_normal_white.default.hex}}"
+        orange "{{colors.primary.default.hex}}"
+    }
+}

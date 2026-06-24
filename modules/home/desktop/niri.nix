@@ -121,19 +121,15 @@ in
           fi
         ''
       ];
-      "Super+Shift+I".action.spawn = [
-        "sh" "-c"
-        "systemctl --user is-active dynamic-island && systemctl --user stop dynamic-island || systemctl --user start dynamic-island"
-      ];
-      "Super+P".action.spawn = [ "noctalia" "msg" "panel-toggle" "control-center" ];
-      "Super+Ctrl+P".action.spawn = [ "noctalia" "msg" "settings-toggle" ];
+      "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
+      "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
       "Super+L".action.focus-column-or-monitor-right = { };
-      "Super+Ctrl+Shift+L".action.spawn = [ "noctalia" "msg" "session" "lock" ];
+      "Super+Ctrl+Shift+L".action.spawn = [ "noctalia-shell" "ipc" "call" "lockScreen" "lock" ];
 
-      "XF86AudioRaiseVolume".action.spawn = [ "noctalia" "msg" "volume-up" ];
-      "XF86AudioLowerVolume".action.spawn = [ "noctalia" "msg" "volume-down" ];
-      "XF86AudioMute".action.spawn = [ "noctalia" "msg" "volume-mute" ];
-      "XF86AudioMicMute".action.spawn = [ "noctalia" "msg" "mic-mute" ];
+      "XF86AudioRaiseVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "increase" ];
+      "XF86AudioLowerVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "decrease" ];
+      "XF86AudioMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteOutput" ];
+      "XF86AudioMicMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteInput" ];
 
       "XF86MonBrightnessUp".action.spawn = [ "brightnessctl" "set" "+5%" ];
       "XF86MonBrightnessDown".action.spawn = [ "brightnessctl" "set" "5%-" ];

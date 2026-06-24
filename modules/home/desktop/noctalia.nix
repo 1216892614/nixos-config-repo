@@ -1,66 +1,256 @@
 { config, lib, pkgs, inputs, ... }:
+
+let
+  colors = import ../../../lib/colors.nix;
+  noctaliaPluginsRev = "0e48cb3c469a6f7d1e377a88a45e7ec427a67e9b";
+  # 官方插件源码（固定 commit 保证 hash 可复现；用于打补丁：录制时红色 mError + 录制时长）
+  pluginSrc = builtins.fetchTarball {
+    url = "https://github.com/noctalia-dev/noctalia-plugins/archive/${noctaliaPluginsRev}.tar.gz";
+    sha256 = "1bf82wa1ax21b528c4m7gh4wqy0wgwg8igi9bfsm7llblwvp39ir";
+  };
+  # 补丁：录制时顶栏红色方块 + tooltip 显示录制时长 (mm:ss)
+  # 解压后可能是 $src/screen-recorder 或 $src/noctalia-plugins-*/screen-recorder
+  # Dock: 修复 hover 放大图标被裁剪（clip: true → clip: dock.interactive）
+  # 只在需要滚动时才裁剪，hover scale 不再被吃掉
+  noctaliaBase = inputs.noctalia.packages.${pkgs.system}.default;
+  patchedNoctaliaShell = noctaliaBase.overrideAttrs (old: {
+    postFixup = (old.postFixup or "") + ''
+      substituteInPlace $out/share/noctalia-shell/Modules/Dock/DockContent.qml \
+        --replace-fail 'clip: true' 'clip: dock.interactive'
+    '';
+  });
+
+  patchedScreenRecorder = pkgs.runCommand "noctalia-screen-recorder-patched" { src = pluginSrc; } ''
+    set -e
+    mkdir -p "$out"
+    if [ -d "$src/screen-recorder" ]; then
+      cp -r "$src/screen-recorder/." "$out/"
+    else
+      pluginDir=$(ls -1 "$src" | head -n1)
+      cp -r "$src/$pluginDir/screen-recorder/." "$out/"
+    fi
+    # 删除符号链接，避免 home-manager 报 "outside $HOME"（如运行时生成的 settings.json 等）
+    find "$out" -type l -delete
+    # 录制时用红色 (mError)
+    substituteInPlace $out/BarWidget.qml \
+      --replace '? Color.mPrimary : Style.capsuleColor' '? Color.mError : Style.capsuleColor' \
+      --replace '? Color.mOnPrimary : root.iconColor' '? Color.mOnError : root.iconColor'
+    # Main.qml: 增加录制时长属性与 Timer，tooltip 显示 mm:ss
+    substituteInPlace $out/Main.qml --replace 'property bool isAvailable: false' \
+      'property bool isAvailable: false
+ property int recordingElapsedSeconds: 0'
+    substituteInPlace $out/Main.qml --replace 'if (isRecording) {
+ return pluginApi.tr("messages.stop-recording")
+ }' \
+      'if (isRecording) {
+ var m = Math.floor(recordingElapsedSeconds/60), s = recordingElapsedSeconds % 60
+ return pluginApi.tr("messages.stop-recording") + " (" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0") + ")"
+ }'
+    substituteInPlace $out/Main.qml --replace 'isRecording = true
+ hasActiveRecording = true
+ monitorTimer.running = true' \
+      'recordingElapsedSeconds = 0
+ isRecording = true
+ hasActiveRecording = true
+ monitorTimer.running = true'
+    substituteInPlace $out/Main.qml --replace 'isRecording = false
+ isPending = false
+ pendingTimer.running = false' \
+      'recordingElapsedSeconds = 0
+ isRecording = false
+ isPending = false
+ pendingTimer.running = false'
+    # 每秒更新时长的 Timer（插入在 killTimer 之后）
+    substituteInPlace $out/Main.qml --replace 'Timer {
+ id: killTimer
+ interval: 3000' \
+      'Timer {
+ id: recordingElapsedTimer
+ running: root.isRecording
+ repeat: true
+ interval: 1000
+ onTriggered: root.recordingElapsedSeconds = root.recordingElapsedSeconds + 1
+ }
+ Timer {
+ id: killTimer
+ interval: 3000'
+  '';
+in
 {
-  programs.noctalia = {
+  programs.noctalia-shell = {
     enable = true;
+    package = patchedNoctaliaShell;
     systemd.enable = true;
 
     settings = {
-      # ── Bar: floating, rounded, compact ──
-      bar = {
-        main = {
-          position = "top";
-          margin_h = 8;             # floating (horizontal inset)
-          margin_v = 8;             # floating (vertical inset)
-          radius = 14;              # rounded corners
-          thickness = 28;           # compact height (default: 34)
-          background_opacity = 1.0; # solid bar
-          widget_spacing = 2;       # tight macOS-style spacing
-          padding = 1;
-          shadow = true;
-          capsule = false;          # no widget background capsules
-
-          start = [ "workspaces" ];
-          center = [];              # empty — Dynamic Island takes this space
-          end = [
-            "tray"
-            "brightness"
-            "volume"
-            "battery"
-            "notifications"
-            "control-center"
-          ];
-        };
-      };
-
-      # ── Wallpaper: Material You with m3-tonal-spot ──
       wallpaper = {
         enabled = true;
-        fill_mode = "cover";
+        setWallpaperOnAllMonitors = true;
+        fillMode = "cover";
+        # overview（Super+O）背景：使用壁纸的模糊版本
+        overviewEnabled = true;
+        overviewBlur = 0.4;
+        overviewTint = 0.3;
       };
 
-      # ── Theme: dynamic from wallpaper ──
-      theme = {
-        source = "wallpaper";
-        wallpaper_scheme = "m3-tonal-spot";
-        mode = "dark";
+      # 锁屏直接使用壁纸（不模糊）
+      general = {
+        lockScreenBlur = 0;
+        lockScreenTint = 0;
+        # 锁屏显示时立即开始 PAM 认证（触发 howdy 面部识别）
+        autoStartAuth = true;
+        # 挂起时自动锁屏
+        lockOnSuspend = true;
+      };
 
-        templates.user.dynamic_island = {
-          input_path = "~/.config/noctalia/templates/dynamic-island.txt";
-          output_path = "~/.config/dynamic-island/colors.json";
+      bar = {
+        showCapsule = false;        # 移除 widget 背景胶囊
+        backgroundOpacity = 1.0;    # 纯色背景（不透明）
+        widgetSpacing = 2;          # 缩小间距，macOS 风格
+        contentPadding = 1;
+        density = "compact";
+
+        widgets.left = [
+          {
+            id = "Workspace";
+            labelMode = "none";     # 移除 1/2/3 数字
+            pillSize = 0.4;         # 最小点
+          }
+        ];
+        widgets.center = [];
+        widgets.right = [
+          { id = "plugin:screen-recorder"; }
+          { id = "Tray"; }
+          { id = "Brightness"; }
+          { id = "Volume"; }
+          { id = "Battery"; }
+          { id = "NotificationHistory"; }
+          { id = "Clock"; }
+          { id = "ControlCenter"; }
+        ];
+      };
+
+      dock = {
+        backgroundOpacity = 0;      # 移除背景和边框，纯透明展示图标
+      };
+    };
+
+    plugins = {
+      sources = [
+        {
+          enabled = true;
+          name = "Official Noctalia Plugins";
+          url = "https://github.com/noctalia-dev/noctalia-plugins";
+        }
+      ];
+      states = {
+        "screen-recorder" = {
+          enabled = true;
+          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
         };
       };
+      version = 2;
+    };
 
-      hooks.colors_changed = [
-        "pkill -SIGUSR2 -f 'quickshell.*dynamic-island' || true"
-      ];
-
-      # ── Lock screen ──
-      lockscreen = {
-        enabled = true;
-        blurred_desktop = false;
-        blur_intensity = 0;
-        tint_intensity = 0;
+    # 顶栏录屏始终显示；录制时红色方块（见下方补丁插件）
+    pluginSettings = {
+      "screen-recorder" = {
+        hideInactive = false;
       };
+    };
+
+    colors = {
+      mPrimary = colors.accent;
+      mOnPrimary = colors.bg;
+      mPrimaryContainer = colors.surface.lift;
+      mOnPrimaryContainer = colors.accent;
+      mSecondary = colors.entity;
+      mOnSecondary = colors.bg;
+      mSecondaryContainer = colors.surface.lift;
+      mOnSecondaryContainer = colors.entity;
+      mTertiary = colors.constant;
+      mOnTertiary = colors.bg;
+      mTertiaryContainer = colors.surface.lift;
+      mOnTertiaryContainer = colors.constant;
+      mError = colors.error;
+      mOnError = colors.bg;
+      mErrorContainer = colors.surface.lift;
+      mOnErrorContainer = colors.error;
+      mBackground = colors.bar.bg;
+      mOnBackground = colors.bar.fg;
+      mSurface = colors.bar.bg;
+      mOnSurface = colors.bar.fg;
+      mSurfaceVariant = colors.bar.bg;
+      mOnSurfaceVariant = colors.bar.fg;
+      mOutline = colors.gutter;
+      mOutlineVariant = colors.surface.over;
+      mInverseSurface = colors.fg;
+      mInverseOnSurface = colors.bg;
+      mInversePrimary = colors.keyword;
+      mSurfaceDim = colors.surface.sunk;
+      mSurfaceBright = colors.surface.lift;
+      mSurfaceContainerLowest = colors.terminal.bg;
+      mSurfaceContainerLow = colors.surface.sunk;
+      mSurfaceContainer = colors.surface.base;
+      mSurfaceContainerHigh = colors.surface.lift;
+      mSurfaceContainerHighest = colors.surface.over;
+
+      terminal = {
+        background = colors.terminal.bg;
+        foreground = colors.terminal.fg;
+        cursor = colors.terminal.cursor;
+        color0 = colors.terminal.black;
+        color1 = colors.terminal.red;
+        color2 = colors.terminal.green;
+        color3 = colors.terminal.yellow;
+        color4 = colors.terminal.blue;
+        color5 = colors.terminal.magenta;
+        color6 = colors.terminal.cyan;
+        color7 = colors.terminal.white;
+        color8 = colors.terminal.brightBlack;
+        color9 = colors.terminal.brightRed;
+        color10 = colors.terminal.brightGreen;
+        color11 = colors.terminal.brightYellow;
+        color12 = colors.terminal.brightBlue;
+        color13 = colors.terminal.brightMagenta;
+        color14 = colors.terminal.brightCyan;
+        color15 = colors.terminal.brightWhite;
+      };
+    };
+  };
+
+  # 部署补丁版录屏插件：录制时顶栏显示红色方块
+  # recursive = true 使目标为目录+文件链接，否则 noctalia 模块写入 settings.json 时路径会解析到 store 报 outside $HOME
+  home.file.".config/noctalia/plugins/screen-recorder" = {
+    source = patchedScreenRecorder;
+    recursive = true;
+  };
+
+  # Noctalia Shell 使用专用 PAM service（带 howdy 面部识别），不用默认的 login
+  systemd.user.services.noctalia-shell.Service.Environment = [
+    "NOCTALIA_PAM_SERVICE=noctalia"
+  ];
+
+  # 启动后立即锁屏（等待 Noctalia Shell IPC 就绪）
+  systemd.user.services.noctalia-lock-on-start = {
+    Unit = {
+      Description = "Lock screen on session start";
+      After = [ "noctalia-shell.service" ];
+      BindsTo = [ "noctalia-shell.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = toString (pkgs.writeShellScript "noctalia-lock-on-start" ''
+        cmd="/etc/profiles/per-user/ep-o1/bin/noctalia-shell"
+        for _ in $(seq 1 30); do
+          "$cmd" ipc call lockScreen lock 2>/dev/null && exit 0
+          sleep 0.2
+        done
+      '');
+      RemainAfterExit = true;
+    };
+    Install = {
+      WantedBy = [ "noctalia-shell.service" ];
     };
   };
 }
