@@ -26,6 +26,7 @@ in
     ./desktop/clash-verge.nix
     ./desktop/noctalia.nix
     ./desktop/walker.nix
+    ./desktop/heroic.nix
     ./shell/fish.nix
     ./dev/git.nix
     ./dev/zed.nix
@@ -346,22 +347,8 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # fcitx5/Rime: 用户服务 + 无条件重启，避免运行一段时间后输入法挂掉或卡死
-  systemd.user.services.fcitx5 = {
-    Unit = {
-      Description = "Fcitx5 input method (Rime)";
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
-    Service = {
-      ExecStartPre = "${pkgs.bash}/bin/bash -c 'until [ -n \"$WAYLAND_DISPLAY\" ]; do sleep 0.2; done'";
-      ExecStart = "/run/current-system/sw/bin/fcitx5";
-      Restart = "always";
-      RestartSec = "3";
-      Environment = "QT_IM_MODULE=fcitx SDL_IM_MODULE=fcitx INPUT_METHOD=fcitx XMODIFIERS=@im=fcitx";
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
+  # fcitx5 由 NixOS i18n.inputMethod (modules/nixos/ime.nix) 的 XDG autostart 管理
+  # 不再定义独立 systemd 用户服务，避免与 app-org.fcitx.Fcitx5@autostart 抢 D-Bus name
 
   systemd.user.services.cliphist-text = {
     Unit = {

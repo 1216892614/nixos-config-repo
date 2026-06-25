@@ -364,7 +364,7 @@ in
           ''
         ];
       }
-      # fcitx5 由 systemd 用户服务启动（见 modules/home/default.nix），崩溃会自动重启
+      # fcitx5 由 NixOS i18n.inputMethod 的 XDG autostart 启动（见 modules/nixos/ime.nix）
     ];
   };
 }

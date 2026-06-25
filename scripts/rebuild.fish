@@ -25,4 +25,12 @@ sudo systemctl daemon-reload >/dev/null 2>&1
 
 set -l host (hostname)
 sudo nixos-rebuild switch --flake $dst#$host
-and systemctl --user restart pipewire wireplumber 2>/dev/null
+and begin
+  systemctl --user restart pipewire wireplumber 2>/dev/null
+  # 重启 fcitx5：rebuild 可能更新了二进制路径或配置，
+  # 干净重启避免 D-Bus name 冲突或 Wayland IM 前端断连
+  pkill -u (id -u) fcitx5 2>/dev/null
+  sleep 1
+  fcitx5 -d 2>/dev/null
+  echo "✓ fcitx5 restarted"
+end
