@@ -71,15 +71,18 @@
     end=
   '';
 
-  # Heroic 桌面集成
-  xdg.desktopEntries.heroic = {
-    name = "Heroic Games Launcher";
-    genericName = "Epic Games & GOG Launcher";
-    comment = "Play Epic Games Store and GOG games on Linux";
-    exec = "heroic %U";
-    icon = "heroic";
-    terminal = false;
-    categories = [ "Game" ];
-    mimeType = [ "x-scheme-handler/heroic" ];
-  };
+  # Epic Games Store 快捷方式（放入 ~/.local/share/applications/ 确保 Walker 索引到）
+  xdg.dataFile."applications/epic-games.desktop".text = ''
+    [Desktop Entry]
+    Name=Epic Games Store
+    GenericName=Game Store
+    Comment=Epic Games Store (via Heroic Games Launcher)
+    Exec=${pkgs.heroic}/bin/heroic --ozone-platform-hint=auto --enable-wayland-ime %U
+    Terminal=false
+    Type=Application
+    Icon=heroic
+    Categories=Game;
+    Keywords=epic;games;store;heroic;launcher;
+    MimeType=x-scheme-handler/heroic;
+  '';
 }

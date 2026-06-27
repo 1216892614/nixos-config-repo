@@ -142,7 +142,7 @@ in
       ui_font_family = "Sarasa UI SC";
       ui_font_size = 14;
       hour_format = "hour24";
-      vim_mode = true;
+      vim_mode = false;
       base_keymap = "VSCode";
       load_direnv = "shell_hook";
       terminal = {

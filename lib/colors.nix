@@ -4,7 +4,7 @@
   bg         = "#1c1f1c";
   fg         = "#b5b9ae";
   line       = "#161916";
-  selection  = "#363b36";
+  selection  = "#b5b9ae";   # fg color — selection uses reverse video style
   accent     = "#8e9878";   # yellow-green grey
   comment    = "#686c62";   # overlay0
   gutter     = "#767a70";   # overlay1

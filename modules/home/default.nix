@@ -794,10 +794,10 @@ PY
   #   "Maximum number of clients reached" and Steam aborts during init with
   #   the misleading XOpenIM() failure + breakpad assert.
   #
-  # niri starts a *second* Xwayland on :1 specifically as a spare. We probe
-  # :0 first; if it's near saturation we transparently switch DISPLAY to :1
-  # so Steam gets a fresh client budget. Steam UI still renders on the niri
-  # Wayland compositor regardless of which Xwayland it talks to.
+   # niri starts a *second* Xwayland on :1 specifically as a spare. We always
+   # route Steam to :1 so it gets a dedicated Xwayland with fresh client budget
+   # (the primary :0 routinely saturates its 256-client limit). Steam UI still
+   # renders on the niri Wayland compositor regardless of which Xwayland it uses.
   home.file.".local/bin/steam-wrapper".text = ''
     #!/bin/sh
     if command -v systemctl >/dev/null 2>&1; then
@@ -806,16 +806,13 @@ PY
       done 2>/dev/null || true
     fi
 
-    # If DISPLAY=:0 is close to MAXCLIENTS (256), fall back to :1 (niri's
-    # spare Xwayland). Threshold is conservative: Steam itself opens ~20
-    # connections during init, so leave that headroom.
+    # Always use :1 (niri's spare Xwayland) for Steam. The primary :0 is
+    # shared with all other X11 clients and routinely saturates the 256-client
+    # limit, causing game launches to fail with "Check your DISPLAY".
+    # Using :1 gives Steam and its games a dedicated Xwayland with fresh budget.
     pick_display() {
-      [ -z "$DISPLAY" ] && return
       sock=/tmp/.X11-unix/X1
-      [ -S "$sock" ] || return  # no spare available
-      cur=$(ss -x 2>/dev/null | grep -c "/tmp/\.X11-unix/X0")
-      if [ -n "$cur" ] && [ "$cur" -ge 230 ]; then
-        echo "[steam-wrapper] DISPLAY=:0 has $cur X clients (cap 256); switching to :1" >&2
+      if [ -S "$sock" ]; then
         DISPLAY=:1
         export DISPLAY
       fi
