@@ -936,7 +936,7 @@ def emit_grid(indent: str, cols: int, rows: int) -> None:
     for _ in range(cols):
         print(f'{indent}    pane split_direction="vertical" {{')
         for _ in range(rows):
-            print(f'{indent}        pane command="omp"')
+            print(f'{indent}        pane command="omp" close_on_exit=true')
         print(f'{indent}    }}')
     print(f'{indent}}}')
 
