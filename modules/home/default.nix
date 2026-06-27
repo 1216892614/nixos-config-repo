@@ -255,10 +255,8 @@ in
   # ── omp (oh-my-pi): config.yml + models.yml ────────────────────────────
   home.file.".omp/agent/config.yml".text = ''
     setupVersion: 1
-
-    startup:
-      setupWizard: false
-      checkUpdate: false
+    startup.setupWizard: false
+    startup.checkUpdate: false
 
     modelRoles:
       default: bigbigdog/claude-opus-4-6
@@ -275,8 +273,7 @@ in
     disabledProviders:
       - ollama
 
-    tools:
-      approvalMode: yolo
+    tools.approvalMode: yolo
 
     retry:
       modelFallback: true
