@@ -237,9 +237,12 @@ in
   };
 
   # Noctalia Shell 使用专用 PAM service（带 howdy 面部识别），不用默认的 login
-  systemd.user.services.noctalia-shell.Service.Environment = [
-    "NOCTALIA_PAM_SERVICE=noctalia"
-  ];
+  # Restart=always 确保 rebuild 重载 unit 后服务自动恢复（SIGTERM 不触发 on-failure）
+  systemd.user.services.noctalia-shell.Service = {
+    Environment = [ "NOCTALIA_PAM_SERVICE=noctalia" ];
+    Restart = lib.mkForce "always";
+    RestartSec = "2";
+  };
 
   # 启动后立即锁屏（等待 Noctalia Shell IPC 就绪）
   systemd.user.services.noctalia-lock-on-start = {

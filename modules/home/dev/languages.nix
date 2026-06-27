@@ -43,8 +43,7 @@
   ];
 
   home.sessionVariables = {
-    RUSTC_WRAPPER = "sccache";
-    SCCACHE_CACHE_SIZE = "10G";
+    # RUSTC_WRAPPER / SCCACHE_* → managed by ./service-plane.nix
     RUSTUP_HOME = "$HOME/.rustup";
     CARGO_HOME = "$HOME/.cargo";
     JAVA_HOME = "${pkgs.jdk21}";

@@ -32,6 +32,7 @@ in
     ./dev/zed.nix
     ./dev/cursor.nix
     ./dev/languages.nix
+    ./dev/service-plane.nix
     ./dev/skills-manager.nix
     ./terminal.nix
     ./zellij.nix
@@ -57,6 +58,7 @@ in
     codex
     opencode
     claude-code
+    omp
     docker-buildx
     brightnessctl   # backlight control for laptop fn keys
     playerctl       # MPRIS media player control for fn keys
@@ -249,6 +251,111 @@ in
       writing = { model = "deepseek/deepseek-v4-pro"; };
     };
   };
+
+  # ── omp (oh-my-pi): config.yml + models.yml ────────────────────────────
+  home.file.".omp/agent/config.yml".text = ''
+    setupVersion: 1
+
+    startup:
+      setupWizard: false
+      checkUpdate: false
+
+    modelRoles:
+      default: bigbigdog/claude-opus-4-6
+      smol: deepseek/deepseek-v4-pro
+      slow: bigbigdog/claude-opus-4-6:high
+      plan: bigbigdog/claude-opus-4-6
+      commit: deepseek/deepseek-v4-pro
+
+    defaultThinkingLevel: high
+
+    providers:
+      webSearch: duckduckgo
+
+    disabledProviders:
+      - ollama
+
+    tools:
+      approvalMode: yolo
+
+    retry:
+      modelFallback: true
+  '';
+
+  home.file.".omp/agent/models.yml".text = ''
+    providers:
+      bigbigdog:
+        baseUrl: ${env.bigbigdogBaseUrl or "http://47.106.169.152/v1"}
+        apiKey: "${env.bigbigdogApiKey or ""}"
+        api: openai-completions
+        models:
+          - id: claude-opus-4-6
+            name: Claude Opus 4.6 (BigBigDog)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text]
+          - id: claude-opus-4-7
+            name: Claude Opus 4.7 (BigBigDog)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text]
+          - id: claude-opus-4-8
+            name: Claude Opus 4.8 (BigBigDog)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text]
+          - id: gpt-5.4
+            name: GPT-5.4 (BigBigDog)
+            contextWindow: 200000
+            maxTokens: 32000
+            reasoning: true
+            input: [text]
+          - id: gpt-5.5
+            name: GPT-5.5 (BigBigDog)
+            contextWindow: 200000
+            maxTokens: 32000
+            reasoning: true
+            input: [text]
+
+      bytecatcode:
+        baseUrl: https://bytecat.lamclod.cn/v1
+        apiKey: "${env.bytekatApiKey or ""}"
+        api: openai-completions
+        models:
+          - id: claude-opus-4-6
+            name: Claude Opus 4.6 (ByteCat)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text]
+          - id: claude-opus-4-7
+            name: Claude Opus 4.7 (ByteCat)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text]
+          - id: claude-opus-4-8
+            name: Claude Opus 4.8 (ByteCat)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text]
+
+      deepseek:
+        baseUrl: https://api.deepseek.com/v1
+        apiKey: "${env.deepseekApiKey or ""}"
+        api: openai-completions
+        models:
+          - id: deepseek-v4-pro
+            name: DeepSeek V4 Pro
+            contextWindow: 128000
+            maxTokens: 16384
+            reasoning: true
+            input: [text]
+  '';
 
   # Disabled: replaced by modules/nixos/apfs-automount.nix which handles
   # all external FS types (APFS, NTFS, exFAT, ext4, etc.) with unified naming
@@ -780,6 +887,85 @@ PY
     fi
   '';
   home.file.".local/bin/lo-launch".executable = true;
+
+  home.file.".local/bin/omp-launch".text = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [ "$#" -gt 1 ]; then
+      echo "usage: omp-launch [<cols>x<rows>]" >&2
+      exit 1
+    fi
+
+    for cmd in zellij omp mktemp; do
+      if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "omp-launch: required command not found: $cmd" >&2
+        exit 127
+      fi
+    done
+
+    cols=1
+    rows=1
+    if [ "$#" -eq 1 ]; then
+      spec="$1"
+      if [[ ! "$spec" =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
+        echo "omp-launch: invalid layout spec: $spec" >&2
+        echo "usage: omp-launch [<cols>x<rows>]" >&2
+        exit 1
+      fi
+      cols="''${BASH_REMATCH[1]}"
+      rows="''${BASH_REMATCH[2]}"
+    fi
+
+    cwd="$PWD"
+    layout_file="$(mktemp /tmp/omp-layout-XXXXXX.kdl)"
+    cleanup() {
+      rm -f "$layout_file"
+    }
+    trap cleanup EXIT
+
+    OMP_CWD="$cwd" OMP_COLS="$cols" OMP_ROWS="$rows" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
+import os
+
+cwd = os.environ["OMP_CWD"]
+cols = int(os.environ["OMP_COLS"])
+rows = int(os.environ["OMP_ROWS"])
+
+def q(value: str) -> str:
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+def emit_grid(indent: str, cols: int, rows: int) -> None:
+    print(f'{indent}pane split_direction="horizontal" {{')
+    for _ in range(cols):
+        print(f'{indent}    pane split_direction="vertical" {{')
+        for _ in range(rows):
+            print(f'{indent}        pane command="omp"')
+        print(f'{indent}    }}')
+    print(f'{indent}}}')
+
+print("layout {")
+print("    default_tab_template {")
+print('        pane size=1 borderless=true {')
+print('            plugin location="zellij:tab-bar"')
+print("        }")
+print("        children")
+print('        pane size=1 borderless=true {')
+print('            plugin location="zellij:status-bar"')
+print("        }")
+print("    }")
+print(f'    tab name="pi" focus=true cwd={q(cwd)} {{')
+emit_grid("        ", cols, rows)
+print("    }")
+print("}")
+PY
+
+    if [ -n "''${ZELLIJ:-}" ]; then
+      command zellij action new-tab --layout "$layout_file" --cwd "$cwd"
+    else
+      command zellij --layout "$layout_file"
+    fi
+  '';
+  home.file.".local/bin/omp-launch".executable = true;
 
   # Steam: wrapper with /bin/sh; load systemd user env so launch from Walker (Elephant) gets WAYLAND_DISPLAY etc.
   #

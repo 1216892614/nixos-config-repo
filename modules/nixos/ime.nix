@@ -27,6 +27,9 @@
         "Hotkey/EnumerateForwardKeys" = { "0" = ""; };
         "Hotkey/EnumerateBackwardKeys" = { "0" = ""; };
         "Hotkey/EnumerateSkipFirst" = { "0" = "False"; };
+        # 禁用单独按 Shift 激活/反激活输入法
+        "Hotkey/ActivateKeys" = { "0" = ""; };
+        "Hotkey/DeactivateKeys" = { "0" = ""; };
       };
       # 默认组加入 Rime，才能用 Super+Space 切到 Rime，再 F4/Ctrl+` 选摩奇方案
       settings.inputMethod = {
