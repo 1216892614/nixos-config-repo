@@ -237,11 +237,15 @@ in
   };
 
   # Noctalia Shell 使用专用 PAM service（带 howdy 面部识别），不用默认的 login
-  # Restart=always 确保 rebuild 重载 unit 后服务自动恢复（SIGTERM 不触发 on-failure）
+  # PartOf=graphical-session.target 会在 rebuild 时级联停止 noctalia，且抑制 Restart=always。
+  # 移除 PartOf，仅保留 After（启动顺序）和 WantedBy（自动拉起）。
   systemd.user.services.noctalia-shell.Service = {
     Environment = [ "NOCTALIA_PAM_SERVICE=noctalia" ];
     Restart = lib.mkForce "always";
     RestartSec = "2";
+  };
+  systemd.user.services.noctalia-shell.Unit = {
+    PartOf = lib.mkForce [];
   };
 
   # 启动后立即锁屏（等待 Noctalia Shell IPC 就绪）
