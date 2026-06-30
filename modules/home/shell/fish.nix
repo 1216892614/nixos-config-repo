@@ -2,6 +2,7 @@
 
 let
   colors = import ../../../lib/colors.nix;
+  env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else import ../../../env.nix.example;
 in
 {
   programs.fish = {
@@ -41,6 +42,15 @@ in
           repo = "nvm.fish";
           rev = "cc70373951379cb986a99f059bfc1e9834a3bdd7";
           hash = "sha256-ZY443mWe/J2eSylzgNEJiLvurqE9StWGb0fvGHthqA0=";
+        };
+      }
+      {
+        name = "fish-ai";
+        src = pkgs.fetchFromGitHub {
+          owner = "Realiserad";
+          repo = "fish-ai";
+          rev = "acb3892e1d058f997d958e385fe100dbafea1f0b";
+          hash = "sha256-UUVPh36/UArWl7XkocLcgJ3BqwlmkGslOguHnaAR4nU=";
         };
       }
     ];
@@ -157,6 +167,7 @@ in
     winetricks
     kuake        # Quark Cloud Drive CLI (夸克网盘)
     baidupcs-go  # Baidu Pan CLI (百度网盘)
+    uv           # fish-ai 使用 uv 管理 Python venv
   ];
 
   programs.starship = {
@@ -301,5 +312,49 @@ in
     theme[upload_start]="${colors.terminal.green}"
     theme[upload_mid]="${colors.terminal.yellow}"
     theme[upload_end]="${colors.terminal.red}"
+  '';
+
+  # ── fish-ai：LLM 辅助 shell 插件配置 ──
+  xdg.configFile."fish-ai.ini".text = ''
+    [fish-ai]
+    configuration = openrouter
+
+    [openrouter]
+    provider = self-hosted
+    server = https://openrouter.ai/api/v1
+    model = ${env.openclawDefaultModel or "moonshotai/kimi-k2.5"}
+    api_key = ${env.openrouterApiKey or ""}
+  '';
+
+  # fish-ai venv 引导：首次或更新后自动安装 Python 依赖
+  home.activation.bootstrapFishAi = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    FISH_AI_DIR="''${XDG_DATA_HOME:-$HOME/.local/share}/fish-ai"
+    FISH_AI_SRC="${pkgs.fetchFromGitHub {
+      owner = "Realiserad";
+      repo = "fish-ai";
+      rev = "acb3892e1d058f997d958e385fe100dbafea1f0b";
+      hash = "sha256-UUVPh36/UArWl7XkocLcgJ3BqwlmkGslOguHnaAR4nU=";
+    }}"
+    MARKER="$FISH_AI_DIR/.installed-rev"
+    CURRENT_REV="acb3892e1d058f997d958e385fe100dbafea1f0b"
+
+    if [ ! -f "$MARKER" ] || [ "$(cat "$MARKER" 2>/dev/null)" != "$CURRENT_REV" ]; then
+      echo "🥡 fish-ai: bootstrapping Python venv..."
+      ${pkgs.uv}/bin/uv venv --quiet --python 3.13 "$FISH_AI_DIR"
+      echo "🍬 fish-ai: installing dependencies..."
+      # nix store 只读，需拷贝源码到可写临时目录
+      FISH_AI_TMP="$(mktemp -d)"
+      cp -r "$FISH_AI_SRC"/. "$FISH_AI_TMP"
+      chmod -R u+w "$FISH_AI_TMP"
+      ${pkgs.uv}/bin/uv pip install --quiet --python "$FISH_AI_DIR/bin/python3" "$FISH_AI_TMP"
+      rm -rf "$FISH_AI_TMP"
+      # 符号链接系统 CA 证书
+      if [ -f /etc/ssl/certs/ca-certificates.crt ]; then
+        ln -snf /etc/ssl/certs/ca-certificates.crt \
+          "$("$FISH_AI_DIR/bin/python3" -c 'import certifi; print(certifi.where())')"
+      fi
+      echo "$CURRENT_REV" > "$MARKER"
+      echo "✅ fish-ai: ready!"
+    fi
   '';
 }

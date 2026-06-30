@@ -6,9 +6,12 @@
 # ║  Architecture:                                                          ║
 # ║    Traefik (always-on)     → HTTP routing + dashboard + Sablier plugin  ║
 # ║    Sablier (always-on)     → HTTP scale-to-zero lifecycle manager       ║
+# ║    portal (always-on)      → 系统主页 + 错误页 + 等待页 (nginx)        ║
 # ║    tcp-gate (always-on)    → TCP on-demand wake + transparent proxy     ║
 # ║    dragonfly (TCP s2z)     → sccache Redis backend                      ║
 # ║    filebrowser (HTTP s2z)  → web file browser                           ║
+# ║    comfyui (HTTP s2z)      → ComfyUI image gen (GPU, comfy-cli)         ║
+# ║    comfyui-keepalive (on)  → queue monitor → Sablier session refresh    ║
 # ║    rustdesk-hbbs (always)  → RustDesk signal server (host network)      ║
 # ║    rustdesk-hbbr (always)  → RustDesk relay server (host network)       ║
 # ║    pi-agent (always)       → AI assistant agent (host network)          ║
@@ -35,11 +38,14 @@ let
   fileBrowserPort = env.fileBrowserPort or 8080;
   piAgentPort = env.piAgentPort or 3001;
   rustdeskRelayPort = env.rustdeskRelayPort or 21117;
+  searxngPort = env.searxngPort or 18980;
 
   # ── Service registry: hostnames + backends ──────────────────────────────
   # Central definition used by Traefik routing, Unbound zone, and /etc/hosts.
   httpServices = {
+    plane  = { backend = "http://service-plane-portal:80"; scaleToZero = false; };
     files  = { backend = "http://service-plane-filebrowser:80"; scaleToZero = true; };
+    comfyui = { backend = "http://service-plane-comfyui:8188"; scaleToZero = true; };
     agent  = { backend = "http://host.docker.internal:${toString piAgentPort}"; scaleToZero = false; };
     traefik = { backend = "http://127.0.0.1:8080"; scaleToZero = false; };  # Traefik API (internal)
   };
@@ -56,6 +62,15 @@ let
       command = [ "--maxmemory" "2G" "--dbfilename" "dump.rdb" "--save_schedule" "*:*" ];
       healthCheck = "redis-cli -h dragonfly -p 6379 ping";
       idleTimeout = 600;
+    };
+    searxng = {
+      image = "searxng/searxng:latest";
+      hostPort = searxngPort;
+      containerPort = 8080;
+      volumes = [ "${planeDir}/searxng/settings.yml:/etc/searxng/settings.yml:ro" ];
+      command = [ ];
+      healthCheck = "wget -q --spider http://searxng:8080";
+      idleTimeout = 300;
     };
   };
 
@@ -173,6 +188,15 @@ let
     };
     http = {
       routers = {
+        # ── Portal (主页仪表板) ──────────────────────────────────────────
+        portal = {
+          rule = "Host(`plane.${localDomain}`)";
+          entryPoints = [ "websecure" ];
+          service = "portal";
+          tls = {};
+          priority = 10;
+        };
+        # ── Scale-to-zero services ──────────────────────────────────────
         filebrowser = {
           rule = "Host(`files.${localDomain}`)";
           entryPoints = [ "websecure" ];
@@ -180,6 +204,14 @@ let
           service = "filebrowser";
           tls = {};
         };
+        comfyui = {
+          rule = "Host(`comfyui.${localDomain}`)";
+          entryPoints = [ "websecure" ];
+          middlewares = [ "comfyui-sablier" ];
+          service = "comfyui";
+          tls = {};
+        };
+        # ── Always-on services ──────────────────────────────────────────
         pi-agent = {
           rule = "Host(`agent.${localDomain}`)";
           entryPoints = [ "websecure" ];
@@ -192,23 +224,58 @@ let
           service = "api@internal";
           tls = {};
         };
+        # ── Catch-all: 未注册的 *.local → portal 404 ────────────────────
+        catchall = {
+          rule = "HostRegexp(`.+\\.${localDomain}`)";
+          entryPoints = [ "websecure" ];
+          middlewares = [ "portal-errors" ];
+          service = "portal";
+          tls = {};
+          priority = 1;
+        };
       };
       services = {
+        portal.loadBalancer.servers = [
+          { url = "http://service-plane-portal:80"; }
+        ];
         filebrowser.loadBalancer.servers = [
           { url = "http://service-plane-filebrowser:80"; }
+        ];
+        comfyui.loadBalancer.servers = [
+          { url = "http://service-plane-comfyui:8188"; }
         ];
         pi-agent.loadBalancer.servers = [
           { url = "http://host.docker.internal:${toString piAgentPort}"; }
         ];
       };
-      middlewares.filebrowser-sablier.plugin.sablier = {
-        sablierUrl = "http://service-plane-sablier:10000";
-        names = "service-plane-filebrowser";
-        sessionDuration = "10m";
-        dynamic = {
-          displayName = "FileBrowser";
-          theme = "hacker-terminal";
-          refreshFrequency = "5s";
+      middlewares = {
+        # ── Sablier: FileBrowser 自动唤醒 + 自定义等待页 ────────────────
+        filebrowser-sablier.plugin.sablier = {
+          sablierUrl = "http://service-plane-sablier:10000";
+          names = "service-plane-filebrowser";
+          sessionDuration = "10m";
+          dynamic = {
+            displayName = "FileBrowser";
+            customThemesPath = "/portal/waiting.html";
+            refreshFrequency = "5s";
+          };
+        };
+        # ── Sablier: ComfyUI 自动唤醒 + 自定义等待页 ───────────────────
+        comfyui-sablier.plugin.sablier = {
+          sablierUrl = "http://service-plane-sablier:10000";
+          names = "service-plane-comfyui";
+          sessionDuration = "30m";
+          dynamic = {
+            displayName = "ComfyUI";
+            customThemesPath = "/portal/waiting.html";
+            refreshFrequency = "5s";
+          };
+        };
+        # ── 错误页中间件: 后端异常时由 portal 返回错误页 ────────────────
+        portal-errors.errors = {
+          status = [ "404-499" "500-599" ];
+          service = "portal";
+          query = "/{status}.html";
         };
       };
     };
@@ -222,6 +289,61 @@ let
     export HOME="/home/${username}"
     cd "$HOME"
     exec /nix-system/bin/opencode serve --hostname 0.0.0.0 --port 3000
+  '';
+
+  # ── ComfyUI entrypoint (comfy-cli based) ──────────────────────────────
+  comfyuiEntrypoint = pkgs.writeText "comfyui-entrypoint.sh" ''
+    #!/bin/bash
+    set -eu
+    export HOME="/home/user"
+    export PATH="$HOME/.local/bin:$PATH"
+
+    # 首次启动：安装 comfy-cli + ComfyUI
+    if [ ! -f "$HOME/comfy/.installed" ]; then
+      echo "[comfyui] 首次启动，安装 comfy-cli..."
+      pip install --user comfy-cli
+      echo "[comfyui] 通过 comfy-cli 安装 ComfyUI..."
+      comfy --workspace="$HOME/comfy" install --nvidia --skip-manager
+      touch "$HOME/comfy/.installed"
+    fi
+
+    echo "[comfyui] 启动 ComfyUI..."
+    exec comfy --workspace="$HOME/comfy" launch -- --listen 0.0.0.0 --port 8188
+  '';
+
+  # ── ComfyUI keepalive: 队列有任务时刷新 Sablier session ─────────────────
+  comfyuiKeepalive = pkgs.writeText "comfyui-keepalive.sh" ''
+    #!/bin/sh
+    set -eu
+    COMFYUI_URL="http://service-plane-comfyui:8188"
+    SABLIER_URL="http://service-plane-sablier:10000"
+    SESSION_DURATION="30m"
+    CHECK_INTERVAL=15
+
+    log() { echo "[keepalive] $(date '+%H:%M:%S') $*"; }
+
+    while true; do
+      sleep "$CHECK_INTERVAL"
+
+      # 容器未运行时跳过
+      if ! curl -sf "$COMFYUI_URL/api/prompt" >/dev/null 2>&1; then
+        continue
+      fi
+
+      # 检查队列：queue_running 或 queue_pending 非空 = 有活跃任务
+      queue=$(curl -sf "$COMFYUI_URL/api/prompt" 2>/dev/null || echo '{}')
+      running=$(echo "$queue" | grep -o '"queue_running":\[[^]]*\]' | grep -c '"' || true)
+      pending=$(echo "$queue" | grep -o '"queue_pending":\[[^]]*\]' | grep -c '"' || true)
+
+      if [ "$running" -gt 2 ] || [ "$pending" -gt 2 ]; then
+        log "队列活跃 (running=$running, pending=$pending)，刷新 session"
+        curl -sf -X PUT \
+          "$SABLIER_URL/api/sessions/comfyui" \
+          -H "Content-Type: application/json" \
+          -d "{\"duration\":\"$SESSION_DURATION\"}" \
+          >/dev/null 2>&1 || true
+      fi
+    done
   '';
 
   # ── Unbound config: authoritative .local zone ───────────────────────────
@@ -240,7 +362,6 @@ let
       ${lib.concatStringsSep "\n  " (lib.mapAttrsToList (name: _:
         ''local-data: "${name}.${localDomain}. IN A 127.0.0.1"''
       ) httpServices)}
-      local-data: "plane.${localDomain}. IN A 127.0.0.1"
   '';
 
   # ── docker-compose.yml ──────────────────────────────────────────────────
@@ -260,6 +381,7 @@ let
         volumes = [
           "${planeDir}/traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
           "${planeDir}/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro"
+          "${planeDir}/portal/waiting.html:/portal/waiting.html:ro"
           "/etc/service-plane/server.crt:/certs/server.crt:ro"
           "/etc/service-plane/server.key:/certs/server.key:ro"
           "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -275,6 +397,18 @@ let
         volumes = [ "/var/run/docker.sock:/var/run/docker.sock" ];
       };
 
+      # ── Always-on: Portal (系统主页 + 错误页 + 等待页) ──────────────────
+      portal = {
+        image = "nginx:alpine";
+        container_name = "service-plane-portal";
+        restart = "unless-stopped";
+        volumes = [
+          "${planeDir}/portal:/usr/share/nginx/html:ro"
+          "${planeDir}/portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro"
+          "/nix/store:/nix/store:ro"
+        ];
+      };
+
       # ── Always-on: Unbound (authoritative .local DNS) ───────────────────
       unbound = {
         image = "mvance/unbound:latest";
@@ -283,6 +417,7 @@ let
         network_mode = "host";
         volumes = [
           "${planeDir}/unbound:/opt/unbound/etc/unbound:ro"
+          "/nix/store:/nix/store:ro"
         ];
       };
 
@@ -298,6 +433,7 @@ let
         ) tcpServices;
         volumes = [
           "${planeDir}/scripts:/scripts:ro"
+          "/nix/store:/nix/store:ro"
           "/var/run/docker.sock:/var/run/docker.sock"
         ];
         depends_on = lib.mapAttrs' (name: _:
@@ -319,6 +455,40 @@ let
           "sablier.enable" = "true";
           "sablier.group" = "filebrowser";
         };
+      };
+
+      # ── Scale-to-zero (HTTP): ComfyUI (GPU, Sablier + queue keepalive) ──
+      comfyui = {
+        image = "nvidia/cuda:12.8.1-runtime-ubuntu24.04";
+        container_name = "service-plane-comfyui";
+        restart = "no";
+        entrypoint = [ "bash" "/scripts/comfyui-entrypoint.sh" ];
+        volumes = [
+          "${dataDir}/comfyui:/home/user/comfy"
+          "${planeDir}/scripts/comfyui-entrypoint.sh:/scripts/comfyui-entrypoint.sh:ro"
+        ];
+        environment = {
+          NVIDIA_VISIBLE_DEVICES = "all";
+        };
+        deploy.resources.reservations.devices = [
+          { driver = "nvidia"; count = "all"; capabilities = [ "gpu" ]; }
+        ];
+        labels = {
+          "sablier.enable" = "true";
+          "sablier.group" = "comfyui";
+        };
+      };
+
+      # ── Always-on: ComfyUI keepalive (queue monitor → Sablier refresh) ──
+      comfyui-keepalive = {
+        image = "docker:27-cli";
+        container_name = "service-plane-comfyui-keepalive";
+        restart = "unless-stopped";
+        entrypoint = "sh";
+        command = [ "-c" "apk add --no-cache curl >/dev/null 2>&1 && exec sh /scripts/comfyui-keepalive.sh" ];
+        volumes = [
+          "${planeDir}/scripts/comfyui-keepalive.sh:/scripts/comfyui-keepalive.sh:ro"
+        ];
       };
 
       # ── Always-on: RustDesk hbbs (host network for UDP NAT) ─────────────
@@ -377,15 +547,36 @@ let
     }) tcpServices);
   });
 
+  # ── SearXNG settings (disable limiter for local API access) ─────────────
+  searxngSettings = pkgs.writeText "searxng-settings.yml" ''
+    use_default_settings: true
+    server:
+      secret_key: "sp-searxng-local-only"
+      image_proxy: true
+      limiter: false
+    search:
+      formats:
+        - html
+        - json
+  '';
+
 in
 {
   # ── Generated config files ──────────────────────────────────────────────
   xdg.configFile."service-plane/docker-compose.yml".source = composeContent;
   xdg.configFile."service-plane/scripts/tcp-gate.sh".source = gateScript;
   xdg.configFile."service-plane/scripts/pi-agent-entrypoint.sh".source = piAgentEntrypoint;
+  xdg.configFile."service-plane/scripts/comfyui-entrypoint.sh".source = comfyuiEntrypoint;
+  xdg.configFile."service-plane/scripts/comfyui-keepalive.sh".source = comfyuiKeepalive;
   xdg.configFile."service-plane/traefik/traefik.yml".source = traefikStaticYml;
   xdg.configFile."service-plane/traefik/dynamic.yml".source = traefikDynamicYml;
   xdg.configFile."service-plane/unbound/unbound.conf".source = unboundConf;
+  xdg.configFile."service-plane/searxng/settings.yml".source = searxngSettings;
+  xdg.configFile."service-plane/portal/index.html".source = ./portal/index.html;
+  xdg.configFile."service-plane/portal/404.html".source = ./portal/404.html;
+  xdg.configFile."service-plane/portal/error.html".source = ./portal/error.html;
+  xdg.configFile."service-plane/portal/waiting.html".source = ./portal/waiting.html;
+  xdg.configFile."service-plane/portal/nginx.conf".source = ./portal/nginx.conf;
 
   # ── Data directories ─────────────────────────────────────────────────────
   home.activation.servicePlaneDataDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -395,14 +586,17 @@ in
     mkdir -p "${dataDir}/filebrowser/database"
     mkdir -p "${dataDir}/filebrowser/config"
     mkdir -p "${dataDir}/rustdesk"
+    mkdir -p "${dataDir}/comfyui"
   '';
 
   # ── systemd user service ─────────────────────────────────────────────────
   systemd.user.services.service-plane = {
     Unit = {
       Description = "Service Plane (Traefik + Sablier + TCP Gate + containers)";
-      After = [ "docker.service" ];
-      Requires = [ "docker.service" ];
+      # docker.service 是系统级 unit，用户级无法 Requires。
+      # 改用 ConditionPathExists 确保 docker socket 存在后再启动。
+      After = [ "default.target" ];
+      ConditionPathExists = "/var/run/docker.sock";
     };
     Service = {
       Type = "oneshot";
@@ -415,6 +609,7 @@ in
         ${pkgs.docker}/bin/docker compose up -d --remove-orphans
         # Stop scale-to-zero backends (created but should idle)
         ${pkgs.docker}/bin/docker stop service-plane-filebrowser 2>/dev/null || true
+        ${pkgs.docker}/bin/docker stop service-plane-comfyui 2>/dev/null || true
         ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _: ''
           ${pkgs.docker}/bin/docker stop "service-plane-${name}-1" 2>/dev/null || true
         '') tcpServices)}

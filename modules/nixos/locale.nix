@@ -4,9 +4,9 @@
   # Use kmscon to replace default VTs — enables CJK rendering in TTY
   services.kmscon = {
     enable = true;
-    hwRender = true;
-    fonts = [{ name = "Sarasa Mono SC"; package = pkgs.sarasa-gothic; }];
-    extraConfig = "font-size=14";
+    config.hwaccel = true;
+    config.font-name = "Sarasa Mono SC";
+    config.font-size = 14;
   };
 
   time.timeZone = "Asia/Shanghai";

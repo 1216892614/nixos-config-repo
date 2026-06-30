@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Service Plane</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--dim:#8b949e;--green:#3fb950;--yellow:#d29922;--red:#f85149;--blue:#58a6ff;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding:2rem}
+.header{text-align:center;margin-bottom:2.5rem}
+.header h1{font-size:1.5rem;font-weight:600;letter-spacing:-.02em}
+.header p{color:var(--dim);font-size:.875rem;margin-top:.25rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;max-width:960px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.25rem;transition:border-color .2s;text-decoration:none;color:inherit;display:block}
+.card:hover{border-color:var(--blue)}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.card-name{font-weight:600;font-size:1rem}
+.badge{font-size:.7rem;padding:.15rem .5rem;border-radius:9999px;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+.badge-active{background:rgba(63,185,80,.15);color:var(--green)}
+.badge-sleeping{background:rgba(210,153,34,.12);color:var(--yellow)}
+.badge-error{background:rgba(248,81,73,.12);color:var(--red)}
+.badge-unknown{background:rgba(139,148,158,.12);color:var(--dim)}
+.card-desc{color:var(--dim);font-size:.8rem;line-height:1.4}
+.card-url{color:var(--blue);font-size:.75rem;margin-top:.5rem;opacity:.7}
+.footer{text-align:center;color:var(--dim);font-size:.75rem;margin-top:3rem}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Service Plane</h1>
+<p>本地服务网关</p>
+</div>
+<div class="grid" id="services"></div>
+<div class="footer">Traefik + Sablier · scale-to-zero</div>
+<script>
+const services = [
+  {name:"FileBrowser", url:"https://files.local", desc:"文件浏览器", container:"service-plane-filebrowser"},
+  {name:"ComfyUI", url:"https://comfyui.local", desc:"AI 图像生成 (GPU)", container:"service-plane-comfyui"},
+  {name:"Pi Agent", url:"https://agent.local", desc:"AI 助手", container:"service-plane-pi-agent", alwaysOn:true},
+  {name:"Traefik", url:"https://traefik.local", desc:"反向代理仪表板", container:"service-plane-traefik", alwaysOn:true},
+];
+
+function badgeHtml(state) {
+  const map = {active:"活跃",sleeping:"休眠",error:"错误",unknown:"未知"};
+  return `<span class="badge badge-${state}">${map[state]||state}</span>`;
+}
+
+function render(states) {
+  const el = document.getElementById("services");
+  el.innerHTML = services.map(s => {
+    const state = states[s.container] || (s.alwaysOn ? "active" : "unknown");
+    return `<a class="card" href="${s.url}">
+      <div class="card-head"><span class="card-name">${s.name}</span>${badgeHtml(state)}</div>
+      <div class="card-desc">${s.desc}</div>
+      <div class="card-url">${s.url.replace("https://","")}</div>
+    </a>`;
+  }).join("");
+}
+
+async function fetchStatus() {
+  const states = {};
+  try {
+    // Sablier API: GET /api/strategies/dynamic
+    // Fallback: check Docker via portal API
+    const r = await fetch("/api/status");
+    if (r.ok) {
+      const data = await r.json();
+      Object.assign(states, data);
+    }
+  } catch(e) {}
+  // Always-on services assumed active
+  services.filter(s=>s.alwaysOn).forEach(s=>{states[s.container]="active"});
+  render(states);
+}
+
+fetchStatus();
+setInterval(fetchStatus, 10000);
+</script>
+</body>
+</html>

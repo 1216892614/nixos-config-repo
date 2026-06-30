@@ -20,7 +20,6 @@
   glib,
   kdePackages,
   libayatana-appindicator,
-  libsForQt5,
   libsoup_3,
   openssl,
   webkitgtk_4_1,
@@ -64,9 +63,7 @@ rustPlatform.buildRustPackage {
 
     substituteInPlace $cargoDepsCopy/*/sysproxy-*/src/linux.rs \
       --replace-fail '"gsettings"' '"${glib.bin}/bin/gsettings"' \
-      --replace-fail '"kreadconfig5"' '"${libsForQt5.kconfig}/bin/kreadconfig5"' \
       --replace-fail '"kreadconfig6"' '"${kdePackages.kconfig}/bin/kreadconfig6"' \
-      --replace-fail '"kwriteconfig5"' '"${libsForQt5.kconfig}/bin/kwriteconfig5"' \
       --replace-fail '"kwriteconfig6"' '"${kdePackages.kconfig}/bin/kwriteconfig6"'
 
     # this file tries to override the linker used when compiling for certain platforms

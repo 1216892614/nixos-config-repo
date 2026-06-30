@@ -4,7 +4,7 @@
   bg         = "#1c1f1c";
   fg         = "#b5b9ae";
   line       = "#161916";
-  selection  = "#b5b9ae";   # fg color — selection uses reverse video style
+  selection  = "#405545";   # muted green highlight — clearly distinct from bg
   accent     = "#8e9878";   # yellow-green grey
   comment    = "#686c62";   # overlay0
   gutter     = "#767a70";   # overlay1

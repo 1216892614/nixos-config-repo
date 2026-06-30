@@ -27,8 +27,8 @@ in
       foreground = colors.terminal.fg;
       cursor = colors.terminal.cursor;
       cursor_text_color = colors.bg;
-      selection_background = colors.terminal.fg;
-      selection_foreground = colors.terminal.bg;
+      selection_background = colors.selection;
+      selection_foreground = "#d0d4ca";
 
       color0 = colors.terminal.black;
       color1 = colors.terminal.red;

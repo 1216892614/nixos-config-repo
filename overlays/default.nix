@@ -106,4 +106,21 @@ EOF
       mainProgram = "BaiduPCS-Go";
     };
   };
+
+  # fish 4.8 删了 create_manpage_completions.py，但 HM fish completions builder 仍引用。
+  # 补回一个无操作 stub 直到 HM 适配新版 fish。
+  fish = prev.fish.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      mkdir -p $out/share/fish/tools
+      cat > $out/share/fish/tools/create_manpage_completions.py << 'STUB'
+import sys, os, argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--directory', '-d', default='.')
+parser.add_argument('files', nargs='*')
+args = parser.parse_args()
+os.makedirs(args.directory, exist_ok=True)
+# fish 4.8+ no longer ships this script; stub for HM compat
+STUB
+    '';
+  });
 }

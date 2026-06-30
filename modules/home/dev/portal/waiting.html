@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>正在启动 — Service Plane</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:2rem}
+.spinner{width:40px;height:40px;border:3px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:1.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+h1{font-size:1.25rem;font-weight:600;margin-bottom:.5rem}
+p{color:#8b949e;font-size:.9rem;margin-bottom:.25rem}
+.status{color:#d29922;font-size:.8rem;margin-top:1rem;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="spinner"></div>
+<h1 id="title">正在唤醒服务...</h1>
+<p id="desc">容器启动中，就绪后自动跳转</p>
+<div class="status" id="status"></div>
+<script>
+const params = new URLSearchParams(window.location.search);
+const name = params.get("name") || document.title;
+if(name) document.getElementById("title").textContent = "正在启动 " + name + "...";
+
+let attempts = 0;
+async function check() {
+  attempts++;
+  document.getElementById("status").textContent = "等待中... (" + attempts + ")";
+  try {
+    const r = await fetch(window.location.href, {method:"HEAD",redirect:"manual"});
+    // Sablier removes the waiting page once ready (returns 200 or redirect)
+    if(r.status === 200 || r.type === "opaqueredirect") {
+      window.location.reload();
+      return;
+    }
+  } catch(e) {}
+  setTimeout(check, 3000);
+}
+setTimeout(check, 3000);
+</script>
+</body>
+</html>

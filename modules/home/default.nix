@@ -268,7 +268,10 @@ in
     defaultThinkingLevel: high
 
     providers:
-      webSearch: duckduckgo
+      webSearch: searxng
+
+    searxng:
+      endpoint: "http://127.0.0.1:18980"
 
     disabledProviders:
       - ollama
@@ -1280,17 +1283,12 @@ PY
     Categories=AudioVideo;
   '';
 
-  xdg.configFile."xdg-terminal-exec/termfilechooser.conf".text = ''
-    cmd=${config.home.homeDirectory}/.local/bin/yazi-wrapper.sh
+  xdg.configFile."xdg-desktop-portal-termfilechooser/config".text = ''
+    [filechooser]
+    cmd=${pkgs.xdg-desktop-portal-termfilechooser}/share/xdg-desktop-portal-termfilechooser/yazi-wrapper.sh
+    default_dir=${config.home.homeDirectory}
+    env=TERMCMD=kitty --title termfilechooser --class file_chooser
   '';
-
-  home.file.".local/bin/yazi-wrapper.sh" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env bash
-      kitty --class=file_chooser -e yazi "$@" --chooser-file="$1"
-    '';
-  };
 
   home.file.".config/noctalia/wallpaper.jpeg".source = ../../wallpapers/moss-fern.jpg;
   home.file.".config/noctalia/wallpapers/moss-fern.jpg".source = ../../wallpapers/moss-fern.jpg;
