@@ -2,6 +2,7 @@
 
 let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
+  colors = import ../../lib/colors.nix;
   steamPulseFix = pkgs.callPackage ../../pkgs/steam-pulse-fix.nix {};
   w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" {} ''
     mkdir -p $out/share/icons
@@ -252,34 +253,60 @@ in
     };
   };
 
-  # ── omp (oh-my-pi): config.yml + models.yml ────────────────────────────
-  home.file.".omp/agent/config.yml".text = ''
-    setupVersion: 1
-    startup.setupWizard: false
-    startup.checkUpdate: false
+  # ── omp (oh-my-pi): config.yml (activation, 可写) + models.yml ─────────
+  # config.yml 不能做 symlink，omp 运行时需要写入。用 activation 每次 rebuild 覆盖。
+  home.activation.ompConfig = let
+    ompConfigContent = pkgs.writeText "omp-config.yml" ''
+      setupVersion: 1
+      startup:
+        setupWizard: false
+        checkUpdate: false
 
-    modelRoles:
-      default: bigbigdog/claude-opus-4-6
-      smol: deepseek/deepseek-v4-pro
-      slow: bigbigdog/claude-opus-4-6:high
-      plan: bigbigdog/claude-opus-4-6
-      commit: deepseek/deepseek-v4-pro
+      theme:
+        dark: moss-fern
 
-    defaultThinkingLevel: high
+      symbolPreset: nerd
 
-    providers:
-      webSearch: searxng
+      statusLine:
+        preset: compact
+        separator: none
 
-    searxng:
-      endpoint: "http://127.0.0.1:18980"
+      tui:
+        tight: true
 
-    disabledProviders:
-      - ollama
+      display:
+        shimmer: kitt
 
-    tools.approvalMode: yolo
+      modelRoles:
+        default: bigbigdog/claude-opus-4-6
+        smol: deepseek/deepseek-v4-pro
+        slow: bigbigdog/claude-opus-4-6:high
+        plan: bigbigdog/claude-opus-4-6
+        vision: bigbigdog/gpt-5.5
+        commit: deepseek/deepseek-v4-pro
 
-    retry:
-      modelFallback: true
+      defaultThinkingLevel: high
+
+      providers:
+        webSearch: searxng
+
+      searxng:
+        endpoint: "http://127.0.0.1:18980"
+
+      disabledProviders:
+        - ollama
+
+      tools:
+        approvalMode: yolo
+
+      retry:
+        modelFallback: true
+    '';
+  in lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "${config.home.homeDirectory}/.omp/agent"
+    rm -f "${config.home.homeDirectory}/.omp/agent/config.yml"
+    cp "${ompConfigContent}" "${config.home.homeDirectory}/.omp/agent/config.yml"
+    chmod 644 "${config.home.homeDirectory}/.omp/agent/config.yml"
   '';
 
   home.file.".omp/agent/models.yml".text = ''
@@ -294,31 +321,31 @@ in
             contextWindow: 200000
             maxTokens: 64000
             reasoning: true
-            input: [text]
+            input: [text, image]
           - id: claude-opus-4-7
             name: Claude Opus 4.7 (BigBigDog)
             contextWindow: 200000
             maxTokens: 64000
             reasoning: true
-            input: [text]
+            input: [text, image]
           - id: claude-opus-4-8
             name: Claude Opus 4.8 (BigBigDog)
             contextWindow: 200000
             maxTokens: 64000
             reasoning: true
-            input: [text]
+            input: [text, image]
           - id: gpt-5.4
             name: GPT-5.4 (BigBigDog)
             contextWindow: 200000
             maxTokens: 32000
             reasoning: true
-            input: [text]
+            input: [text, image]
           - id: gpt-5.5
             name: GPT-5.5 (BigBigDog)
             contextWindow: 200000
             maxTokens: 32000
             reasoning: true
-            input: [text]
+            input: [text, image]
 
       bytecatcode:
         baseUrl: https://bytecat.lamclod.cn/v1
@@ -330,19 +357,19 @@ in
             contextWindow: 200000
             maxTokens: 64000
             reasoning: true
-            input: [text]
+            input: [text, image]
           - id: claude-opus-4-7
             name: Claude Opus 4.7 (ByteCat)
             contextWindow: 200000
             maxTokens: 64000
             reasoning: true
-            input: [text]
+            input: [text, image]
           - id: claude-opus-4-8
             name: Claude Opus 4.8 (ByteCat)
             contextWindow: 200000
             maxTokens: 64000
             reasoning: true
-            input: [text]
+            input: [text, image]
 
       deepseek:
         baseUrl: https://api.deepseek.com/v1
@@ -356,6 +383,105 @@ in
             reasoning: true
             input: [text]
   '';
+
+  # ── omp theme: Moss & Fern (from lib/colors.nix) ─────────────────────────
+  home.file.".omp/agent/themes/moss-fern.json".text = builtins.toJSON {
+    name = "moss-fern";
+    vars = {
+      accent = colors.accent;
+      muted = colors.comment;
+      bg = colors.bg;
+      fg = colors.fg;
+      surface = colors.surface.lift;
+      border = colors.surface.over;
+    };
+    colors = {
+      # 核心文本与边框
+      accent = "accent";
+      border = "border";
+      borderAccent = "accent";
+      borderMuted = "muted";
+      success = colors.added;
+      error = colors.error;
+      warning = colors.terminal.yellow;
+      muted = "muted";
+      dim = colors.inactive;
+      text = "";
+      thinkingText = "muted";
+
+      # 背景块
+      selectedBg = colors.selection;
+      userMessageBg = colors.surface.sunk;
+      userMessageText = "";
+      customMessageBg = colors.surface.lift;
+      customMessageText = "";
+      customMessageLabel = "accent";
+      toolPendingBg = colors.surface.sunk;
+      toolSuccessBg = "#1a2d1f";
+      toolErrorBg = "#2d1a1f";
+      toolTitle = "";
+      toolOutput = "muted";
+
+      # 状态栏
+      statusLineBg = colors.bar.bg;
+      statusLineSep = colors.inactive;
+      statusLineModel = colors.keyword;
+      statusLinePath = colors.func;
+      statusLineGitClean = colors.added;
+      statusLineGitDirty = colors.terminal.yellow;
+      statusLineContext = colors.tag;
+      statusLineSpend = colors.func;
+      statusLineStaged = colors.added;
+      statusLineDirty = colors.terminal.yellow;
+      statusLineUntracked = colors.error;
+      statusLineOutput = colors.fg;
+      statusLineCost = colors.constant;
+      statusLineSubagents = colors.keyword;
+
+      # Markdown
+      mdHeading = "accent";
+      mdLink = colors.func;
+      mdLinkUrl = "muted";
+      mdCode = colors.terminal.fg;
+      mdCodeBlock = colors.terminal.fg;
+      mdCodeBlockBorder = "muted";
+      mdQuote = "muted";
+      mdQuoteBorder = "muted";
+      mdHr = "muted";
+      mdListBullet = "accent";
+
+      # Diff
+      toolDiffAdded = colors.added;
+      toolDiffRemoved = colors.removed;
+      toolDiffContext = "muted";
+
+      # 语法高亮
+      syntaxComment = colors.comment;
+      syntaxKeyword = colors.keyword;
+      syntaxFunction = colors.func;
+      syntaxVariable = colors.fg;
+      syntaxString = colors.string;
+      syntaxNumber = colors.constant;
+      syntaxType = colors.entity;
+      syntaxOperator = colors.operator;
+      syntaxPunctuation = colors.gutter;
+
+      # Thinking 等级边框
+      thinkingOff = colors.inactive;
+      thinkingMinimal = colors.comment;
+      thinkingLow = colors.func;
+      thinkingMedium = colors.tag;
+      thinkingHigh = colors.keyword;
+      thinkingXhigh = colors.error;
+
+      # 模式边框
+      bashMode = colors.tag;
+      pythonMode = colors.keyword;
+    };
+    symbols = {
+      preset = "nerd";
+    };
+  };
 
   # Disabled: replaced by modules/nixos/apfs-automount.nix which handles
   # all external FS types (APFS, NTFS, exFAT, ext4, etc.) with unified naming

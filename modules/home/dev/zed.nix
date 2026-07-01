@@ -4,32 +4,41 @@ let
   env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else {};
   colors = import ../../../lib/colors.nix;
 
-  # Zed theme generated from lib/colors.nix (Moss & Fern)
+  # Zed theme generated from lib/colors.nix (Moss & Fern v2)
   mossFernTheme = {
+    "$schema" = "https://zed.dev/schema/themes/v0.2.0.json";
     name = "Moss and Fern";
     author = "ep-o1";
     themes = [{
       name = "Moss and Fern";
       appearance = "dark";
       style = {
-        # Editor
+        # ── Editor ─────────────────────────────────────────────────────
         background = colors.bg;
         "editor.background" = colors.bg;
         "editor.foreground" = colors.fg;
         "editor.gutter.background" = colors.bg;
-        "editor.line.active" = colors.surface.lift;
-        "editor.active_line.background" = colors.surface.lift;
-        "editor.highlighted_line.background" = colors.surface.lift;
-        "editor.wrap_guide" = colors.surface.lift;
-        "editor.invisible" = colors.surface.over;
+        "editor.active_line.background" = "${colors.surface.lift}cc";
+        "editor.highlighted_line.background" = "${colors.surface.lift}aa";
+        "editor.line_number" = colors.comment;
+        "editor.active_line_number" = colors.fg;
+        "editor.wrap_guide" = "${colors.surface.over}60";
+        "editor.invisible" = "${colors.surface.over}80";
+        "editor.subheader.background" = colors.surface.sunk;
+        "editor.document_highlight.read_background" = "${colors.selection}60";
+        "editor.document_highlight.write_background" = "${colors.selection}90";
 
-        # Cursor
+        # ── Cursor ────────────────────────────────────────────────────
         "editor.cursor" = colors.accent;
 
-        # Selection
-        "editor.selection" = colors.selection;
+        # ── Selection — 高对比度，文字清晰可见 ──────────────────────
+        "editor.selection" = "${colors.selection}cc";
+        "editor.selection.inactive" = "${colors.selection}70";
 
-        # Terminal
+        # ── Search highlights ─────────────────────────────────────────
+        "search.match_background" = "${colors.terminal.yellow}40";
+
+        # ── Terminal ──────────────────────────────────────────────────
         "terminal.background" = colors.terminal.bg;
         "terminal.foreground" = colors.terminal.fg;
         "terminal.ansi.black" = colors.terminal.black;
@@ -49,7 +58,7 @@ let
         "terminal.ansi.bright_cyan" = colors.terminal.brightCyan;
         "terminal.ansi.bright_white" = colors.terminal.brightWhite;
 
-        # UI panels
+        # ── UI panels ────────────────────────────────────────────────
         "panel.background" = colors.surface.sunk;
         "panel.focused_border" = colors.accent;
         "tab_bar.background" = colors.surface.sunk;
@@ -58,67 +67,128 @@ let
         "toolbar.background" = colors.bg;
         "status_bar.background" = colors.surface.sunk;
         "title_bar.background" = colors.surface.sunk;
-        "title_bar.inactive_background" = colors.surface.sunk;
-        "scrollbar.thumb.background" = colors.surface.over;
+        "title_bar.inactive_background" = "${colors.surface.sunk}e0";
+        "scrollbar.thumb.background" = "${colors.surface.over}90";
+        "scrollbar.thumb.hover_background" = "${colors.inactive}cc";
         "scrollbar.track.background" = colors.bg;
+        "scrollbar.track.border" = colors.bg;
+        "pane.focused_border" = colors.accent;
 
-        # Borders
-        border = colors.surface.lift;
-        "border.variant" = colors.surface.over;
+        # ── Borders ──────────────────────────────────────────────────
+        border = colors.surface.over;
+        "border.variant" = "${colors.surface.over}80";
         "border.focused" = colors.accent;
         "border.selected" = colors.accent;
         "border.disabled" = colors.surface.lift;
+        "border.transparent" = "#00000000";
 
-        # Text / syntax
+        # ── Text ─────────────────────────────────────────────────────
         text = colors.fg;
         "text.muted" = colors.comment;
-        "text.placeholder" = colors.comment;
-        "text.disabled" = colors.surface.over;
+        "text.placeholder" = "${colors.comment}aa";
+        "text.disabled" = "${colors.inactive}cc";
         "text.accent" = colors.accent;
 
-        # Element backgrounds
-        "element.background" = colors.surface.lift;
-        "element.hover" = colors.surface.over;
-        "element.selected" = colors.selection;
+        # ── Icons — 使图标清晰可辨 ──────────────────────────────────
+        icon = colors.fg;
+        "icon.muted" = colors.comment;
+        "icon.disabled" = colors.inactive;
+        "icon.placeholder" = colors.comment;
+        "icon.accent" = colors.accent;
 
-        # Surface
+        # ── Element backgrounds（按钮、列表项等）─────────────────────
+        "element.background" = colors.surface.lift;
+        "element.hover" = "${colors.surface.over}cc";
+        "element.active" = "${colors.surface.over}e0";
+        "element.selected" = "${colors.accent}30";
+        "element.disabled" = "${colors.surface.lift}80";
+
+        # ── Ghost elements（文件树、命令面板候选项等）─────────────────
+        "ghost_element.background" = "#00000000";
+        "ghost_element.hover" = "${colors.surface.over}60";
+        "ghost_element.active" = "${colors.surface.over}90";
+        "ghost_element.selected" = "${colors.accent}25";
+        "ghost_element.disabled" = "${colors.surface.lift}40";
+
+        # ── Surface ──────────────────────────────────────────────────
         surface = colors.surface.base;
         "surface.background" = colors.surface.base;
         "elevated_surface.background" = colors.surface.lift;
+        "drop_target.background" = "${colors.accent}20";
 
-        # Git gutters
+        # ── Git gutters ──────────────────────────────────────────────
         "created" = colors.added;
         "modified" = colors.modified;
         "deleted" = colors.removed;
         "conflict" = colors.terminal.yellow;
+        "renamed" = colors.terminal.blue;
 
-        # Diagnostics
+        # ── Diagnostics ──────────────────────────────────────────────
         "error" = colors.error;
-        "error.background" = colors.surface.lift;
+        "error.background" = "${colors.error}15";
+        "error.border" = "${colors.error}50";
         "warning" = colors.terminal.yellow;
-        "warning.background" = colors.surface.lift;
-        "info" = colors.tag;
-        "info.background" = colors.surface.lift;
+        "warning.background" = "${colors.terminal.yellow}15";
+        "warning.border" = "${colors.terminal.yellow}50";
+        "info" = colors.func;
+        "info.background" = "${colors.func}15";
+        "info.border" = "${colors.func}50";
+        "hint" = "${colors.comment}cc";
+        "hint.background" = "${colors.surface.lift}80";
+        "hint.border" = "${colors.surface.over}60";
+        "predictive" = "${colors.comment}90";
 
-        # Links
-        "link_text.hover" = colors.tag;
+        # ── Links ────────────────────────────────────────────────────
+        "link_text.hover" = colors.func;
 
-        # Syntax highlighting
+        # ── Players（多人协作光标颜色）───────────────────────────────
+        players = [
+          { cursor = colors.accent; background = "${colors.accent}30"; selection = "${colors.accent}30"; }
+          { cursor = colors.func; background = "${colors.func}30"; selection = "${colors.func}30"; }
+          { cursor = colors.terminal.magenta; background = "${colors.terminal.magenta}30"; selection = "${colors.terminal.magenta}30"; }
+          { cursor = colors.terminal.yellow; background = "${colors.terminal.yellow}30"; selection = "${colors.terminal.yellow}30"; }
+          { cursor = colors.tag; background = "${colors.tag}30"; selection = "${colors.tag}30"; }
+          { cursor = colors.constant; background = "${colors.constant}30"; selection = "${colors.constant}30"; }
+          { cursor = colors.terminal.red; background = "${colors.terminal.red}30"; selection = "${colors.terminal.red}30"; }
+          { cursor = colors.terminal.brightGreen; background = "${colors.terminal.brightGreen}30"; selection = "${colors.terminal.brightGreen}30"; }
+        ];
+
+        # ── Syntax highlighting ──────────────────────────────────────
         "syntax" = {
-          "keyword" = { color = colors.keyword; };
+          "keyword" = { color = colors.keyword; font_weight = 600; };
           "function" = { color = colors.func; };
+          "function.method" = { color = colors.func; };
+          "function.special_definition" = { color = colors.func; };
           "string" = { color = colors.string; };
+          "string.escape" = { color = colors.constant; };
+          "string.regex" = { color = colors.regexp; };
+          "string.special" = { color = colors.string; font_style = "italic"; };
           "constant" = { color = colors.constant; };
-          "comment" = { color = colors.comment; };
+          "number" = { color = colors.constant; };
+          "boolean" = { color = colors.constant; };
+          "comment" = { color = colors.comment; font_style = "italic"; };
+          "comment.doc" = { color = colors.comment; font_style = "italic"; };
           "tag" = { color = colors.tag; };
           "operator" = { color = colors.operator; };
-          "number" = { color = colors.constant; };
           "type" = { color = colors.entity; };
+          "type.builtin" = { color = colors.entity; font_weight = 600; };
+          "constructor" = { color = colors.entity; };
           "variable" = { color = colors.fg; };
-          "property" = { color = colors.fg; };
-          "punctuation" = { color = colors.comment; };
-          "attribute" = { color = colors.entity; };
+          "variable.special" = { color = colors.constant; };
+          "property" = { color = colors.tag; };
+          "punctuation" = { color = "${colors.fg}cc"; };
+          "punctuation.bracket" = { color = "${colors.fg}bb"; };
+          "punctuation.delimiter" = { color = "${colors.fg}aa"; };
+          "punctuation.special" = { color = colors.operator; };
+          "attribute" = { color = colors.entity; font_style = "italic"; };
           "label" = { color = colors.tag; };
+          "link_text" = { color = colors.func; };
+          "link_uri" = { color = colors.string; font_style = "italic"; };
+          "embedded" = { color = colors.fg; };
+          "emphasis" = { font_style = "italic"; };
+          "emphasis.strong" = { font_weight = 700; };
+          "title" = { color = colors.func; font_weight = 700; };
+          "preproc" = { color = colors.keyword; };
         };
       };
     }];

@@ -1,62 +1,62 @@
-# Moss & Fern — desaturated yellow-green dark theme
-# Chromatic colors: HSL saturation ~10-18%, muted foggy aesthetic
+# Moss & Fern v2 — forest dark theme with visible color separation
+# Chromatic colors: HSL saturation raised to ~35-55% for real distinction
 {
-  bg         = "#1c1f1c";
-  fg         = "#b5b9ae";
-  line       = "#161916";
-  selection  = "#405545";   # muted green highlight — clearly distinct from bg
-  accent     = "#8e9878";   # yellow-green grey
-  comment    = "#686c62";   # overlay0
-  gutter     = "#767a70";   # overlay1
+  bg         = "#1a1d1a";
+  fg         = "#c8ccc0";
+  line       = "#141714";
+  selection  = "#2e322e";   # dark gray — subtle but visible selection on dark bg
+  accent     = "#7fad6a";   # vivid green accent
+  comment    = "#6b7265";   # muted grey-green
+  gutter     = "#828a7a";   # visible gutter numbers
 
-  keyword    = "#867a93";   # dusty lavender
-  func       = "#758891";   # steel grey
-  string     = "#7e9070";   # sage grey
-  constant   = "#937d87";   # mauve grey
-  tag        = "#6f8b8b";   # teal grey
-  entity     = "#6f8b8b";   # teal grey
-  regexp     = "#6f8b82";   # sea grey
-  markup     = "#957272";   # brick grey
-  operator   = "#6f8b82";   # sea grey
-  error      = "#957272";   # brick grey
+  keyword    = "#c78dda";   # purple — clear keyword pop
+  func       = "#6bb8d6";   # sky blue — functions
+  string     = "#a3c77d";   # leaf green — strings
+  constant   = "#e0956c";   # warm orange — constants/numbers
+  tag        = "#5cbdb9";   # teal — tags/labels
+  entity     = "#5cbdb9";   # teal — types
+  regexp     = "#6bbfa0";   # sea green — regex
+  markup     = "#d48282";   # brick red — markup
+  operator   = "#89c5a8";   # mint green — operators
+  error      = "#e06c6c";   # clear red
 
   terminal = {
-    bg            = "#1c1f1c";   # base
-    fg            = "#b5b9ae";   # text
-    cursor        = "#ccc8be";   # warm neutral
-    black         = "#343734";   # surface1
-    red           = "#a07575";
-    green         = "#839970";
-    yellow        = "#a09670";
-    blue          = "#7590a0";
-    magenta       = "#9a7d8a";   # mauve
-    cyan          = "#709088";   # sea
-    white         = "#9da196";   # subtext1
-    brightBlack   = "#484b46";   # surface2
-    brightRed     = "#ad8282";
-    brightGreen   = "#90a67d";
-    brightYellow  = "#ada37d";
-    brightBlue    = "#829dab";
-    brightMagenta = "#a78a97";
-    brightCyan    = "#7d9d95";
-    brightWhite   = "#aaaea3";   # subtext0
+    bg            = "#1a1d1a";   # base
+    fg            = "#e8ebe0";   # bright text — ensures reverse-video selection is obvious
+    cursor        = "#e0ddd4";   # warm white
+    black         = "#2e322e";   # surface1
+    red           = "#d47272";
+    green         = "#8fbf6a";
+    yellow        = "#d4b86a";
+    blue          = "#6ba4d4";
+    magenta       = "#c78dda";   # vivid magenta
+    cyan          = "#5cbdb9";   # teal
+    white         = "#a8ada0";   # subtext1
+    brightBlack   = "#4a4f48";   # surface2
+    brightRed     = "#e08a8a";
+    brightGreen   = "#a3d47d";
+    brightYellow  = "#e0cc7d";
+    brightBlue    = "#82b8e0";
+    brightMagenta = "#da9ee8";
+    brightCyan    = "#72d4cc";
+    brightWhite   = "#c0c4b8";   # subtext0
   };
 
-  added    = "#839970";   # green
-  modified = "#7590a0";   # blue
-  removed  = "#a07575";   # red
+  added    = "#8fbf6a";   # green
+  modified = "#6ba4d4";   # blue
+  removed  = "#d47272";   # red
 
   surface = {
-    sunk = "#161916";   # mantle
-    base = "#1c1f1c";   # base
-    lift = "#262926";   # surface0
-    over = "#343734";   # surface1
+    sunk = "#141714";   # mantle — panels/sidebars
+    base = "#1a1d1a";   # base — editor bg
+    lift = "#242824";   # surface0 — active line, subtle hover
+    over = "#2e322e";   # surface1 — borders, scrollbar
   };
 
   # UI semantic tokens
   bar = {
     bg     = "#0e100e";   # statusbar background
-    fg     = "#d0d4ca";   # statusbar foreground
+    fg     = "#d8dcd0";   # statusbar foreground
   };
-  inactive = "#484b46";   # inactive borders/rings (surface2)
+  inactive = "#4a4f48";   # inactive borders/rings (surface2)
 }

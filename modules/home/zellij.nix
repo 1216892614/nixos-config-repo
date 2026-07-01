@@ -79,7 +79,7 @@ in
       themes {
           moss-fern {
               fg "${colors.fg}"
-              bg "${colors.terminal.bg}"
+              bg "${colors.selection}"
               black "${colors.terminal.black}"
               red "${colors.terminal.red}"
               green "${colors.terminal.green}"

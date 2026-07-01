@@ -24,7 +24,7 @@ sudo systemctl reset-failed nixos-rebuild-switch-to-configuration.service >/dev/
 sudo systemctl daemon-reload >/dev/null 2>&1
 
 set -l host (hostname)
-sudo nixos-rebuild switch --flake $dst#$host
+sudo NIXOS_NO_CHECK=1 nixos-rebuild switch --flake $dst#$host
 and begin
   # ── 重启可能被 rebuild 中断的用户服务 ──────────────────────────────────
   # home-manager 重载 systemd user units 时会 stop 正在运行的服务，
