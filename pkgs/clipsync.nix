@@ -1,4 +1,4 @@
-{ lib, stdenv, makeWrapper, bash, wl-clipboard, xclip, clipnotify, xxHash, coreutils, gnused, gawk, findutils }:
+{ lib, stdenv, makeWrapper, bash, wl-clipboard, xclip, clipnotify, xxhash, coreutils, gnused, gawk, findutils }:
 
 stdenv.mkDerivation {
   pname = "clipsync";
@@ -18,7 +18,7 @@ stdenv.mkDerivation {
     for f in $out/bin/*; do
       wrapProgram "$f" \
         --prefix PATH : "${lib.makeBinPath [
-          bash wl-clipboard xclip clipnotify xxHash coreutils gnused gawk findutils
+          bash wl-clipboard xclip clipnotify xxhash coreutils gnused gawk findutils
         ]}"
     done
   '';

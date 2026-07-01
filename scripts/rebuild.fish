@@ -31,8 +31,14 @@ and begin
   # 但 graphical-session.target 不会重新触发，导致桌面组件消失。
   systemctl --user daemon-reload
   systemctl --user restart noctalia-shell 2>/dev/null
-  systemctl --user restart pipewire wireplumber 2>/dev/null
+  systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null
   systemctl --user restart service-plane 2>/dev/null
+
+  # 重启 Clash Verge：rebuild 会重启 clash-verge.service（特权进程），
+  # 旧 GUI 进程失去连接后无法拉起 mihomo 内核，需要杀掉让 XDG autostart 重启
+  pkill -u (id -u) -f clash-verge 2>/dev/null
+  sleep 1
+  nohup clash-verge &>/dev/null &
 
   # 重启 fcitx5：rebuild 可能更新了二进制路径或配置，
   # 干净重启避免 D-Bus name 冲突或 Wayland IM 前端断连

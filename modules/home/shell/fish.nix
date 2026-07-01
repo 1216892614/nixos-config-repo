@@ -340,7 +340,7 @@ in
 
     if [ ! -f "$MARKER" ] || [ "$(cat "$MARKER" 2>/dev/null)" != "$CURRENT_REV" ]; then
       echo "🥡 fish-ai: bootstrapping Python venv..."
-      ${pkgs.uv}/bin/uv venv --quiet --python 3.13 "$FISH_AI_DIR"
+      ${pkgs.uv}/bin/uv venv --quiet --clear --python 3.13 "$FISH_AI_DIR"
       echo "🍬 fish-ai: installing dependencies..."
       # nix store 只读，需拷贝源码到可写临时目录
       FISH_AI_TMP="$(mktemp -d)"

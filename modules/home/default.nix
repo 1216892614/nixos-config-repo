@@ -45,6 +45,7 @@ in
   home.username = "ep-o1";
   home.homeDirectory = "/home/ep-o1";
   home.stateVersion = "24.11";
+  home.enableNixpkgsReleaseCheck = false;  # nixos-unstable 始终领先 HM release 周期
 
   home.sessionVariables = {
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
@@ -508,6 +509,7 @@ in
     };
     gtk3.extraConfig.gtk-application-prefer-dark-theme = true;
     gtk4.extraConfig.gtk-application-prefer-dark-theme = true;
+    gtk4.theme = null;
   };
 
   qt = {
