@@ -33,7 +33,12 @@ in
           @define-color error_fg_color ${colors.fg};
 
           * {
-            all: unset;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: none;
+            box-shadow: none;
+            outline: none;
             font-family: "Sarasa UI SC", sans-serif;
           }
 

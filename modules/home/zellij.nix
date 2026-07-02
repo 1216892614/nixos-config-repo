@@ -78,17 +78,99 @@ in
     extraConfig = ''
       themes {
           moss-fern {
-              fg "${colors.fg}"
-              bg "${colors.selection}"
-              black "${colors.terminal.black}"
-              red "${colors.terminal.red}"
-              green "${colors.terminal.green}"
-              yellow "${colors.terminal.yellow}"
-              blue "${colors.terminal.blue}"
-              magenta "${colors.terminal.magenta}"
-              cyan "${colors.terminal.cyan}"
-              white "${colors.terminal.brightWhite}"
-              orange "${colors.accent}"
+              text_unselected {
+                  base "${colors.terminal.brightWhite}"
+                  emphasis_0 "${colors.accent}"
+                  emphasis_1 "${colors.terminal.cyan}"
+                  emphasis_2 "${colors.terminal.green}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.terminal.black}"
+              }
+              text_selected {
+                  base "${colors.terminal.brightWhite}"
+                  emphasis_0 "${colors.accent}"
+                  emphasis_1 "${colors.terminal.cyan}"
+                  emphasis_2 "${colors.terminal.green}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.selection}"
+              }
+              ribbon_unselected {
+                  base "${colors.terminal.black}"
+                  emphasis_0 "${colors.terminal.red}"
+                  emphasis_1 "${colors.terminal.brightWhite}"
+                  emphasis_2 "${colors.terminal.blue}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.fg}"
+              }
+              ribbon_selected {
+                  base "${colors.terminal.black}"
+                  emphasis_0 "${colors.terminal.red}"
+                  emphasis_1 "${colors.accent}"
+                  emphasis_2 "${colors.terminal.magenta}"
+                  emphasis_3 "${colors.terminal.blue}"
+                  background "${colors.terminal.green}"
+              }
+              table_title {
+                  base "${colors.terminal.brightWhite}"
+                  emphasis_0 "${colors.terminal.cyan}"
+                  emphasis_1 "${colors.terminal.green}"
+                  emphasis_2 "${colors.terminal.blue}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.terminal.black}"
+              }
+              table_cell_unselected {
+                  base "${colors.terminal.brightWhite}"
+                  emphasis_0 "${colors.accent}"
+                  emphasis_1 "${colors.terminal.cyan}"
+                  emphasis_2 "${colors.terminal.green}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.terminal.black}"
+              }
+              table_cell_selected {
+                  base "${colors.terminal.black}"
+                  emphasis_0 "${colors.accent}"
+                  emphasis_1 "${colors.terminal.cyan}"
+                  emphasis_2 "${colors.terminal.green}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.terminal.green}"
+              }
+              list_unselected {
+                  base "${colors.terminal.brightWhite}"
+                  emphasis_0 "${colors.accent}"
+                  emphasis_1 "${colors.terminal.cyan}"
+                  emphasis_2 "${colors.terminal.green}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.terminal.bg}"
+              }
+              list_selected {
+                  base "${colors.terminal.black}"
+                  emphasis_0 "${colors.accent}"
+                  emphasis_1 "${colors.terminal.cyan}"
+                  emphasis_2 "${colors.terminal.green}"
+                  emphasis_3 "${colors.terminal.magenta}"
+                  background "${colors.terminal.green}"
+              }
+              frame_selected {
+                  base "${colors.terminal.green}"
+                  emphasis_0 "${colors.terminal.red}"
+                  emphasis_1 "${colors.terminal.brightWhite}"
+                  emphasis_2 "${colors.terminal.cyan}"
+                  emphasis_3 "${colors.terminal.blue}"
+              }
+              exit_code_success {
+                  base "${colors.terminal.green}"
+                  emphasis_0 "${colors.terminal.cyan}"
+                  emphasis_1 "${colors.terminal.black}"
+                  emphasis_2 "${colors.terminal.magenta}"
+                  emphasis_3 "${colors.terminal.blue}"
+              }
+              exit_code_error {
+                  base "${colors.terminal.red}"
+                  emphasis_0 "${colors.terminal.yellow}"
+                  emphasis_1 "${colors.accent}"
+                  emphasis_2 "${colors.terminal.brightWhite}"
+                  emphasis_3 "${colors.terminal.magenta}"
+              }
           }
       }
       keybinds clear-defaults=true {
