@@ -71,6 +71,8 @@ let
       command = [ ];
       healthCheck = "wget -q --spider http://searxng:8080";
       idleTimeout = 300;
+      # 只要主机上有 omp 进程就保持 searxng 存活（检查 /proc/*/exe → omp）
+      keepAliveCheck = "ls -l /host-proc/[0-9]*/exe 2>/dev/null | grep -q '/omp'";
     };
   };
 
@@ -87,20 +89,36 @@ let
     idle_reaper() {
       while true; do
         sleep 30
-        ${lib.concatStringsSep "\n    " (lib.mapAttrsToList (name: svc: ''
+        ${lib.concatStringsSep "\n    " (lib.mapAttrsToList (name: svc:
+          let
+            hasKeepAlive = svc ? keepAliveCheck;
+            stopBlock = ''
+              last=$(stat -c %Y "$activity_file" 2>/dev/null || echo 0)
+              now=$(date +%s)
+              elapsed=$((now - last))
+              if [ "$elapsed" -ge ${toString svc.idleTimeout} ]; then
+                if [ "$state" = "true" ]; then
+                  log "${name}: idle ''${elapsed}s (>=${toString svc.idleTimeout}s), stopping"
+                  docker stop "service-plane-${name}-1" >/dev/null 2>&1 || true
+                fi
+              fi'';
+          in ''
         activity_file="$ACTIVITY_DIR/${name}"
-        if [ -f "$activity_file" ]; then
-          last=$(stat -c %Y "$activity_file" 2>/dev/null || echo 0)
-          now=$(date +%s)
-          elapsed=$((now - last))
-          if [ "$elapsed" -ge ${toString svc.idleTimeout} ]; then
-            state=$(docker inspect --format='{{.State.Running}}' "service-plane-${name}-1" 2>/dev/null || echo "false")
-            if [ "$state" = "true" ]; then
-              log "${name}: idle ''${elapsed}s (>=${toString svc.idleTimeout}s), stopping"
-              docker stop "service-plane-${name}-1" >/dev/null 2>&1 || true
-            fi
+        state=$(docker inspect --format='{{.State.Running}}' "service-plane-${name}-1" 2>/dev/null || echo "false")
+        ${if hasKeepAlive then ''
+        if ${svc.keepAliveCheck}; then
+          # omp 活跃 → 保持服务存活
+          touch "$activity_file"
+          if [ "$state" != "true" ]; then
+            log "${name}: omp active, waking..."
+            docker start "service-plane-${name}-1" >/dev/null 2>&1 || true
           fi
-        fi
+        elif [ -f "$activity_file" ]; then
+          ${stopBlock}
+        fi'' else ''
+        if [ -f "$activity_file" ]; then
+          ${stopBlock}
+        fi''}
         '') tcpServices)}
       done
     }
@@ -435,6 +453,7 @@ let
           "${planeDir}/scripts:/scripts:ro"
           "/nix/store:/nix/store:ro"
           "/var/run/docker.sock:/var/run/docker.sock"
+          "/proc:/host-proc:ro"
         ];
         depends_on = lib.mapAttrs' (name: _:
           lib.nameValuePair name { condition = "service_started"; }
