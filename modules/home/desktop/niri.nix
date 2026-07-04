@@ -8,6 +8,11 @@ let
   # 追加原始 KDL 到 finalConfig 输出
   extraConfig = ''
 
+    // P2710V: 启用 10-bit 色深输出（HDR 兼容性、色彩精度提升）
+    output "DP-3" {
+        max-bpc 10
+    }
+
     // Background blur (dual kawase)
     blur {
         passes 5
@@ -65,8 +70,16 @@ in
       accel-speed = 0.0;
     };
 
+    # HDMI-A-3 (AOC 24G2W1G4 1080p) 使用 1.0 缩放
+    # 通配符设为 1.0 作为安全默认值
     outputs."*" = {
-      scale = 2.0;
+      scale = 1.0;
+    };
+
+    # P2710V 4K 显示器：scale 1.5（4K → 有效 2560x1440）
+    # max-bpc 10 通过 extraConfig KDL 设置（niri-flake schema 不支持）
+    outputs."DP-3" = {
+      scale = 1.5;
     };
 
     layout = {

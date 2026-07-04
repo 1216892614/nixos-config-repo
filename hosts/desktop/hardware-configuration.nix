@@ -97,13 +97,9 @@
   };
 
   # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
+  # 注意：login 和 systemd-user 不能启用 howdy，否则开机时 IR 摄像头未就绪会导致
+  # 用户会话无法启动（niri 不加载）或 TTY 登录无限挂起
   security.pam.services = {
-    login = {
-      howdy.enable = true;
-      howdy.control = "sufficient";
-      rules.auth.howdy.modulePath = lib.mkForce
-        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
-    };
     # niri 内置 session-lock 使用此 PAM service 认证（2026-06 unstable 新增）
     niri = {
       howdy.enable = true;
@@ -141,12 +137,6 @@
       # 同上：避免 pam_unix acct_mgmt segfault
       rules.account.unix.modulePath = lib.mkForce
         "${pkgs.pam}/lib/security/pam_permit.so";
-    };
-    systemd-user = {
-      howdy.enable = true;
-      howdy.control = "sufficient";
-      rules.auth.howdy.modulePath = lib.mkForce
-        "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
   };
 }

@@ -17,6 +17,7 @@
     # 依赖项和工具
     gamemode         # 游戏性能优化
     mangohud         # 游戏内性能监控叠加层
+    gamescope        # HDR/VRR compositing wrapper
   ];
 
   # 为 Heroic 配置环境变量
@@ -70,6 +71,23 @@
     start=
     end=
   '';
+
+  # Heroic: 在 Heroic 设置中，每个游戏的 "Wrapper" 字段可填入 gamescope HDR 参数：
+  #   gamescope --hdr-enabled --hdr-itm-enable -W 3840 -H 2160 -f --
+  # 为方便使用，提供 wrapper 脚本供 Heroic 调用
+  home.file.".local/bin/heroic-gamescope-hdr".text = ''
+    #!/bin/sh
+    # Heroic wrapper: 在游戏设置 → Other → Wrapper command 中填入：
+    #   ${config.home.homeDirectory}/.local/bin/heroic-gamescope-hdr
+    exec gamescope \
+      --hdr-enabled \
+      --hdr-itm-enable \
+      --prefer-output DP-3 \
+      -W 3840 -H 2160 \
+      --fullscreen \
+      -- "$@"
+  '';
+  home.file.".local/bin/heroic-gamescope-hdr".executable = true;
 
   # Epic Games Store 快捷方式（放入 ~/.local/share/applications/ 确保 Walker 索引到）
   xdg.dataFile."applications/epic-games.desktop".text = ''

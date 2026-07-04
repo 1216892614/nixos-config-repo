@@ -14,15 +14,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    noctalia = {
-      url = "github:noctalia-dev/noctalia-shell";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    noctalia-qs = {
-      url = "github:noctalia-dev/noctalia-qs";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     elephant.url = "github:abenz1267/elephant";
 
@@ -38,7 +29,7 @@
     zed.url = "github:zed-industries/zed";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, noctalia, noctalia-qs, walker, elephant, nix-flatpak, maccel, zed, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, walker, elephant, nix-flatpak, maccel, zed, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -47,7 +38,6 @@
         ./hosts/desktop
 
         niri.nixosModules.niri
-        noctalia.nixosModules.default
         nix-flatpak.nixosModules.nix-flatpak
         maccel.nixosModules.default
 
@@ -69,7 +59,6 @@
             useUserPackages = true;
             backupFileExtension = "hm-bak2";
             sharedModules = [
-              noctalia.homeModules.default
               walker.homeManagerModules.default
             ];
             extraSpecialArgs = { inherit inputs; };
@@ -102,7 +91,6 @@
         ./hosts/ep-laptop
 
         niri.nixosModules.niri
-        noctalia.nixosModules.default
         nix-flatpak.nixosModules.nix-flatpak
         maccel.nixosModules.default
 
@@ -124,7 +112,6 @@
             useUserPackages = true;
             backupFileExtension = "hm-bak2";
             sharedModules = [
-              noctalia.homeModules.default
               walker.homeManagerModules.default
             ];
             extraSpecialArgs = { inherit inputs; };

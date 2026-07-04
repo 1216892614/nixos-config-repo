@@ -269,8 +269,17 @@ in
       symbolPreset: nerd
 
       statusLine:
-        preset: compact
+        preset: custom
         separator: none
+        leftSegments:
+          - mode
+          - model
+          - cwd
+        rightSegments:
+          - git
+          - tokens
+          - cost
+          - time
 
       tui:
         tight: true
@@ -671,11 +680,12 @@ in
   # Chrome: 不使用 gnome-keyring，改用内置密码存储
   # 避免启动时弹出 keyring 解锁对话框（面部识别登录时 keyring 不会自动解锁）
   # 访问密码管理器时 Chrome 走 polkit 认证 → 支持 howdy 人脸识别
+  # GPU 加速 + HDR: 启用 Vulkan、VA-API 硬解码、10-bit 渲染
   xdg.desktopEntries.google-chrome = {
     name = "Google Chrome";
     genericName = "Web Browser";
     comment = "Access the Internet";
-    exec = "google-chrome-stable --password-store=basic %U";
+    exec = "google-chrome-stable --password-store=basic --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization,WebRTCPipeWireCapturer,UseMultiPlaneFormatForHardwareVideo --enable-gpu-rasterization --enable-zero-copy %U";
     terminal = false;
     icon = "google-chrome";
     type = "Application";
@@ -692,11 +702,11 @@ in
     actions = {
       new-window = {
         name = "New Window";
-        exec = "google-chrome-stable --password-store=basic";
+        exec = "google-chrome-stable --password-store=basic --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization --enable-gpu-rasterization --enable-zero-copy";
       };
       new-private-window = {
         name = "New Incognito Window";
-        exec = "google-chrome-stable --password-store=basic --incognito";
+        exec = "google-chrome-stable --password-store=basic --incognito --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization --enable-gpu-rasterization --enable-zero-copy";
       };
     };
   };
@@ -739,6 +749,90 @@ with open('$prefs_file', 'w') as f:
       echo "chrome: created Preferences with vertical tabs enabled"
     fi
   '';
+
+  # ── Gamescope HDR 包裹脚本 ──────────────────────────────────────────────
+  # gamescope 作为轻量 HDR compositor 包裹应用，在 niri 不支持 HDR 合成的情况下
+  # 为单个应用提供 HDR 输出能力（通过 DRM lease 或嵌套合成）
+
+  # VLC HDR 启动器：通过 gamescope 启动 VLC 以支持 HDR 视频播放
+  home.file.".local/bin/vlc-hdr".text = ''
+    #!/bin/sh
+    # gamescope HDR 模式启动 VLC
+    # --hdr-enabled: 启用 HDR 输出
+    # --hdr-itm-enable: 启用 inverse tone mapping（SDR→HDR 提升）
+    # --prefer-output DP-3: 指定 HDR 显示器
+    # --fullscreen: VLC 观影通常全屏
+    exec gamescope \
+      --hdr-enabled \
+      --hdr-itm-enable \
+      --prefer-output DP-3 \
+      --fullscreen \
+      -W 3840 -H 2160 \
+      -- vlc --fullscreen "$@"
+  '';
+  home.file.".local/bin/vlc-hdr".executable = true;
+
+  # VLC HDR 桌面快捷方式
+  xdg.desktopEntries.vlc-hdr = {
+    name = "VLC (HDR)";
+    genericName = "Media Player";
+    comment = "VLC with HDR output via Gamescope";
+    exec = "${config.home.homeDirectory}/.local/bin/vlc-hdr %U";
+    terminal = false;
+    icon = "vlc";
+    type = "Application";
+    categories = [ "AudioVideo" "Player" ];
+    mimeType = [
+      "video/x-matroska" "video/mp4" "video/webm" "video/avi"
+      "video/x-msvideo" "video/quicktime" "video/mpeg"
+      "audio/flac" "audio/mpeg" "audio/ogg"
+    ];
+  };
+
+  # Chrome HDR 启动器：通过 gamescope 启动 Chrome 以支持 HDR 网页视频
+  home.file.".local/bin/chrome-hdr".text = ''
+    #!/bin/sh
+    # gamescope HDR 模式启动 Chrome（用于 HDR 视频流：YouTube HDR、Netflix 等）
+    exec gamescope \
+      --hdr-enabled \
+      --hdr-itm-enable \
+      --prefer-output DP-3 \
+      --fullscreen \
+      -W 3840 -H 2160 \
+      -- google-chrome-stable \
+        --password-store=basic \
+        --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization,UseMultiPlaneFormatForHardwareVideo \
+        --enable-gpu-rasterization \
+        --enable-zero-copy \
+        "$@"
+  '';
+  home.file.".local/bin/chrome-hdr".executable = true;
+
+  # Chrome HDR 桌面快捷方式
+  xdg.desktopEntries.chrome-hdr = {
+    name = "Google Chrome (HDR)";
+    genericName = "Web Browser (HDR)";
+    comment = "Chrome with HDR output via Gamescope for streaming HDR video";
+    exec = "${config.home.homeDirectory}/.local/bin/chrome-hdr %U";
+    terminal = false;
+    icon = "google-chrome";
+    type = "Application";
+    categories = [ "Network" "WebBrowser" ];
+  };
+
+  # 通用 gamescope HDR 启动器：任意应用可通过 gamescope-hdr <command> 使用 HDR
+  home.file.".local/bin/gamescope-hdr".text = ''
+    #!/bin/sh
+    # 通用 HDR 启动器：gamescope-hdr <任意命令>
+    exec gamescope \
+      --hdr-enabled \
+      --hdr-itm-enable \
+      --prefer-output DP-3 \
+      --fullscreen \
+      -W 3840 -H 2160 \
+      -- "$@"
+  '';
+  home.file.".local/bin/gamescope-hdr".executable = true;
 
   # Symlink ~/.local/share/fonts → system font dir so apps with hardcoded
   # font paths (RustDesk fontdb, etc.) can find CJK fonts on NixOS
@@ -1135,7 +1229,8 @@ PY
 
     # Fix: Steam's bundled libaudio.so (2012) crashes in pa_card_info callback
     # with PipeWire. Intercept pa_context_get_card_info_list to make it a no-op.
-    export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix.so''${LD_PRELOAD:+:$LD_PRELOAD}"
+    # Load both 32-bit and 64-bit; ld.so silently ignores the wrong ELF class.
+    export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix64.so:${steamPulseFix}/lib/steam_pulse_fix32.so''${LD_PRELOAD:+:$LD_PRELOAD}"
 
     # Ensure we run NixOS Steam (programs.steam) so extraPackages/fonts are present.
     exec /run/current-system/sw/bin/steam "$@"
@@ -1146,6 +1241,50 @@ PY
       [ "Exec=steam" ]
       [ "Exec=${config.home.homeDirectory}/.local/bin/steam-wrapper" ]
       (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
+
+  # Steam HDR 启动器：通过 gamescope 包裹 Steam（适用于全屏游戏 HDR）
+  # 注意：也可以在 Steam 单个游戏中设置启动选项：
+  #   gamescope --hdr-enabled --hdr-itm-enable -W 3840 -H 2160 -f -- %command%
+  home.file.".local/bin/steam-hdr".text = ''
+    #!/bin/sh
+    if command -v systemctl >/dev/null 2>&1; then
+      for line in $(systemctl --user show-environment 2>/dev/null); do
+        case "$line" in *=*) export "$line" ;; esac
+      done 2>/dev/null || true
+    fi
+
+    pick_display() {
+      sock=/tmp/.X11-unix/X1
+      if [ -S "$sock" ]; then
+        DISPLAY=:1
+        export DISPLAY
+      fi
+    }
+    pick_display
+
+    export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix64.so:${steamPulseFix}/lib/steam_pulse_fix32.so''${LD_PRELOAD:+:$LD_PRELOAD}"
+
+    # 通过 gamescope HDR 启动 Steam
+    exec gamescope \
+      --hdr-enabled \
+      --hdr-itm-enable \
+      --prefer-output DP-3 \
+      -W 3840 -H 2160 \
+      --fullscreen \
+      --steam \
+      -- /run/current-system/sw/bin/steam -tenfoot "$@"
+  '';
+  home.file.".local/bin/steam-hdr".executable = true;
+  xdg.desktopEntries.steam-hdr = {
+    name = "Steam (HDR)";
+    genericName = "Game Platform (HDR)";
+    comment = "Steam Big Picture with HDR via Gamescope";
+    exec = "${config.home.homeDirectory}/.local/bin/steam-hdr";
+    terminal = false;
+    icon = "steam";
+    type = "Application";
+    categories = [ "Game" ];
+  };
 
   # Steam follows per-user fontconfig; force strong CJK fallbacks.
   xdg.configFile."fontconfig/conf.d/99-steam-cjk.conf".text = ''

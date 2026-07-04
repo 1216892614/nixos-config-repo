@@ -84,9 +84,18 @@ in
     GTK_USE_PORTAL = "1";
   };
 
+  programs.gamescope = {
+    enable = true;
+    capSysNice = true;
+  };
+
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
+    gamescopeSession = {
+      enable = true;
+      args = [ "--hdr-enabled" "--hdr-itm-enable" "--prefer-output" "DP-3" ];
+    };
     # Same idea as: pkgs.steam.override { extraPkgs = pkgs: [ ...fonts... ]; }
     # Force fonts to exist inside Steam's FHS env (some setups still show □□□ without this).
     extraPackages = with pkgs; [
@@ -96,6 +105,7 @@ in
       source-han-mono
       noto-fonts-color-emoji
       sarasa-gothic
+      gamescope
     ];
   };
 
@@ -208,6 +218,7 @@ EOF
     libva
     libva-utils
     vlc
+    gamescope  # HDR/VRR compositing for games and media
   ];
 
   # IM 环境变量由 niri spawn-at-startup 统一导入 systemd/DBus（见 niri.nix）

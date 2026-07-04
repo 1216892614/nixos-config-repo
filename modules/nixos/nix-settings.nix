@@ -21,5 +21,11 @@
     };
   };
 
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config = {
+    allowUnfree = true;
+    # pnpm 9 仍被 clash-verge-rev 作为 build 依赖使用，仅构建时需要
+    permittedInsecurePackages = [
+      "pnpm-9.15.9"
+    ];
+  };
 }
