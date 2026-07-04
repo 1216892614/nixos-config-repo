@@ -680,12 +680,12 @@ in
   # Chrome: 不使用 gnome-keyring，改用内置密码存储
   # 避免启动时弹出 keyring 解锁对话框（面部识别登录时 keyring 不会自动解锁）
   # 访问密码管理器时 Chrome 走 polkit 认证 → 支持 howdy 人脸识别
-  # GPU 加速 + HDR: 启用 Vulkan、VA-API 硬解码、10-bit 渲染
+  # GPU 加速: 启用 VA-API 硬解码（Vulkan 和 zero-copy 在 RTX 5080 / 595.x 驱动下导致黑屏）
   xdg.desktopEntries.google-chrome = {
     name = "Google Chrome";
     genericName = "Web Browser";
     comment = "Access the Internet";
-    exec = "google-chrome-stable --password-store=basic --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization,WebRTCPipeWireCapturer,UseMultiPlaneFormatForHardwareVideo --enable-gpu-rasterization --enable-zero-copy %U";
+    exec = "google-chrome-stable --password-store=basic --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,CanvasOopRasterization,WebRTCPipeWireCapturer,UseMultiPlaneFormatForHardwareVideo --enable-gpu-rasterization %U";
     terminal = false;
     icon = "google-chrome";
     type = "Application";
@@ -702,11 +702,11 @@ in
     actions = {
       new-window = {
         name = "New Window";
-        exec = "google-chrome-stable --password-store=basic --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization --enable-gpu-rasterization --enable-zero-copy";
+        exec = "google-chrome-stable --password-store=basic --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,CanvasOopRasterization --enable-gpu-rasterization";
       };
       new-private-window = {
         name = "New Incognito Window";
-        exec = "google-chrome-stable --password-store=basic --incognito --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization --enable-gpu-rasterization --enable-zero-copy";
+        exec = "google-chrome-stable --password-store=basic --incognito --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,CanvasOopRasterization --enable-gpu-rasterization";
       };
     };
   };
@@ -801,9 +801,8 @@ with open('$prefs_file', 'w') as f:
       -W 3840 -H 2160 \
       -- google-chrome-stable \
         --password-store=basic \
-        --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,CanvasOopRasterization,UseMultiPlaneFormatForHardwareVideo \
+        --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,CanvasOopRasterization,UseMultiPlaneFormatForHardwareVideo \
         --enable-gpu-rasterization \
-        --enable-zero-copy \
         "$@"
   '';
   home.file.".local/bin/chrome-hdr".executable = true;
