@@ -245,7 +245,7 @@ in
         openai_compatible = {
           # BigBigDog — Claude/GPT/Gemini relay
           bigbigdog = {
-            api_url = "https://www.dogapi.cc/v1";
+            api_url = "https://www.hongkongdog.cc/v1";
             available_models = [
               {
                 name = "claude-fable-5";

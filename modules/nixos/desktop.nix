@@ -212,6 +212,7 @@ EOF
 
   environment.systemPackages = with pkgs; [
     git
+    gh  # GitHub CLI
     xwayland-satellite
     v4l-utils
     ffmpeg

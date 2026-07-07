@@ -75,7 +75,52 @@ in
     wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
     qq      # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
     qqmusic
+    # ── 文档阅读 ──
+    foliate         # PDF / EPUB / DjVu / CBR / FB2 / MOBI 阅读器
+    (callPackage ../../pkgs/doxx.nix {})  # 终端 DOCX 查看器 (doxx file.docx)
+    ghostscript     # AI/PDF/PS 文件渲染（ImageMagick delegate）
+    evince          # PS/EPS/AI 文档查看器（通过 Ghostscript 渲染）
+    # ── 图片查看 ──
+    imv             # Wayland 原生轻量图片查看器
+    # ── 云存储 ──
+    rclone          # 多云存储挂载/同步（OneDrive, GDrive 等）
   ];
+
+  # ── 文档格式 MIME 关联 ──
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      # imv: 图片
+      "image/png" = "imv-dir.desktop";
+      "image/jpeg" = "imv-dir.desktop";
+      "image/gif" = "imv-dir.desktop";
+      "image/webp" = "imv-dir.desktop";
+      "image/bmp" = "imv-dir.desktop";
+      "image/svg+xml" = "imv-dir.desktop";
+      # Foliate: 电子书 + PDF
+      "application/pdf" = "com.github.johnfactotum.Foliate.desktop";
+      "application/epub+zip" = "com.github.johnfactotum.Foliate.desktop";
+      "image/vnd.djvu" = "com.github.johnfactotum.Foliate.desktop";
+      "application/x-mobipocket-ebook" = "com.github.johnfactotum.Foliate.desktop";
+      "application/x-cbr" = "com.github.johnfactotum.Foliate.desktop";
+      "application/x-cbz" = "com.github.johnfactotum.Foliate.desktop";
+      "application/x-cb7" = "com.github.johnfactotum.Foliate.desktop";
+      "application/x-fb2+xml" = "com.github.johnfactotum.Foliate.desktop";
+      # Evince: PostScript / EPS / Adobe Illustrator（通过 Ghostscript 渲染）
+      "application/postscript" = "org.gnome.Evince.desktop";
+      "application/eps" = "org.gnome.Evince.desktop";
+      "application/x-eps" = "org.gnome.Evince.desktop";
+      "image/x-eps" = "org.gnome.Evince.desktop";
+      "application/illustrator" = "org.gnome.Evince.desktop";
+      # imv: 额外图片格式
+      "image/tiff" = "imv-dir.desktop";
+      "image/x-tga" = "imv-dir.desktop";
+      "image/x-icon" = "imv-dir.desktop";
+      "image/vnd.microsoft.icon" = "imv-dir.desktop";
+      "image/heif" = "imv-dir.desktop";
+      "image/avif" = "imv-dir.desktop";
+    };
+  };
 
   # Claude Code / Codex / Gemini / OpenCode providers: configured manually.
 
@@ -115,7 +160,7 @@ in
         name = "BigBigDog (OpenAI-compatible)";
         options = {
           apiKey = env.opencodeBigbigdogApiKey or (env.bigbigdogApiKey or "");
-          baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.dogapi.cc/v1");
+          baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1");
         };
         models = {
           "claude-fable-5" = { name = "claude-fable-5"; };
@@ -322,7 +367,7 @@ in
   home.file.".omp/agent/models.yml".text = ''
     providers:
       bigbigdog:
-        baseUrl: ${env.bigbigdogBaseUrl or "http://47.106.169.152/v1"}
+        baseUrl: ${env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1"}
         apiKey: "${env.bigbigdogApiKey or ""}"
         api: openai-completions
         models:

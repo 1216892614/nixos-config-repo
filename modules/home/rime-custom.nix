@@ -19,6 +19,13 @@ let
       schema_list:
         - schema: moqi_wan_flypy
         - schema: moqi_single_xh
+      ascii_composer/switch_key:
+        Shift_L: noop
+        Shift_R: noop
+        Control_L: noop
+        Control_R: noop
+        Caps_Lock: clear
+        Eisu_toggle: clear
   '';
 
   # moqi_single_xh 没有循环依赖，custom 正常生效

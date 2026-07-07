@@ -26,11 +26,60 @@ in
             "for" = "linux";
           }
         ];
+        image = [
+          {
+            run = ''imv "$@"'';
+            orphan = true;
+            desc = "View in imv";
+          }
+        ];
+        postscript = [
+          {
+            run = ''evince "$@"'';
+            orphan = true;
+            desc = "View PS/EPS/AI in Evince";
+          }
+        ];
       };
 
       open = {
         prepend_rules = [
           { url = "*/"; use = "terminal"; }
+          # 图片格式 → imv
+          { mime = "image/*"; use = "image"; }
+          # Adobe / PostScript 格式 → Evince (Ghostscript 渲染)
+          { mime = "application/postscript"; use = "postscript"; }
+          { mime = "application/eps"; use = "postscript"; }
+          { mime = "application/x-eps"; use = "postscript"; }
+          { mime = "image/x-eps"; use = "postscript"; }
+          { mime = "application/illustrator"; use = "postscript"; }
+          { url = "*.ai"; use = "postscript"; }
+          { url = "*.eps"; use = "postscript"; }
+          { url = "*.ps"; use = "postscript"; }
+        ];
+      };
+
+      # 预览：Ghostscript 将 PS/EPS/AI 转为 PNG 供 yazi 内联预览
+      plugin = {
+        prepend_previewers = [
+          { mime = "application/postscript"; run = "gs-preview"; }
+          { mime = "application/eps"; run = "gs-preview"; }
+          { mime = "application/x-eps"; run = "gs-preview"; }
+          { mime = "image/x-eps"; run = "gs-preview"; }
+          { mime = "application/illustrator"; run = "gs-preview"; }
+          { url = "*.ai"; run = "gs-preview"; }
+          { url = "*.eps"; run = "gs-preview"; }
+          { url = "*.ps"; run = "gs-preview"; }
+        ];
+        prepend_preloaders = [
+          { mime = "application/postscript"; run = "gs-preview"; }
+          { mime = "application/eps"; run = "gs-preview"; }
+          { mime = "application/x-eps"; run = "gs-preview"; }
+          { mime = "image/x-eps"; run = "gs-preview"; }
+          { mime = "application/illustrator"; run = "gs-preview"; }
+          { url = "*.ai"; run = "gs-preview"; }
+          { url = "*.eps"; run = "gs-preview"; }
+          { url = "*.ps"; run = "gs-preview"; }
         ];
       };
     };
@@ -44,6 +93,7 @@ in
         rev = "3b9681091b783d6bc5d07172afd6159060a7db63";
         hash = "sha256-8p2RC8F8JH1K36HebJM58stHX+lFLD+KYQxfdJm06y0=";
       };
+      gs-preview = ../../pkgs/yazi-plugins/gs-preview.yazi;
     };
 
     keymap = {

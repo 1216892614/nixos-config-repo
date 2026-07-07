@@ -25,8 +25,7 @@
     # 启用 GameMode（自动提升游戏进程优先级）
     GAMEMODERUNEXEC = "${pkgs.gamemode}/bin/gamemoderun";
     
-    # MangoHud 配置（游戏内 FPS/性能显示）
-    MANGOHUD = "1";
+    # MangoHud 配置路径（需要时通过 mangohud %command% 启用）
     MANGOHUD_CONFIGFILE = "${config.xdg.configHome}/MangoHud/MangoHud.conf";
   };
 

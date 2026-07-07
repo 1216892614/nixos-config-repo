@@ -59,7 +59,7 @@ let
       hostPort = 6399;
       containerPort = 6379;
       volumes = [ "${dataDir}/dragonfly:/data" ];
-      command = [ "--maxmemory" "2G" "--dbfilename" "dump.rdb" "--save_schedule" "*:*" ];
+      command = [ "--maxmemory" "2G" "--dbfilename" "dump.rdb" "--save_schedule" "*:*" "--proactor_threads" "4" ];
       healthCheck = "redis-cli -h dragonfly -p 6379 ping";
       idleTimeout = 600;
     };
@@ -303,10 +303,10 @@ let
   piAgentEntrypoint = pkgs.writeText "pi-agent-entrypoint.sh" ''
     #!/bin/sh
     set -eu
-    export PATH="/nix-system/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    export PATH="/nix-user/bin:/nix-system/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     export HOME="/home/${username}"
     cd "$HOME"
-    exec /nix-system/bin/opencode serve --hostname 0.0.0.0 --port 3000
+    exec opencode serve --hostname 0.0.0.0 --port 3000
   '';
 
   # ── ComfyUI entrypoint (comfy-cli based) ──────────────────────────────
@@ -541,6 +541,7 @@ let
         volumes = [
           "/nix/store:/nix/store:ro"
           "/run/current-system/sw:/nix-system:ro"
+          "/etc/profiles/per-user/${username}:/nix-user:ro"
           "/home/${username}:/home/${username}"
           "/var/run/docker.sock:/var/run/docker.sock"
           "${planeDir}/scripts/pi-agent-entrypoint.sh:/entrypoint/pi-agent-entrypoint.sh:ro"
@@ -622,10 +623,10 @@ in
       RemainAfterExit = true;
       WorkingDirectory = planeDir;
       ExecStart = pkgs.writeShellScript "service-plane-up" ''
-        set -euo pipefail
         cd "${planeDir}"
         ${pkgs.docker}/bin/docker compose pull --quiet 2>/dev/null || true
-        ${pkgs.docker}/bin/docker compose up -d --remove-orphans
+        # 允许个别容器启动失败（如 GPU 不可用），不影响其余服务
+        ${pkgs.docker}/bin/docker compose up -d --remove-orphans || true
         # Stop scale-to-zero backends (created but should idle)
         ${pkgs.docker}/bin/docker stop service-plane-filebrowser 2>/dev/null || true
         ${pkgs.docker}/bin/docker stop service-plane-comfyui 2>/dev/null || true
