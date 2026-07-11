@@ -26,10 +26,9 @@
 
     maccel.url = "github:Gnarus-G/maccel";
 
-    zed.url = "github:zed-industries/zed";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, walker, elephant, nix-flatpak, maccel, zed, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, walker, elephant, nix-flatpak, maccel, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -45,9 +44,6 @@
           nixpkgs.overlays = [
             (import ./overlays/default.nix)
             niri.overlays.niri
-            (final: prev: {
-              zed-editor = zed.packages.x86_64-linux.default;
-            })
           ];
           programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;
         }
@@ -98,9 +94,6 @@
           nixpkgs.overlays = [
             (import ./overlays/default.nix)
             niri.overlays.niri
-            (final: prev: {
-              zed-editor = zed.packages.x86_64-linux.default;
-            })
           ];
           programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;
         }
