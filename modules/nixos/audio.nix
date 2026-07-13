@@ -14,6 +14,27 @@
     wireplumber = {
       enable = true;
       extraConfig = {
+        # 禁用节点挂起，避免 Chrome 播放视频时音频断续
+        "10-disable-suspend" = {
+          "monitor.alsa.rules" = [
+            {
+              matches = [
+                { "node.name" = "~alsa_output.*"; }
+              ];
+              actions.update-props = {
+                "session.suspend-timeout-seconds" = 0;
+              };
+            }
+            {
+              matches = [
+                { "node.name" = "~alsa_input.*"; }
+              ];
+              actions.update-props = {
+                "session.suspend-timeout-seconds" = 0;
+              };
+            }
+          ];
+        };
         "10-bluez" = {
           "monitor.bluez.properties" = {
             "bluez5.enable-sbc-xq" = true;

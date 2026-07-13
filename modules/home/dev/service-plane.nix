@@ -455,9 +455,7 @@ let
           "/var/run/docker.sock:/var/run/docker.sock"
           "/proc:/host-proc:ro"
         ];
-        depends_on = lib.mapAttrs' (name: _:
-          lib.nameValuePair name { condition = "service_started"; }
-        ) tcpServices;
+        # 不依赖 backend 容器 — tcp-gate 按需唤醒它们
       };
 
       # ── Scale-to-zero (HTTP): FileBrowser ────────────────────────────────
