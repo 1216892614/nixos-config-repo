@@ -14,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    niri-glass = {
+      url = "github:zaroutt/Niri-glass";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
 
     elephant.url = "github:abenz1267/elephant";
 
@@ -28,7 +33,7 @@
 
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, walker, elephant, nix-flatpak, maccel, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, niri-glass, walker, elephant, nix-flatpak, maccel, ... }@inputs:
   {
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -45,7 +50,7 @@
             (import ./overlays/default.nix)
             niri.overlays.niri
           ];
-          programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;
+          programs.niri.package = nixpkgs.lib.mkForce niri-glass.packages.x86_64-linux.niri-glass;
         }
 
         home-manager.nixosModules.home-manager
@@ -95,7 +100,7 @@
             (import ./overlays/default.nix)
             niri.overlays.niri
           ];
-          programs.niri.package = nixpkgs.lib.mkForce niri.packages.x86_64-linux.niri-unstable;
+          programs.niri.package = nixpkgs.lib.mkForce niri-glass.packages.x86_64-linux.niri-glass;
         }
 
         home-manager.nixosModules.home-manager

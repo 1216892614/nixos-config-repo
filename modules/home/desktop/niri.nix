@@ -13,15 +13,19 @@ let
         max-bpc 10
     }
 
-    // Background blur (dual kawase)
+    // Background blur (dual kawase) — 降低 passes 配合液态玻璃
     blur {
-        passes 5
+        passes 3
         offset 2
-        noise 0.02
-        saturation 1.5
+        noise 0.01
+        saturation 1.2
     }
 
-    // 全局启用背景模糊（排除浏览器、vlc、输入法）
+    // 全局启用背景模糊 + 液态玻璃（排除浏览器、vlc、输入法）
+    // 液态玻璃效果可见程度由各窗口 opacity 决定：
+    //   opacity 1.0 → 背景完全被遮挡，效果不可见
+    //   opacity 0.95 → 微弱玻璃感
+    //   opacity 0.85~0.80 → 明显液态玻璃
     window-rule {
         exclude app-id="^google-chrome$"
         exclude app-id="^chromium$"
@@ -29,6 +33,26 @@ let
         exclude app-id="^fcitx"
         background-effect {
             blur true
+            xray true
+            liquid-glass {
+                refraction-strength 5.0
+                power-factor 6
+                refraction-power 1.5
+                glow-weight 0.4
+                glow-bias 0.2
+                glow-edge0 0.2
+                glow-edge1 0.8
+                edge-lighting 0.8
+                saturation 1.0
+                vibrancy 0.2
+                adaptive-dim 0.1
+                adaptive-boost 0.2
+                physical-refraction 0
+                lens-distortion 0
+                fringing 1.2
+                edge-thickness 0.3
+                edge-padding 0.0
+            }
         }
     }
 

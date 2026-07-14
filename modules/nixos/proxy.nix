@@ -12,8 +12,7 @@
 # 默认开关（TUN / 系统代理 / 局域网 / ipv6 / 静默启动）由 home-manager 的
 # clash-verge.nix 首次播种到 verge.yaml / config.yaml，且之后仍可在 GUI 修改。
 #
-# 注意：clash-verge-rev 包本身由 overlays/default.nix 覆盖为 2.4.7
-#       （nixpkgs pin 的 2.4.6 因 tao-macros vendoring bug 无法编译）。
+# 注意：clash-verge-rev 使用 nixpkgs-unstable 提供的版本（当前 2.5.1）。
 
 {
   programs.clash-verge = {

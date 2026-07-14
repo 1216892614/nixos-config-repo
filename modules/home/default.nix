@@ -74,6 +74,7 @@ in
     fastfetch
     wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
     qq      # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
+    wemeet  # 腾讯会议（屏幕共享通过 xdg-desktop-portal ScreenCast）
     qqmusic
     # ── 文档阅读 ──
     foliate         # PDF / EPUB / DjVu / CBR / FB2 / MOBI 阅读器
@@ -445,7 +446,7 @@ in
     vars = {
       accent = colors.accent;
       muted = colors.comment;
-      bg = colors.bg;
+      bg = colors.terminal.bg;
       fg = colors.fg;
       surface = colors.surface.lift;
       border = colors.surface.over;
@@ -466,19 +467,19 @@ in
 
       # 背景块
       selectedBg = colors.selection;
-      userMessageBg = colors.surface.sunk;
+      userMessageBg = colors.terminal.bg;
       userMessageText = "";
       customMessageBg = colors.surface.lift;
       customMessageText = "";
       customMessageLabel = "accent";
-      toolPendingBg = colors.surface.sunk;
+      toolPendingBg = colors.terminal.bg;
       toolSuccessBg = "#1a2d1f";
       toolErrorBg = "#2d1a1f";
       toolTitle = "";
       toolOutput = "muted";
 
       # 状态栏
-      statusLineBg = colors.bar.bg;
+      statusLineBg = colors.terminal.bg;
       statusLineSep = colors.inactive;
       statusLineModel = colors.keyword;
       statusLinePath = colors.func;
@@ -1566,11 +1567,14 @@ PY
   '';
 
   # QQ (nixpkgs): desktop entry so Walker shows it; absolute Exec path.
+  # 注意：QQ (Electron) 的 RUNPATH 中不含 libpulse，导致 Chromium 回退到 ALSA 后端，
+  # ALSA 后端通过 PipeWire PCM 插件虽可播放，但设备枚举对麦克风录制有问题。
+  # 通过 env 注入 libpulseaudio 路径使 Chromium 使用 PulseAudio 后端（由 PipeWire 提供）。
   xdg.dataFile."applications/qq.desktop".text = ''
     [Desktop Entry]
     Name=QQ
     Name[zh_CN]=QQ
-    Exec=${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer --ozone-platform=wayland --enable-wayland-ime %U
+    Exec=env LD_LIBRARY_PATH=${pkgs.libpulseaudio}/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} ${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer --ozone-platform=wayland --enable-wayland-ime %U
     Terminal=false
     Type=Application
     Icon=qq

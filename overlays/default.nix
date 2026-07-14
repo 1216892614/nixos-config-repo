@@ -103,6 +103,43 @@ EOF
     };
   };
 
+  # gdal-minimal 3.13.1 zarr sharding 测试在 nixpkgs unstable 上失败（上游 bug），
+  # 阻塞 vtk → opencv → howdy 依赖链。跳过该单测以解除构建阻塞。
+  gdal = prev.gdal.overrideAttrs (old: {
+    disabledTests = (old.disabledTests or []) ++ [ "test_zarr_read_simple_sharding" ];
+  });
+
+  # pdal 2.9.3 与 GDAL 3.13 的 const-correctness 不兼容（CSLConstList → char** 隐式转换），
+  # 加 -fpermissive 绕过编译错误，解除 vtk → opencv → howdy 依赖链阻塞。
+  pdal = prev.pdal.overrideAttrs (old: {
+    # GDAL 3.13 将 GetMetadata 返回类型改为 CSLConstList (const char*const*)，
+    # pdal 2.9.3 仍用 char**。-fpermissive 降级为 warning，-Wno-error 确保不中断。
+    env = (old.env or {}) // {
+      NIX_CFLAGS_COMPILE = toString ((old.env.NIX_CFLAGS_COMPILE or "") + " -fpermissive -Wno-error");
+    };
+    cmakeFlags = (old.cmakeFlags or []) ++ [
+      "-DCMAKE_CXX_FLAGS=-fpermissive -Wno-error"
+    ];
+  });
+
+  # vtk 9.5.2 的 IO/GDAL 模块同样受 GDAL 3.13 const-correctness 影响，
+  # vtkGDALRasterReader.cxx 用 char** 接 CSLConstList 返回值。
+  vtk = prev.vtk.overrideAttrs (old: {
+    cmakeFlags = (old.cmakeFlags or []) ++ [
+      "-DCMAKE_CXX_FLAGS=-fpermissive -Wno-error"
+    ];
+  });
+
+  # face-recognition 1.3.0 在 Python 3.14 下测试阶段 api.py 调用 quit() 导致 pytest 崩溃。
+  # howdy 依赖此包，跳过检查以解除构建阻塞（上游兼容性问题）。
+  pythonPackagesExtensions = (prev.pythonPackagesExtensions or []) ++ [
+    (pyFinal: pyPrev: {
+      face-recognition = pyPrev.face-recognition.overridePythonAttrs (old: {
+        doCheck = false;
+      });
+    })
+  ];
+
   # fish 4.8 删了 create_manpage_completions.py，但 HM fish completions builder 仍引用。
   # 补回一个无操作 stub 直到 HM 适配新版 fish。
   fish = prev.fish.overrideAttrs (old: {

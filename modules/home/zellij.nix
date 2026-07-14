@@ -84,7 +84,7 @@ in
                   emphasis_1 "${colors.terminal.cyan}"
                   emphasis_2 "${colors.terminal.green}"
                   emphasis_3 "${colors.terminal.magenta}"
-                  background "${colors.terminal.black}"
+                  background "${colors.terminal.bg}"
               }
               text_selected {
                   base "${colors.terminal.brightWhite}"
@@ -100,7 +100,7 @@ in
                   emphasis_1 "${colors.terminal.brightWhite}"
                   emphasis_2 "${colors.terminal.blue}"
                   emphasis_3 "${colors.terminal.magenta}"
-                  background "${colors.fg}"
+                  background "${colors.terminal.bg}"
               }
               ribbon_selected {
                   base "${colors.terminal.black}"
@@ -116,7 +116,7 @@ in
                   emphasis_1 "${colors.terminal.green}"
                   emphasis_2 "${colors.terminal.blue}"
                   emphasis_3 "${colors.terminal.magenta}"
-                  background "${colors.terminal.black}"
+                  background "${colors.terminal.bg}"
               }
               table_cell_unselected {
                   base "${colors.terminal.brightWhite}"
@@ -124,7 +124,7 @@ in
                   emphasis_1 "${colors.terminal.cyan}"
                   emphasis_2 "${colors.terminal.green}"
                   emphasis_3 "${colors.terminal.magenta}"
-                  background "${colors.terminal.black}"
+                  background "${colors.terminal.bg}"
               }
               table_cell_selected {
                   base "${colors.terminal.black}"
