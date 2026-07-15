@@ -11,13 +11,13 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "status-bar"
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: 36
+    exclusiveZone: 44
 
     anchors.top: true
     anchors.left: true
     anchors.right: true
 
-    height: 36
+    height: 44
     color: "transparent"
 
     ColorSync {
