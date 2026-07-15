@@ -81,4 +81,16 @@ in
         echo "clash-verge: config.yaml exists, leaving GUI-managed config untouched"
       fi
     '';
+
+  # 注册 .desktop 文件，供 mimeApps 引用（解决 init_scheme() 写只读 mimeapps.list 的 EROFS 错误）
+  xdg.desktopEntries.clash-verge-rev = {
+    name = "Clash Verge Rev";
+    genericName = "Proxy Client";
+    comment = "A Clash Meta GUI based on Tauri";
+    exec = "${pkgs.clash-verge-rev}/bin/clash-verge %u";
+    terminal = false;
+    icon = "clash-verge";
+    categories = [ "Network" ];
+    mimeType = [ "x-scheme-handler/clash" ];
+  };
 }

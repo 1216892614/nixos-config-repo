@@ -110,9 +110,7 @@ let
             pillSize = 0.4;
           }
         ];
-        center = [
-          { id = "Clock"; }
-        ];
+        center = [];
         right = [
           { id = "Tray"; }
           { id = "plugin:screen-recorder"; }

@@ -28,6 +28,7 @@ in
     ./desktop/noctalia.nix
     ./desktop/walker.nix
     ./desktop/heroic.nix
+    ./desktop/dynamic-island
     ./shell/fish.nix
     ./dev/git.nix
     ./dev/zed.nix
@@ -120,6 +121,8 @@ in
       "image/vnd.microsoft.icon" = "imv-dir.desktop";
       "image/heif" = "imv-dir.desktop";
       "image/avif" = "imv-dir.desktop";
+      # Clash Verge Rev: 注册 clash:// URL scheme 避免启动时 EROFS 写入只读 mimeapps.list
+      "x-scheme-handler/clash" = "clash-verge-rev.desktop";
     };
   };
 
@@ -299,6 +302,45 @@ in
       writing = { model = "deepseek/deepseek-v4-pro"; };
     };
   };
+
+  # ── Dynamic Island: agent hook 脚本 + opencode settings.json ────────────
+  xdg.configFile."dynamic-island/scripts/island-agent-hook.sh" = {
+    source = ./desktop/dynamic-island/scripts/island-agent-hook.sh;
+    executable = true;
+  };
+
+  # opencode settings.json — claude-code-hooks 配置
+  # oh-my-openagent 的 claude-code-hooks hook 会读取此文件
+  xdg.configFile."opencode/settings.json".text = builtins.toJSON {
+    hooks = {
+      UserPromptSubmit = [
+        {
+          matcher = "";
+          hooks = [
+            {
+              type = "command";
+              command = "ISLAND_SOURCE=opencode ISLAND_PID=$PPID ISLAND_MODEL=\"$model\" ISLAND_TASK=\"$prompt\" ~/.config/dynamic-island/scripts/island-agent-hook.sh start";
+            }
+          ];
+        }
+      ];
+      Stop = [
+        {
+          matcher = "";
+          hooks = [
+            {
+              type = "command";
+              command = "ISLAND_SOURCE=opencode ISLAND_PID=$PPID ~/.config/dynamic-island/scripts/island-agent-hook.sh done";
+            }
+          ];
+        }
+      ];
+    };
+  };
+
+  # omp Dynamic Island hook 文件
+  xdg.configFile."dynamic-island/scripts/omp-island-hook.ts".source =
+    ./desktop/dynamic-island/scripts/omp-island-hook.ts;
 
   # ── omp (oh-my-pi): config.yml (activation, 可写) + models.yml ─────────
   # config.yml 不能做 symlink，omp 运行时需要写入。用 activation 每次 rebuild 覆盖。

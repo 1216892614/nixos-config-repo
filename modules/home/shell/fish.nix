@@ -61,6 +61,7 @@ in
       find = "fd";
       grep = "rg";
       ir-emitter-cfg = "nix shell nixpkgs#xhost -c sh -c 'xhost +SI:localuser:root && sudo linux-enable-ir-emitter configure'";
+      omp = "omp --hook=~/.config/dynamic-island/scripts/omp-island-hook.ts";
     };
 
     functions.lo = ''

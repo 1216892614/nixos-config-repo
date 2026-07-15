@@ -15,8 +15,8 @@ let
 
     // Background blur (dual kawase) — 降低 passes 配合液态玻璃
     blur {
-        passes 3
-        offset 2
+        passes 2
+        offset 1
         noise 0.01
         saturation 1.2
     }
@@ -36,21 +36,23 @@ let
             xray true
             liquid-glass {
                 refraction-strength 5.0
-                power-factor 6
+                power-factor 4
                 refraction-power 1.5
-                glow-weight 0.4
-                glow-bias 0.2
-                glow-edge0 0.2
-                glow-edge1 0.8
-                edge-lighting 0.8
-                saturation 1.0
-                vibrancy 0.2
-                adaptive-dim 0.1
-                adaptive-boost 0.2
+                glow-weight 0.5
+                glow-bias 0.3
+                glow-edge0 0.1
+                glow-edge1 0.9
+                edge-lighting 1.0
+                brightness 0.4
+                contrast 1.0
+                saturation 0.9
+                vibrancy 0.15
+                adaptive-dim 0.0
+                adaptive-boost 0.0
                 physical-refraction 0
                 lens-distortion 0
                 fringing 1.2
-                edge-thickness 0.3
+                edge-thickness 0.6
                 edge-padding 0.0
             }
         }
