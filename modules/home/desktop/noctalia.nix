@@ -101,7 +101,7 @@ let
       backgroundOpacity = 0;
       widgetSpacing = 2;
       contentPadding = 1;
-      density = "compact";
+      density = "comfortable";
       widgets = {
         left = [
           {

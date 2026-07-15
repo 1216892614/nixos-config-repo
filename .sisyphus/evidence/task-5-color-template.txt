@@ -1,5 +1,0 @@
-T5 QA: Color template research
-Research doc exists: YES
-Template variables: 27
-JSON schema includes: primary, onPrimary, surface, onSurface, error, outline, background
-PASS

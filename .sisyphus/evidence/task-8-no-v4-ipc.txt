@@ -1,5 +1,0 @@
-T8 QA: No v4 IPC in niri.nix
-noctalia-shell refs: 0
-v5 IPC refs: 0
-All IPC commands use v5 syntax: YES
-PASS

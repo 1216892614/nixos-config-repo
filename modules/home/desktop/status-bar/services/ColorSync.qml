@@ -19,7 +19,7 @@ Item {
 
     FileView {
         id: colorsFile
-        path: Quickshell.env("HOME") + "/.config/dynamic-island/colors.json"
+        path: Quickshell.env("HOME") + "/.config/status-bar/colors.json"
         watchChanges: true
         printErrors: false
     }

@@ -1,5 +1,0 @@
-T6 QA: v5 package buildable
-noctalia v5 flake input:     noctalia = {
-Build dry-run:   /nix/store/cyd3b6ckx0cd5yzh20rb3a20ycq5brvz-windows-link-0.2.1
-Cachix configured: 6 entries
-PASS

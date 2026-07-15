@@ -28,7 +28,6 @@ in
     ./desktop/noctalia.nix
     ./desktop/walker.nix
     ./desktop/heroic.nix
-    ./desktop/dynamic-island
     ./shell/fish.nix
     ./dev/git.nix
     ./dev/zed.nix
@@ -303,44 +302,9 @@ in
     };
   };
 
-  # ── Dynamic Island: agent hook 脚本 + opencode settings.json ────────────
-  xdg.configFile."dynamic-island/scripts/island-agent-hook.sh" = {
-    source = ./desktop/dynamic-island/scripts/island-agent-hook.sh;
-    executable = true;
-  };
 
-  # opencode settings.json — claude-code-hooks 配置
-  # oh-my-openagent 的 claude-code-hooks hook 会读取此文件
-  xdg.configFile."opencode/settings.json".text = builtins.toJSON {
-    hooks = {
-      UserPromptSubmit = [
-        {
-          matcher = "";
-          hooks = [
-            {
-              type = "command";
-              command = "ISLAND_SOURCE=opencode ISLAND_PID=$PPID ISLAND_MODEL=\"$model\" ISLAND_TASK=\"$prompt\" ~/.config/dynamic-island/scripts/island-agent-hook.sh start";
-            }
-          ];
-        }
-      ];
-      Stop = [
-        {
-          matcher = "";
-          hooks = [
-            {
-              type = "command";
-              command = "ISLAND_SOURCE=opencode ISLAND_PID=$PPID ~/.config/dynamic-island/scripts/island-agent-hook.sh done";
-            }
-          ];
-        }
-      ];
-    };
-  };
 
-  # omp Dynamic Island hook 文件
-  xdg.configFile."dynamic-island/scripts/omp-island-hook.ts".source =
-    ./desktop/dynamic-island/scripts/omp-island-hook.ts;
+
 
   # ── omp (oh-my-pi): config.yml (activation, 可写) + models.yml ─────────
   # config.yml 不能做 symlink，omp 运行时需要写入。用 activation 每次 rebuild 覆盖。
@@ -399,6 +363,7 @@ in
 
       retry:
         modelFallback: true
+
     '';
   in lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.omp/agent"
@@ -444,7 +409,6 @@ in
             maxTokens: 32000
             reasoning: true
             input: [text, image]
-
       bytecatcode:
         baseUrl: https://bytecat.lamclod.cn/v1
         apiKey: "${env.bytekatApiKey or ""}"
@@ -468,7 +432,6 @@ in
             maxTokens: 64000
             reasoning: true
             input: [text, image]
-
       deepseek:
         baseUrl: https://api.deepseek.com/v1
         apiKey: "${env.deepseekApiKey or ""}"

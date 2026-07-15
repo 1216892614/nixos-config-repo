@@ -95,7 +95,7 @@ in
                   background "${colors.selection}"
               }
               ribbon_unselected {
-                  base "${colors.terminal.black}"
+                  base "${colors.terminal.brightWhite}"
                   emphasis_0 "${colors.terminal.red}"
                   emphasis_1 "${colors.terminal.brightWhite}"
                   emphasis_2 "${colors.terminal.blue}"
@@ -103,7 +103,7 @@ in
                   background "${colors.terminal.bg}"
               }
               ribbon_selected {
-                  base "${colors.terminal.black}"
+                  base "${colors.terminal.brightWhite}"
                   emphasis_0 "${colors.terminal.red}"
                   emphasis_1 "${colors.accent}"
                   emphasis_2 "${colors.terminal.magenta}"

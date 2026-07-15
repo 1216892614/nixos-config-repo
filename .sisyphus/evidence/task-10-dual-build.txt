@@ -1,6 +1,0 @@
-T10 QA: Dual host build + no v4
-Desktop build dry-run:   /nix/store/cyd3b6ckx0cd5yzh20rb3a20ycq5brvz-windows-link-0.2.1
-Laptop build dry-run:   /nix/store/cyd3b6ckx0cd5yzh20rb3a20ycq5brvz-windows-link-0.2.1
-noctalia-shell refs: 0
-patchedNoctalia refs: 0
-PASS

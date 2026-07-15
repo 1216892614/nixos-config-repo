@@ -21,12 +21,9 @@ let
         saturation 1.2
     }
 
-    // 全局启用背景模糊 + 液态玻璃（排除浏览器、vlc、输入法）
-    // 液态玻璃效果可见程度由各窗口 opacity 决定：
-    //   opacity 1.0 → 背景完全被遮挡，效果不可见
-    //   opacity 0.95 → 微弱玻璃感
-    //   opacity 0.85~0.80 → 明显液态玻璃
+    // 聚焦窗口：强辉光边缘（代替 focus-ring 边框）
     window-rule {
+        match is-focused=true
         exclude app-id="^google-chrome$"
         exclude app-id="^chromium$"
         exclude app-id="^vlc$"
@@ -38,12 +35,12 @@ let
                 refraction-strength 5.0
                 power-factor 4
                 refraction-power 1.5
-                glow-weight 0.5
-                glow-bias 0.3
+                glow-weight 0.7
+                glow-bias 0.4
                 glow-edge0 0.1
                 glow-edge1 0.9
-                edge-lighting 1.0
-                brightness 0.4
+                edge-lighting 1.2
+                brightness 0.25
                 contrast 1.0
                 saturation 0.9
                 vibrancy 0.15
@@ -58,6 +55,40 @@ let
         }
     }
 
+    // 非聚焦窗口：暗淡辉光
+    window-rule {
+        match is-focused=false
+        exclude app-id="^google-chrome$"
+        exclude app-id="^chromium$"
+        exclude app-id="^vlc$"
+        exclude app-id="^fcitx"
+        background-effect {
+            blur true
+            xray true
+            liquid-glass {
+                refraction-strength 3.0
+                power-factor 4
+                refraction-power 1.0
+                glow-weight 0.1
+                glow-bias 0.1
+                glow-edge0 0.2
+                glow-edge1 0.8
+                edge-lighting 0.2
+                brightness 0.2
+                contrast 1.0
+                saturation 0.8
+                vibrancy 0.1
+                adaptive-dim 0.0
+                adaptive-boost 0.0
+                physical-refraction 0
+                lens-distortion 0
+                fringing 0.8
+                edge-thickness 0.4
+                edge-padding 0.0
+            }
+        }
+    }
+
     // noctalia overview backdrop 放入 niri overview 背景层
     layer-rule {
         match namespace="^noctalia-overview-"
@@ -66,7 +97,6 @@ let
             blur true
         }
     }
-
     // statusbar / bar 只显示 widget 胶囊，禁用 layer-shell 背景效果
     layer-rule {
         match namespace="status-bar"
@@ -117,11 +147,7 @@ in
         { proportion = 2.0 / 3.0; }
         { proportion = 1.0; }
       ];
-      focus-ring = {
-        width = 2;
-        active.color = colors.accent;
-        inactive.color = colors.inactive;
-      };
+      focus-ring.width = 0;
     };
 
     binds = {
