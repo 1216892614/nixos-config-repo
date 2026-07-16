@@ -37,22 +37,6 @@ let
     enable_random_port = false;
     enable_auto_light_weight_mode = false;    # 禁用轻量模式（v2.5.x bug workaround）
 
-    # 主题：透明背景，露出窗口的液态玻璃效果
-    theme_setting = {
-      css_injection = ''
-        html, body, #root, #app {
-          background: transparent !important;
-        }
-        .MuiPaper-root, .MuiDrawer-paper, .layout__left,
-        .base-page, [class*="layout"], [class*="Layout"] {
-          background: transparent !important;
-        }
-        .MuiAppBar-root {
-          background: transparent !important;
-          backdrop-filter: none !important;
-        }
-      '';
-    };
   };
 
   # clash 核心覆盖项默认值（对应 Clash 设置页：局域网 / ipv6）
@@ -66,10 +50,6 @@ let
   vergeYaml = yamlFormat.generate "verge.yaml.default" vergeDefaults;
   configYaml = yamlFormat.generate "config.yaml.default" clashDefaults;
 
-  # 单独生成 theme_setting 片段，用于强制合并到已有 verge.yaml
-  themeSnippet = yamlFormat.generate "theme-snippet.yaml" {
-    theme_setting = vergeDefaults.theme_setting;
-  };
 in
 {
   home.activation.seedClashVergeConfig =
@@ -96,11 +76,6 @@ in
         echo "enable_auto_light_weight_mode: false" >> "$_appdir/verge.yaml"
       fi
 
-      # ── 强制修补：透明主题 CSS 注入（无论新旧文件都执行） ──
-      run ${yq} eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
-        "$_appdir/verge.yaml" ${themeSnippet} > "$_appdir/verge.yaml.tmp"
-      run mv "$_appdir/verge.yaml.tmp" "$_appdir/verge.yaml"
-      echo "clash-verge: force-patched theme_setting (transparent CSS)"
 
       if [ ! -e "$_appdir/config.yaml" ]; then
         run cp ${configYaml} "$_appdir/config.yaml"

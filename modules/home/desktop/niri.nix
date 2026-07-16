@@ -97,10 +97,48 @@ let
             blur true
         }
     }
+    // Dynamic Island：液态玻璃 + 圆角裁剪
+    // geometry-corner-radius 18 → pill 态(h≈36)为完整胶囊，card 态(h≈200)为轻圆角
+    layer-rule {
+        match namespace="dynamic-island"
+        geometry-corner-radius 18
+        background-effect {
+            blur true
+            xray true
+            liquid-glass {
+                refraction-strength 3.0
+                power-factor 4
+                refraction-power 1.0
+                glow-weight 0.4
+                glow-bias 0.3
+                glow-edge0 0.05
+                glow-edge1 0.95
+                edge-lighting 1.8
+                brightness 0.2
+                contrast 1.0
+                saturation 0.85
+                vibrancy 0.1
+                adaptive-dim 0.0
+                adaptive-boost 0.0
+                physical-refraction 0
+                lens-distortion 0
+                fringing 1.0
+                edge-thickness 0.8
+                edge-padding 0.0
+            }
+        }
+    }
     // statusbar / bar 只显示 widget 胶囊，禁用 layer-shell 背景效果
     layer-rule {
         match namespace="status-bar"
         match namespace="noctalia-bar-content"
+        background-effect {
+            blur false
+            xray false
+        }
+    }
+    // noctalia-background：禁用所有背景效果，面板使用实色背景
+    layer-rule {
         match namespace="noctalia-background"
         background-effect {
             blur false
@@ -343,6 +381,7 @@ in
           { app-id = "^dev\\.zed\\."; is-focused = true; }
           { app-id = "^zed$"; is-focused = true; }
           { app-id = "^cursor$"; is-focused = true; }
+          { app-id = "^clash-verge$"; is-focused = true; }
           { app-id = "^QQ$"; is-focused = true; }
           { app-id = "^qqmusic$"; is-focused = true; }
           { app-id = "^chrome-chatgpt\\.com__-"; is-focused = true; }
@@ -355,6 +394,7 @@ in
           { app-id = "^dev\\.zed\\."; is-focused = false; }
           { app-id = "^zed$"; is-focused = false; }
           { app-id = "^cursor$"; is-focused = false; }
+          { app-id = "^clash-verge$"; is-focused = false; }
           { app-id = "^QQ$"; is-focused = false; }
           { app-id = "^qqmusic$"; is-focused = false; }
           { app-id = "^chrome-chatgpt\\.com__-"; is-focused = false; }
