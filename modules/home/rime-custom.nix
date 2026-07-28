@@ -90,6 +90,9 @@ in
       $DRY_RUN_CMD chmod -R u+w "$RIME_DEST" 2>/dev/null || true
       $DRY_RUN_CMD rm -rf "$RIME_DEST"/build 2>/dev/null || true
       echo "$NEW_HASH" > "$RIME_STAMP"
+      # 预编译词典，避免 fcitx5 启动时 rime 在线 deploy 导致内存峰值过高崩溃
+      echo "Pre-building Rime schemas..."
+      $DRY_RUN_CMD ${pkgs.librime}/bin/rime_deployer --build "$RIME_DEST" 2>&1 || true
     fi
 
     # Ensure rime is in fcitx5 profile (fcitx5 strips it when Rime fails to load)

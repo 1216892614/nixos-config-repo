@@ -123,25 +123,26 @@ let
                 physical-refraction 0
                 lens-distortion 0
                 fringing 1.0
-                edge-thickness 0.8
+                edge-thickness 0.3
                 edge-padding 0.0
             }
         }
+        block-out-from "screen-capture"
     }
-    // statusbar / bar 只显示 widget 胶囊，禁用 layer-shell 背景效果
+    // statusbar 内容层：保持透明，禁用所有背景效果
     layer-rule {
-        match namespace="status-bar"
-        match namespace="noctalia-bar-content"
+        match namespace="^noctalia-bar-content"
+        match namespace="^noctalia-bar-exclusion"
         background-effect {
             blur false
             xray false
         }
     }
-    // noctalia-background：禁用所有背景效果，面板使用实色背景
+    // noctalia-background（面板/plane）：启用毛玻璃背景
     layer-rule {
-        match namespace="noctalia-background"
+        match namespace="^noctalia-background"
         background-effect {
-            blur false
+            blur true
             xray false
         }
     }
@@ -201,11 +202,11 @@ in
       "Super+Space".action.spawn = [ "fcitx5-remote" "-t" ];
       "Super+G".action.spawn = [
         "sh" "-c"
-        ''f=$(mktemp --suffix=.png); grim -s 1 -o "$(niri msg --json focused-output | ${pkgs.jq}/bin/jq -r '.name')" "$f" && satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
+        ''f=$(mktemp --suffix=.png); grim -s 1 -o "$(niri msg --json focused-output | ${pkgs.jq}/bin/jq -r '.name')" "$f" && satty --fullscreen --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
       ];
       "Super+Shift+G".action.spawn = [
         "sh" "-c"
-        ''f=$(mktemp --suffix=.png); grim -s 1 -g "$(slurp)" "$f"; satty --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
+        ''f=$(mktemp --suffix=.png); grim -s 1 -g "$(slurp)" "$f"; satty --fullscreen --filename "$f" --copy-command "wl-copy" --output-filename "$HOME/Pictures/screenshot-%Y%m%d-%H%M%S.png"''
       ];
       "Print".action.spawn = [
         "sh" "-c"

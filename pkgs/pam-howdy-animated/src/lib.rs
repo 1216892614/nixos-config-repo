@@ -9,11 +9,11 @@
 //! When no TTY is available (lock screen, polkit), it delegates to pam_howdy
 //! with PAM_SILENT flag to suppress error messages that would confuse
 //! GUI PAM clients (e.g., Noctalia Shell lock screen).
-
 mod animation;
 mod howdy;
 
 use std::ffi::CStr;
+use std::fs;
 use std::os::raw::c_int;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -49,6 +49,22 @@ unsafe fn parse_args(argc: c_int, argv: *const *const libc::c_char) -> Vec<Strin
     args
 }
 
+/// Write howdy status to `/run/user/<UID>/howdy-status.json` for UI overlay
+fn write_status(state: &str, success: Option<bool>) {
+    // Get UID from real user (not effective after sudo)
+    let uid = unsafe { libc::getuid() };
+    let status_path = format!("/run/user/{}/howdy-status.json", uid);
+    
+    let json = if let Some(s) = success {
+        format!(r#"{{"state":"{}","success":{}}}"#, state, s)
+    } else {
+        format!(r#"{{"state":"{}"}}"#, state)
+    };
+    
+    // Best-effort write (if fails, island just won't update)
+    let _ = fs::write(&status_path, json);
+}
+
 /// PAM entry point: pam_sm_authenticate
 ///
 /// # Safety
@@ -67,12 +83,19 @@ pub unsafe extern "C" fn pam_sm_authenticate(
         Some(p) => p,
         None => return PAM_IGNORE, // howdy not found, skip
     };
+    
+    // Notify island: howdy starting
+    write_status("scanning", None);
 
     if !has_tty() {
         // No terminal available (lock screen, polkit, etc.)
         // Pass PAM_SILENT to suppress howdy's error messages (e.g., "Failure, timeout reached")
         // which would otherwise be relayed to GUI PAM clients and cause confusion.
         let result = howdy::call_pam_howdy(&howdy_path, pamh, flags | PAM_SILENT);
+        
+        // Notify island: result
+        write_status("ended", Some(result == PAM_SUCCESS));
+        
         // In non-TTY mode: if howdy fails, return PAM_IGNORE instead of PAM_AUTH_ERR.
         // This prevents GUI lock screens from counting it as a failed attempt,
         // allowing clean fallback to password without triggering retry loops.
@@ -116,6 +139,9 @@ pub unsafe extern "C" fn pam_sm_authenticate(
         PAM_SUCCESS => anim.show_check(),
         _ => anim.show_fail(),
     }
+    
+    // Notify island: result
+    write_status("ended", Some(result == PAM_SUCCESS));
 
     result
 }

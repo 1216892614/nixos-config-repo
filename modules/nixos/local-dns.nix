@@ -17,6 +17,7 @@ in
       "plane.local"       # Service Plane portal (主页仪表板)
       "files.local"       # FileBrowser (scale-to-zero)
       "comfyui.local"     # ComfyUI (scale-to-zero, GPU)
+      "ocr.local"         # OCR vLLM (scale-to-zero, GPU)
       "agent.local"       # Pi Agent (opencode serve)
       "traefik.local"     # Traefik dashboard
     ];

@@ -20,6 +20,18 @@ let
 
       substituteInPlace $out/share/noctalia-shell/Modules/MainScreen/Backgrounds/BarBackground.qml \
         --replace-warn 'fillColor: isRenderable ? Qt.rgba(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a * opacityFactor) : "transparent"' 'fillColor: "transparent"'
+
+      # 面板背景透明化：让 niri liquid-glass layer-rule 透过 controlCenter/settings 面板
+      substituteInPlace $out/share/noctalia-shell/Modules/MainScreen/Backgrounds/PanelBackground.qml \
+        --replace-warn 'fillColor: isRenderable ? effectiveBackgroundColor : "transparent"' 'fillColor: "transparent"'
+
+      # 禁用通知弹出卡片 — Dynamic Island 接管实时通知显示
+      # 保留 NotificationServer（NotificationHistory + dbus-monitor 仍可工作）
+      substituteInPlace $out/share/noctalia-shell/Modules/Notification/Notification.qml \
+        --replace-warn 'const screens = Quickshell.screens.filter(screen => Settings.data.notifications.monitors.includes(screen.name));' \
+        'const screens = []; // Dynamic Island handles notification display' \
+        --replace-warn 'return screens.length === 0 ? Quickshell.screens : screens;' \
+        'return []; // suppressed: Dynamic Island handles notifications'
     '';
   });
 
@@ -99,6 +111,7 @@ let
     bar = {
       showCapsule = false;
       backgroundOpacity = 0;
+      useSeparateOpacity = true;
       widgetSpacing = 2;
       contentPadding = 1;
       density = "comfortable";
@@ -124,6 +137,7 @@ let
       backgroundOpacity = 0;
     };
     ui = {
+      panelBackgroundOpacity = 1;
       panelsAttachedToBar = false;
       settingsPanelMode = "centered";
     };

@@ -32,17 +32,18 @@ use smithay_client_toolkit::shm::{Shm, ShmHandler};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
+    delegate_seat, delegate_pointer,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
-    seat::{SeatHandler, SeatState},
-    delegate_seat,
+    seat::{SeatHandler, SeatState, Capability},
+    seat::pointer::{PointerHandler, PointerEvent, PointerEventKind},
 };
 
 
 use crate::config::Config;
 use crate::renderer::Renderer;
-use crate::spring::Spring2D;
+use crate::spring::{Spring, Spring2D};
 use crate::state::{IslandState, IslandStateMachine, AgentSource};
 
 // ── Constants ──────────────────────────────────────────────────────────
@@ -130,9 +131,20 @@ struct Island {
     current_width: f32,
     current_height: f32,
 
+    // Content crossfade
+    text_fade: Spring,       // 0.0 = showing prev_text, 1.0 = showing current_text
+    prev_text: String,
+    current_text: String,
+
     // Frame tracking
     last_frame: Instant,
     animating: bool,
+
+    // Scanning animation phase (radians, continuously incrementing)
+    scanning_phase: f32,
+
+    // Interaction
+    expanded: bool,
 
     // Screen width for centering
     screen_width: u32,
@@ -170,8 +182,14 @@ impl Island {
             current_width: iw,
             current_height: ih,
 
+            text_fade: Spring::new(1.0), // start fully shown
+            prev_text: String::new(),
+            current_text: String::new(),
+
             last_frame: Instant::now(),
             animating: false,
+            scanning_phase: 0.0,
+            expanded: false,
 
             screen_width: 2560, // default; updated from output info
         }
@@ -195,7 +213,7 @@ impl Island {
         layer_surface.set_size(iw.max(1), ih.max(1));
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.set_exclusive_zone(-1);
-        layer_surface.set_margin(6, 0, 0, 0);
+        layer_surface.set_margin(4, 0, 0, 0);
         layer_surface.commit();
 
         let pool_size = (MAX_WIDTH * MAX_HEIGHT * 4 * 2) as usize;
@@ -219,15 +237,36 @@ impl Island {
         // Check state timeouts
         let state_changed = self.state_machine.check_timeout();
         if state_changed {
+            self.expanded = false;
             let (tw, th) = self.state_machine.target_size(&self.config);
             self.size_spring.set_target(tw, th);
             self.animating = true;
         }
 
-        // Advance spring
+        // Advance size spring
         self.size_spring.tick(SPRING_DT);
         let (new_w, new_h) = self.size_spring.value();
-        self.animating = self.size_spring.is_active();
+
+        // Content crossfade: detect text change
+        let new_text = self.state_machine.display_text(&self.config);
+        if new_text != self.current_text {
+            self.prev_text = std::mem::replace(&mut self.current_text, new_text);
+            self.text_fade.snap(0.0);
+            self.text_fade.set_target(1.0);
+        }
+        self.text_fade.tick(SPRING_DT);
+
+        // Keep animating during scanning (for spinner + dots)
+        let is_scanning = matches!(
+            self.state_machine.current_state(),
+            IslandState::Howdy { sub_state: crate::state::HowdySubState::Scanning, .. }
+        );
+        if is_scanning {
+            self.scanning_phase += SPRING_DT * 4.0; // ~4 rad/s rotation
+            self.animating = true;
+        } else {
+            self.animating = self.size_spring.is_active() || self.text_fade.is_active();
+        }
 
         self.current_width = new_w;
         self.current_height = new_h;
@@ -248,21 +287,62 @@ impl Island {
         // the island surface only needs to be a dark semi-transparent shape.
         // No grim capture needed — niri composites behind our alpha channel.
 
-        // Render pixels once (shared across all outputs)
-        let text = self.state_machine.display_text(&self.config);
+        // Render pill shape + crossfade text content
+        let fade = self.text_fade.value.clamp(0.0, 1.0);
         let corner_radius = ih as f32 / 2.0;
         let opacity = 0.35; // low opacity so niri liquid-glass shows through
         let glow = 0.4;
 
-        let pixels = self.renderer.render(
+        // Render background shape (no text)
+        let mut pixels = self.renderer.render(
             &self.config,
-            &text,
+            "",  // empty: no text in base pass
             iw,
             ih,
             corner_radius,
             opacity,
             glow,
         );
+
+        // Check if in scanning mode for custom rendering
+        let is_scanning = matches!(
+            self.state_machine.current_state(),
+            IslandState::Howdy { sub_state: crate::state::HowdySubState::Scanning, .. }
+        );
+
+        if is_scanning {
+            // Render spinning circle in upper portion
+            self.renderer.render_scanning_spinner(
+                &mut pixels, iw as usize, ih as usize,
+                self.scanning_phase,
+                &crate::renderer::Rgba::from_hex(&self.config.colors.accent),
+                &crate::renderer::Rgba::from_hex(&self.config.colors.text),
+            );
+            // Render "scanning" + animated dots in lower portion
+            let dot_count = ((self.scanning_phase * 1.5) as u32 % 4) as usize; // 0..3 cycling
+            let dots: String = ".".repeat(dot_count);
+            let scanning_text = format!("scanning{}", dots);
+            let text_color = crate::renderer::Rgba::from_hex(&self.config.colors.text);
+            self.renderer.render_text_at_y(
+                &mut pixels, iw as usize, ih as usize,
+                &scanning_text, &text_color, 0.75, // 75% down
+            );
+        } else {
+            // Normal crossfade text rendering
+            let text_color = crate::renderer::Rgba::from_hex(&self.config.colors.text);
+            if fade < 0.999 && !self.prev_text.is_empty() {
+                self.renderer.render_text_with_opacity(
+                    &mut pixels, iw as usize, ih as usize,
+                    &self.prev_text, &text_color, corner_radius, 1.0 - fade,
+                );
+            }
+            if fade > 0.001 {
+                self.renderer.render_text_with_opacity(
+                    &mut pixels, iw as usize, ih as usize,
+                    &self.current_text, &text_color, corner_radius, fade,
+                );
+            }
+        }
 
         let copy_len = (iw * ih * 4) as usize;
 
@@ -304,6 +384,24 @@ impl Island {
             surface.damage_buffer(0, 0, buf_w as i32, buf_h as i32);
             surface.commit();
         }
+    }
+
+    /// Handle click: toggle expanded state (pill/capsule <-> card)
+    fn handle_click(&mut self) {
+        use crate::state::IslandState;
+        // Only expand if not idle
+        match &self.state_machine.current_state() {
+            IslandState::Idle => return, // no-op on idle
+            _ => {}
+        }
+        self.expanded = !self.expanded;
+        let (tw, th) = if self.expanded {
+            (self.config.card_w, self.config.card_h)
+        } else {
+            self.state_machine.target_size(&self.config)
+        };
+        self.size_spring.set_target(tw, th);
+        self.animating = true;
     }
 }
 
@@ -412,10 +510,13 @@ impl SeatHandler for Island {
     fn new_capability(
         &mut self,
         _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _seat: smithay_client_toolkit::reexports::client::protocol::wl_seat::WlSeat,
-        _capability: smithay_client_toolkit::seat::Capability,
+        qh: &QueueHandle<Self>,
+        seat: smithay_client_toolkit::reexports::client::protocol::wl_seat::WlSeat,
+        capability: Capability,
     ) {
+        if capability == Capability::Pointer {
+            self.seat_state.get_pointer(qh, &seat).ok();
+        }
     }
 
     fn remove_capability(
@@ -433,6 +534,25 @@ impl SeatHandler for Island {
         _qh: &QueueHandle<Self>,
         _seat: smithay_client_toolkit::reexports::client::protocol::wl_seat::WlSeat,
     ) {
+    }
+}
+
+impl PointerHandler for Island {
+    fn pointer_frame(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _pointer: &smithay_client_toolkit::reexports::client::protocol::wl_pointer::WlPointer,
+        events: &[PointerEvent],
+    ) {
+        for event in events {
+            if let PointerEventKind::Press { button, .. } = event.kind {
+                // BTN_LEFT = 0x110 (272)
+                if button == 0x110 {
+                    self.handle_click();
+                }
+            }
+        }
     }
 }
 
@@ -493,6 +613,7 @@ delegate_layer!(Island);
 delegate_registry!(Island);
 delegate_seat!(Island);
 delegate_shm!(Island);
+delegate_pointer!(Island);
 
 // ── D-Bus notification listener (dbus-monitor subprocess) ──────────────
 
@@ -703,27 +824,52 @@ enum HowdyEvent {
 }
 
 fn spawn_howdy_monitor(sender: calloop::channel::Sender<HowdyEvent>) {
-    std::thread::spawn(move || {
-        let mut was_running = false;
-        loop {
-            let running = std::process::Command::new("pgrep")
-                .args(["-x", "howdy"])
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false);
+    use inotify::{Inotify, WatchMask};
 
-            if running && !was_running {
+    std::thread::spawn(move || {
+        // Get status file path: /run/user/<UID>/howdy-status.json
+        let uid = unsafe { libc::getuid() };
+        let status_path = format!("/run/user/{}/howdy-status.json", uid);
+
+        // Ensure file exists so inotify can watch it
+        if !std::path::Path::new(&status_path).exists() {
+            let _ = std::fs::write(&status_path, r#"{"state":"idle"}"#);
+        }
+
+        let mut inotify = Inotify::init().expect("howdy inotify init");
+        inotify
+            .watches()
+            .add(&status_path, WatchMask::MODIFY | WatchMask::CREATE)
+            .expect("howdy inotify watch");
+
+        let mut buf = [0u8; 1024];
+        
+        // Helper to parse and send events
+        let mut send_events = |content: &str| {
+            if content.contains(r#""state":"scanning""#) {
                 let _ = sender.send(HowdyEvent::Started);
-            } else if !running && was_running {
-                // Check exit status from PAM module status file
-                let success = std::path::Path::new("/tmp/howdy-success").exists();
+            } else if content.contains(r#""state":"ended""#) {
+                let success = content.contains(r#""success":true"#);
                 let _ = sender.send(HowdyEvent::Ended(success));
-                // Clean up
-                let _ = std::fs::remove_file("/tmp/howdy-success");
+            }
+        };
+        
+        // Read initial state once (in case we missed the write)
+        if let Ok(content) = std::fs::read_to_string(&status_path) {
+            send_events(&content);
+        }
+
+        loop {
+            let events = inotify.read_events_blocking(&mut buf);
+            if events.is_err() {
+                std::thread::sleep(Duration::from_secs(1));
+                continue;
             }
 
-            was_running = running;
-            std::thread::sleep(Duration::from_millis(500));
+            // Read and parse the status JSON
+            if let Ok(content) = std::fs::read_to_string(&status_path) {
+                send_events(&content);
+            }
         }
     });
 }
@@ -819,6 +965,7 @@ fn main() {
                     timeout_ms: notif.timeout_ms,
                 });
                 if changed {
+                    island.expanded = false;
                     let (tw, th) = island.state_machine.target_size(&island.config);
                     island.size_spring.set_target(tw, th);
                     island.animating = true;
@@ -854,6 +1001,7 @@ fn main() {
                     _ => false,
                 };
                 if changed {
+                    island.expanded = false;
                     let (tw, th) = island.state_machine.target_size(&island.config);
                     island.size_spring.set_target(tw, th);
                     island.animating = true;
@@ -876,12 +1024,13 @@ fn main() {
                         })
                     }
                     HowdyEvent::Ended(success) => {
-                        // Update howdy state to result
+                        // Dismiss current Scanning state first, then push result
                         let sub = if success {
                             crate::state::HowdySubState::Success
                         } else {
                             crate::state::HowdySubState::Failed
                         };
+                        island.state_machine.dismiss_current();
                         island.state_machine.push(IslandState::Howdy {
                             sub_state: sub,
                             entered_at: Instant::now(),
@@ -889,6 +1038,7 @@ fn main() {
                     }
                 };
                 if changed {
+                    island.expanded = false;
                     let (tw, th) = island.state_machine.target_size(&island.config);
                     island.size_spring.set_target(tw, th);
                     island.animating = true;

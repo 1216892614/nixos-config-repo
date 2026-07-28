@@ -90,6 +90,24 @@ in
         }];
       }];
     };
+    mcpServers = {
+      context7 = {
+        url = "https://mcp.context7.com/mcp";
+      };
+      nixos = {
+        command = "nix";
+        args = [ "run" "github:utensils/mcp-nixos" "--" ];
+      };
+      rust-docs = {
+        command = "${config.home.homeDirectory}/.cargo/bin/rust-docs-mcp";
+        transport = "stdio";
+      };
+      chrome-agent = {
+        command = "${config.home.homeDirectory}/.cargo/bin/chrome-agent";
+        args = [ "pipe" ];
+        transport = "stdio";
+      };
+    };
   };
 
   # ── 颜色配置目录（由 noctalia 模板生成） ──

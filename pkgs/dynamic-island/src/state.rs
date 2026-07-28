@@ -109,8 +109,8 @@ impl IslandState {
             IslandState::Howdy {
                 sub_state: HowdySubState::Scanning,
                 ..
-            } => Shape::Pill,
-            IslandState::Howdy { .. } => Shape::Card,
+            } => Shape::Card,
+            IslandState::Howdy { .. } => Shape::Capsule,
             IslandState::Recording { .. } => Shape::Pill,
             IslandState::AgentRunning { .. } => Shape::Pill,
             IslandState::AgentResult { .. } => Shape::Card,
@@ -182,8 +182,13 @@ impl StateMachine {
                 sub_state,
                 entered_at,
             } => {
-                matches!(sub_state, HowdySubState::Success | HowdySubState::Failed)
-                    && now.duration_since(*entered_at).as_millis() >= 2000
+                // Success/Failed: 2s display
+                // Scanning: 10s safety timeout (in case PAM crashes)
+                let timeout_ms = match sub_state {
+                    HowdySubState::Scanning => 10000,
+                    HowdySubState::Success | HowdySubState::Failed => 2000,
+                };
+                now.duration_since(*entered_at).as_millis() >= timeout_ms
             }
             IslandState::AgentResult { entered_at, .. } => {
                 now.duration_since(*entered_at).as_millis() >= 5000
@@ -217,8 +222,8 @@ impl StateMachine {
             IslandState::Idle => (config.idle_w, config.idle_h),
             IslandState::Notification { .. } => (config.notification_w, config.notification_h),
             IslandState::Howdy { sub_state, .. } => match sub_state {
-                HowdySubState::Scanning => (config.idle_w, config.idle_h),
-                _ => (config.card_w, config.card_h),
+                HowdySubState::Scanning => (config.card_w, config.card_h),
+                _ => (config.notification_w, config.notification_h),
             },
             IslandState::Recording { .. } => (config.idle_w, config.idle_h),
             IslandState::AgentRunning { .. } => (config.notification_w, config.notification_h),

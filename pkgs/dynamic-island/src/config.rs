@@ -57,7 +57,7 @@ impl Default for Config {
             colors: Colors::default(),
             idle_w: 140.0,
             idle_h: 36.0,
-            notification_w: 320.0,
+            notification_w: 280.0,
             notification_h: 36.0,
             dot_diameter: 8.0,
             card_w: 320.0,

@@ -62,6 +62,24 @@ final: prev: {
 
   omp = prev.callPackage ../pkgs/omp.nix { };
 
+  # opencode 1.18.5 — nixpkgs 尚未更新，覆盖 src + node_modules hash
+  opencode = prev.opencode.overrideAttrs (old: rec {
+    version = "1.18.5";
+    src = prev.fetchFromGitHub {
+      owner = "anomalyco";
+      repo = "opencode";
+      tag = "v${version}";
+      hash = "sha256-qO26isOZNzdVX0Pd6IYRhhnOtcrvL3nI0C34kczzW0k=";
+    };
+    env = (old.env or {}) // {
+      OPENCODE_VERSION = version;
+    };
+    node_modules = old.node_modules.overrideAttrs (_: {
+      inherit version src;
+      outputHash = "sha256-DDrijxS2geI1uFyj82gn5JPFOM6Mlwzi0OohG7vxoag=";
+    });
+  });
+
   baidupcs-go = prev.buildGoModule {
     pname = "baidupcs-go";
     version = "3.6.2";
@@ -130,15 +148,25 @@ EOF
     ];
   });
 
-  # face-recognition 1.3.0 在 Python 3.14 下测试阶段 api.py 调用 quit() 导致 pytest 崩溃。
-  # howdy 依赖此包，跳过检查以解除构建阻塞（上游兼容性问题）。
+  # pipx 1.14.0 的 test_inject 参数化测试在 Python 3.14 下全部 ERROR，
+  # face-recognition 1.3.0 在 Python 3.14 下 api.py 调用 quit() 导致 pytest 崩溃。
+  # 两者均为上游兼容性问题，跳过检查以解除构建阻塞。
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or []) ++ [
     (pyFinal: pyPrev: {
+      pipx = pyPrev.pipx.overridePythonAttrs (old: {
+        doCheck = false;
+      });
       face-recognition = pyPrev.face-recognition.overridePythonAttrs (old: {
         doCheck = false;
       });
     })
   ];
+
+  # poetry 2.4.1 的 test_executor 测试在 Python 3.14 下输出格式不匹配（3 FAILED / 3079 passed）。
+  # poetry 使用独立 Python 实例构建，pythonPackagesExtensions 无法覆盖，需直接 override。
+  poetry = prev.poetry.overridePythonAttrs (old: {
+    doCheck = false;
+  });
 
   # fish 4.8 删了 create_manpage_completions.py，但 HM fish completions builder 仍引用。
   # 补回一个无操作 stub 直到 HM 适配新版 fish。

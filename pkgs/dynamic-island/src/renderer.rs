@@ -10,7 +10,7 @@ use fontdue::{Font, FontSettings};
 use crate::config::Config;
 /// Parsed RGBA color for pixel math
 #[derive(Clone, Copy)]
-struct Rgba {
+pub struct Rgba {
     r: f32,
     g: f32,
     b: f32,
@@ -18,7 +18,7 @@ struct Rgba {
 }
 
 impl Rgba {
-    fn from_hex(hex: &str) -> Self {
+    pub fn from_hex(hex: &str) -> Self {
         let c = Config::parse_color(hex);
         Self { r: c[0], g: c[1], b: c[2], a: c[3] }
     }
@@ -214,8 +214,15 @@ impl Renderer {
         // Center vertically: baseline_y = (h - text_height) / 2 + ascent
         let baseline_y = ((h as f32 - text_height) / 2.0 + ascent).round() as i32;
 
-        // ── Center horizontally ──
-        let start_x = ((w as f32 - total_width) / 2.0).max(4.0);
+        // ── Left-align with padding (leave room for gradient fade on right) ──
+        let h_pad = 20.0_f32;
+        let start_x = if total_width + h_pad * 2.0 <= w as f32 {
+            // Text fits: center it with padding respected
+            ((w as f32 - total_width) / 2.0).max(h_pad)
+        } else {
+            // Text overflows: left-align at padding
+            h_pad
+        };
 
         // ── Render each glyph on the shared baseline ──
         let mut cursor_x = start_x;
@@ -246,6 +253,20 @@ impl Renderer {
                         continue;
                     }
 
+                    // ── Right-edge gradient fade (30px ramp → transparent) ──
+                    let fade_zone = 30.0_f32;
+                    let fade_start = w as f32 - h_pad - fade_zone;
+                    let fade_factor = if (px as f32) > fade_start {
+                        let t = ((px as f32) - fade_start) / fade_zone;
+                        (1.0 - t * t).max(0.0) // quadratic ease-out to zero
+                    } else {
+                        1.0
+                    };
+                    let coverage = coverage * fade_factor;
+                    if coverage < 0.01 {
+                        continue;
+                    }
+
                     let idx = (py as usize * w + px as usize) * 4;
                     // Alpha-composite text over existing background
                     let dst_b = buf[idx] as f32 / 255.0;
@@ -265,6 +286,194 @@ impl Renderer {
                         buf[idx]     = (out_b * out_a * 255.0) as u8;
                         buf[idx + 1] = (out_g * out_a * 255.0) as u8;
                         buf[idx + 2] = (out_r * out_a * 255.0) as u8;
+                        buf[idx + 3] = (out_a * 255.0) as u8;
+                    }
+                }
+            }
+
+            cursor_x += metrics.advance_width;
+        }
+    }
+
+    /// Render text with a given opacity (0.0 = invisible, 1.0 = full).
+    /// Used for crossfade transitions between content states.
+    pub fn render_text_with_opacity(
+        &self,
+        buf: &mut [u8],
+        w: usize,
+        h: usize,
+        text: &str,
+        color: &Rgba,
+        corner_radius: f32,
+        opacity: f32,
+    ) {
+        if text.is_empty() || opacity < 0.01 {
+            return;
+        }
+        let scaled_color = Rgba {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+            a: color.a * opacity,
+        };
+        self.render_text(buf, w, h, text, &scaled_color, corner_radius);
+    }
+
+    /// Render a spinning circular pattern for the scanning animation.
+    /// Draws a ring of arc segments that rotate based on `phase`.
+    /// Centered in the upper 60% of the card area.
+    pub fn render_scanning_spinner(
+        &self,
+        buf: &mut [u8],
+        w: usize,
+        h: usize,
+        phase: f32,
+        accent: &Rgba,
+        dim: &Rgba,
+    ) {
+        // Circle center: horizontally centered, vertically at ~40% height
+        let cx = w as f32 / 2.0;
+        let cy = h as f32 * 0.40;
+        // Radius: fit within the card nicely (about 25% of min dimension)
+        let radius = (w.min(h) as f32 * 0.22).max(16.0);
+        let ring_thickness = 3.0;
+
+        // Draw arc segments: 8 segments, each gets varying brightness
+        let num_segments = 8u32;
+        for py in 0..h {
+            for px in 0..w {
+                let x = px as f32;
+                let y = py as f32;
+
+                let dx = x - cx;
+                let dy = y - cy;
+                let dist = (dx * dx + dy * dy).sqrt();
+
+                // Only draw within the ring band
+                let ring_dist = (dist - radius).abs();
+                if ring_dist > ring_thickness {
+                    continue;
+                }
+
+                // Anti-alias the ring edges
+                let ring_aa = (1.0 - (ring_dist - ring_thickness + 1.0).max(0.0)).clamp(0.0, 1.0);
+                if ring_aa < 0.01 {
+                    continue;
+                }
+
+                // Compute angle and determine which segment
+                let angle = dy.atan2(dx) + std::f32::consts::PI; // [0, 2π]
+                let rotated = (angle + phase) % (2.0 * std::f32::consts::PI);
+                let segment = (rotated / (2.0 * std::f32::consts::PI) * num_segments as f32) as u32;
+
+                // Trailing fade: segment 0 is brightest (head), higher segments fade
+                let brightness = 1.0 - (segment as f32 / num_segments as f32) * 0.85;
+
+                // Interpolate between accent (bright) and dim
+                let r = accent.r * brightness + dim.r * (1.0 - brightness) * 0.3;
+                let g = accent.g * brightness + dim.g * (1.0 - brightness) * 0.3;
+                let b = accent.b * brightness + dim.b * (1.0 - brightness) * 0.3;
+                let a = ring_aa * 0.9;
+
+                // Alpha composite onto buffer
+                let idx = (py * w + px) * 4;
+                let dst_b = buf[idx] as f32 / 255.0;
+                let dst_g = buf[idx + 1] as f32 / 255.0;
+                let dst_r = buf[idx + 2] as f32 / 255.0;
+                let dst_a = buf[idx + 3] as f32 / 255.0;
+
+                let src_a = a;
+                let out_a = src_a + dst_a * (1.0 - src_a);
+                if out_a > 0.001 {
+                    let out_r = (r * src_a + dst_r * dst_a * (1.0 - src_a)) / out_a;
+                    let out_g = (g * src_a + dst_g * dst_a * (1.0 - src_a)) / out_a;
+                    let out_b = (b * src_a + dst_b * dst_a * (1.0 - src_a)) / out_a;
+
+                    buf[idx]     = (out_b.clamp(0.0, 1.0) * out_a * 255.0) as u8;
+                    buf[idx + 1] = (out_g.clamp(0.0, 1.0) * out_a * 255.0) as u8;
+                    buf[idx + 2] = (out_r.clamp(0.0, 1.0) * out_a * 255.0) as u8;
+                    buf[idx + 3] = (out_a * 255.0) as u8;
+                }
+            }
+        }
+    }
+
+    /// Render text at a specific vertical position (y_fraction: 0.0=top, 1.0=bottom).
+    /// Horizontally centered. Used for scanning "scanning..." text below the spinner.
+    pub fn render_text_at_y(
+        &self,
+        buf: &mut [u8],
+        w: usize,
+        h: usize,
+        text: &str,
+        color: &Rgba,
+        y_fraction: f32,
+    ) {
+        if text.is_empty() {
+            return;
+        }
+        let font_size = 13.0;
+
+        // Measure text width
+        let mut total_width = 0.0f32;
+        for ch in text.chars() {
+            total_width += self.font.metrics(ch, font_size).advance_width;
+        }
+
+        // Vertical position
+        let line_metrics = self.font.horizontal_line_metrics(font_size);
+        let ascent = match line_metrics {
+            Some(m) => m.ascent,
+            None => font_size * 0.8,
+        };
+        let baseline_y = (h as f32 * y_fraction + ascent * 0.5).round() as i32;
+
+        // Horizontal center
+        let start_x = ((w as f32 - total_width) / 2.0).max(4.0);
+
+        // Render glyphs
+        let mut cursor_x = start_x;
+        for ch in text.chars() {
+            let (metrics, bitmap) = self.font.rasterize(ch, font_size);
+            if metrics.width == 0 || metrics.height == 0 {
+                cursor_x += metrics.advance_width;
+                continue;
+            }
+
+            let glyph_x = cursor_x as i32 + metrics.xmin;
+            let glyph_top_y = baseline_y - metrics.ymin - metrics.height as i32;
+
+            for gy in 0..metrics.height {
+                for gx in 0..metrics.width {
+                    let px = glyph_x + gx as i32;
+                    let py = glyph_top_y + gy as i32;
+
+                    if px < 0 || py < 0 || px >= w as i32 || py >= h as i32 {
+                        continue;
+                    }
+
+                    let coverage = bitmap[gy * metrics.width + gx] as f32 / 255.0;
+                    if coverage < 0.01 {
+                        continue;
+                    }
+
+                    let idx = (py as usize * w + px as usize) * 4;
+                    let dst_b = buf[idx] as f32 / 255.0;
+                    let dst_g = buf[idx + 1] as f32 / 255.0;
+                    let dst_r = buf[idx + 2] as f32 / 255.0;
+                    let dst_a = buf[idx + 3] as f32 / 255.0;
+
+                    let src_a = coverage * color.a;
+                    let out_a = src_a + dst_a * (1.0 - src_a);
+
+                    if out_a > 0.001 {
+                        let out_r = (color.r * src_a + dst_r * dst_a * (1.0 - src_a)) / out_a;
+                        let out_g = (color.g * src_a + dst_g * dst_a * (1.0 - src_a)) / out_a;
+                        let out_b = (color.b * src_a + dst_b * dst_a * (1.0 - src_a)) / out_a;
+
+                        buf[idx]     = (out_b.clamp(0.0, 1.0) * out_a * 255.0) as u8;
+                        buf[idx + 1] = (out_g.clamp(0.0, 1.0) * out_a * 255.0) as u8;
+                        buf[idx + 2] = (out_r.clamp(0.0, 1.0) * out_a * 255.0) as u8;
                         buf[idx + 3] = (out_a * 255.0) as u8;
                     }
                 }

@@ -11,6 +11,7 @@
 # ║    dragonfly (TCP s2z)     → sccache Redis backend                      ║
 # ║    filebrowser (HTTP s2z)  → web file browser                           ║
 # ║    comfyui (HTTP s2z)      → ComfyUI image gen (GPU, comfy-cli)         ║
+# ║    ocr (HTTP s2z)          → vLLM OCR (Qwen 3.5 4B, GPU)               ║
 # ║    comfyui-keepalive (on)  → queue monitor → Sablier session refresh    ║
 # ║    rustdesk-hbbs (always)  → RustDesk signal server (host network)      ║
 # ║    rustdesk-hbbr (always)  → RustDesk relay server (host network)       ║
@@ -46,6 +47,7 @@ let
     plane  = { backend = "http://service-plane-portal:80"; scaleToZero = false; };
     files  = { backend = "http://service-plane-filebrowser:80"; scaleToZero = true; };
     comfyui = { backend = "http://service-plane-comfyui:8188"; scaleToZero = true; };
+    ocr    = { backend = "http://service-plane-ocr:8000"; scaleToZero = true; };
     agent  = { backend = "http://host.docker.internal:${toString piAgentPort}"; scaleToZero = false; };
     traefik = { backend = "http://127.0.0.1:8080"; scaleToZero = false; };  # Traefik API (internal)
   };
@@ -229,6 +231,13 @@ let
           service = "comfyui";
           tls = {};
         };
+        ocr = {
+          rule = "Host(`ocr.${localDomain}`)";
+          entryPoints = [ "websecure" ];
+          middlewares = [ "ocr-sablier" ];
+          service = "ocr";
+          tls = {};
+        };
         # ── Always-on services ──────────────────────────────────────────
         pi-agent = {
           rule = "Host(`agent.${localDomain}`)";
@@ -265,6 +274,9 @@ let
         pi-agent.loadBalancer.servers = [
           { url = "http://host.docker.internal:${toString piAgentPort}"; }
         ];
+        ocr.loadBalancer.servers = [
+          { url = "http://service-plane-ocr:8000"; }
+        ];
       };
       middlewares = {
         # ── Sablier: FileBrowser 自动唤醒 + 自定义等待页 ────────────────
@@ -285,6 +297,17 @@ let
           sessionDuration = "30m";
           dynamic = {
             displayName = "ComfyUI";
+            customThemesPath = "/portal/waiting.html";
+            refreshFrequency = "5s";
+          };
+        };
+        # ── Sablier: OCR (vLLM) 自动唤醒 + 自定义等待页 ────────────────
+        ocr-sablier.plugin.sablier = {
+          sablierUrl = "http://service-plane-sablier:10000";
+          names = "service-plane-ocr";
+          sessionDuration = "15m";
+          dynamic = {
+            displayName = "OCR (Qwen 3.5)";
             customThemesPath = "/portal/waiting.html";
             refreshFrequency = "5s";
           };
@@ -496,6 +519,44 @@ let
         };
       };
 
+      # ── Scale-to-zero (HTTP): OCR vLLM (Qwen 3.5 4B, GPU, Sablier) ────
+      ocr = {
+        image = "vllm/vllm-openai:v0.21.0";
+        container_name = "service-plane-ocr";
+        restart = "no";
+        volumes = [
+          "${dataDir}/ocr/models:/mnt/models"
+        ];
+        environment = {
+          NVIDIA_VISIBLE_DEVICES = "all";
+          PORT = "8000";
+          SERVED_NAME = "Qwen/Qwen3.5-4B";
+          GPU_MEMORY = "0.85";
+          MAX_NUM_BATCHED_TOKENS = "32768";
+          MAX_NUM_SEQS = "64";
+          MAX_MODEL_LEN = "8192";
+        };
+        command = [
+          "--served-model-name" "Qwen/Qwen3.5-4B"
+          "--port" "8000"
+          "--gpu-memory-utilization" "0.85"
+          "--max-model-len" "8192"
+          "--max-num-batched-tokens" "32768"
+          "--max-num-seqs" "64"
+          "--limit-mm-per-prompt" "{\"image\":1, \"video\":0}"
+          "--trust-remote-code"
+          "--enable-chunked-prefill"
+          "--dtype" "float16"
+        ];
+        deploy.resources.reservations.devices = [
+          { driver = "nvidia"; count = "all"; capabilities = [ "gpu" ]; }
+        ];
+        labels = {
+          "sablier.enable" = "true";
+          "sablier.group" = "ocr";
+        };
+      };
+
       # ── Always-on: ComfyUI keepalive (queue monitor → Sablier refresh) ──
       comfyui-keepalive = {
         image = "docker:27-cli";
@@ -605,6 +666,7 @@ in
     mkdir -p "${dataDir}/filebrowser/config"
     mkdir -p "${dataDir}/rustdesk"
     mkdir -p "${dataDir}/comfyui"
+    mkdir -p "${dataDir}/ocr/models"
   '';
 
   # ── systemd user service ─────────────────────────────────────────────────
@@ -628,6 +690,7 @@ in
         # Stop scale-to-zero backends (created but should idle)
         ${pkgs.docker}/bin/docker stop service-plane-filebrowser 2>/dev/null || true
         ${pkgs.docker}/bin/docker stop service-plane-comfyui 2>/dev/null || true
+        ${pkgs.docker}/bin/docker stop service-plane-ocr 2>/dev/null || true
         ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _: ''
           ${pkgs.docker}/bin/docker stop "service-plane-${name}-1" 2>/dev/null || true
         '') tcpServices)}

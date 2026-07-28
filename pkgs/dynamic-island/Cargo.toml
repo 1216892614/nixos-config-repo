@@ -2,7 +2,7 @@
 name = "dynamic-island"
 version = "0.1.0"
 edition = "2024"
-description = "Wayland Dynamic Island – wgpu + SCTK layer-shell overlay"
+description = "Wayland Dynamic Island – CPU-rendered SCTK layer-shell overlay"
 
 [[bin]]
 name = "dynamic-island"
@@ -12,26 +12,18 @@ path = "src/main.rs"
 # Wayland layer-shell
 smithay-client-toolkit = { version = "0.19", features = ["calloop"] }
 wayland-client = "0.31"
-wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 
-# GPU rendering
-wgpu = "25"
-bytemuck = { version = "1", features = ["derive"] }
-
-# Text rendering
-glyphon = "0.7"
+# Font rasterization
+fontdue = "0.9"
 
 # Event loop
-calloop = "0.14"
-
-# D-Bus notifications
-zbus = { version = "5", default-features = false, features = ["tokio"] }
-
-# Async runtime (for zbus)
-tokio = { version = "1", features = ["rt", "sync", "time", "process", "io-util", "fs", "macros"] }
+calloop = "0.13"
 
 # File watching (agent JSON)
 inotify = "0.11"
+
+# System calls (getuid for howdy status path)
+libc = "0.2"
 
 # Time
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

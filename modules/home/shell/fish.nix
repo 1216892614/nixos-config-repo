@@ -61,12 +61,18 @@ in
       find = "fd";
       grep = "rg";
       ir-emitter-cfg = "nix shell nixpkgs#xhost -c sh -c 'xhost +SI:localuser:root && sudo linux-enable-ir-emitter configure'";
-      omp = "omp";
+      omp = "omp --hook=$HOME/.config/dynamic-island/island-agent-hook-omp.js";
     };
 
     functions.lo = ''
+      argparse 'n/name=' -- $argv
+      or begin
+        echo "usage: lo [-n|--name <name>] [<cols>x<rows>]" >&2
+        return 1
+      end
+
       if test (count $argv) -gt 1
-        echo "usage: lo [<cols>x<rows>]" >&2
+        echo "usage: lo [-n|--name <name>] [<cols>x<rows>]" >&2
         return 1
       end
 
@@ -82,8 +88,14 @@ in
 
       if not string match -rq '^[1-9][0-9]*x[1-9][0-9]*$' -- "$spec"
         echo "lo: invalid layout spec: $spec" >&2
-        echo "usage: lo [<cols>x<rows>]" >&2
+        echo "usage: lo [-n|--name <name>] [<cols>x<rows>]" >&2
         return 1
+      end
+
+      # 默认名称: "布局 <spec>"
+      set -l session_name "布局 $spec"
+      if set -q _flag_name
+        set session_name "$_flag_name"
       end
 
       set -l launcher "$HOME/.local/bin/lo-launch"
@@ -92,7 +104,7 @@ in
         return 1
       end
 
-      command "$launcher" "$spec"
+      command "$launcher" "$spec" "$session_name"
       return $status
     '';
 
@@ -198,6 +210,7 @@ in
     enable = true;
     enableFishIntegration = true;
     settings = {
+      scan_timeout = 100;
       format = "$directory$git_branch$git_status$nix_shell$python$rust$nodejs$cmd_duration$line_break$character";
       directory = {
         style = "bold ${colors.accent}";

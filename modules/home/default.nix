@@ -1,17 +1,23 @@
-{ config, lib, pkgs, inputs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 
 let
-  env = if builtins.pathExists ../../env.nix then import ../../env.nix else {};
+  env = if builtins.pathExists ../../env.nix then import ../../env.nix else { };
   colors = import ../../lib/colors.nix;
-  steamPulseFix = pkgs.callPackage ../../pkgs/steam-pulse-fix.nix {};
-  w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" {} ''
+  steamPulseFix = pkgs.callPackage ../../pkgs/steam-pulse-fix.nix { };
+  w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" { } ''
     mkdir -p $out/share/icons
     cp -R "${inputs.self}/icons/W11-CC-V2.2-Dark-Default-wayland" "$out/share/icons/W11-CC-V2.2-Dark-Default-wayland"
   '';
   # WhiteSur 打包的 icon-theme.cache 是无效的（magic bytes 不对），GTK 无法解析导致图标回退到 hicolor。
   # 重新生成有效的 gtk icon cache。
   whitesurIconTheme = pkgs.whitesur-icon-theme.overrideAttrs (old: {
-    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.gtk3 ];
+    nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.gtk3 ];
     postFixup = (old.postFixup or "") + ''
       for theme in $out/share/icons/WhiteSur*; do
         if [ -f "$theme/index.theme" ]; then
@@ -28,6 +34,7 @@ in
     ./desktop/noctalia.nix
     ./desktop/walker.nix
     ./desktop/heroic.nix
+    ./desktop/dynamic-island
     ./shell/fish.nix
     ./dev/git.nix
     ./dev/zed.nix
@@ -45,7 +52,7 @@ in
   home.username = "ep-o1";
   home.homeDirectory = "/home/ep-o1";
   home.stateVersion = "24.11";
-  home.enableNixpkgsReleaseCheck = false;  # nixos-unstable 始终领先 HM release 周期
+  home.enableNixpkgsReleaseCheck = false; # nixos-unstable 始终领先 HM release 周期
 
   home.sessionVariables = {
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
@@ -62,29 +69,29 @@ in
     claude-code
     omp
     docker-buildx
-    brightnessctl   # backlight control for laptop fn keys
-    playerctl       # MPRIS media player control for fn keys
+    brightnessctl # backlight control for laptop fn keys
+    playerctl # MPRIS media player control for fn keys
     wl-clipboard
-    xclip           # X11 clipboard access for clipsync bridge
-    clipnotify      # X11 clipboard change notifications for clipsync
-    clipsync        # bidirectional X11↔Wayland clipboard bridge
-    clippaste       # smart clipboard paste (text via wtype stdin, image via shortcut)
+    xclip # X11 clipboard access for clipsync bridge
+    clipnotify # X11 clipboard change notifications for clipsync
+    clipsync # bidirectional X11↔Wayland clipboard bridge
+    clippaste # smart clipboard paste (text via wtype stdin, image via shortcut)
     cliphist
-    uv  # provides uvx for running Python tools (e.g. astrbot)
+    uv # provides uvx for running Python tools (e.g. astrbot)
     fastfetch
-    wechat  # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
-    qq      # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
-    wemeet  # 腾讯会议（屏幕共享通过 xdg-desktop-portal ScreenCast）
+    wechat # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
+    qq # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
+    wemeet # 腾讯会议（屏幕共享通过 xdg-desktop-portal ScreenCast）
     qqmusic
     # ── 文档阅读 ──
-    foliate         # PDF / EPUB / DjVu / CBR / FB2 / MOBI 阅读器
-    (callPackage ../../pkgs/doxx.nix {})  # 终端 DOCX 查看器 (doxx file.docx)
-    ghostscript     # AI/PDF/PS 文件渲染（ImageMagick delegate）
-    evince          # PS/EPS/AI 文档查看器（通过 Ghostscript 渲染）
+    foliate # PDF / EPUB / DjVu / CBR / FB2 / MOBI 阅读器
+    (callPackage ../../pkgs/doxx.nix { }) # 终端 DOCX 查看器 (doxx file.docx)
+    ghostscript # AI/PDF/PS 文件渲染（ImageMagick delegate）
+    evince # PS/EPS/AI 文档查看器（通过 Ghostscript 渲染）
     # ── 图片查看 ──
-    imv             # Wayland 原生轻量图片查看器
+    imv # Wayland 原生轻量图片查看器
     # ── 云存储 ──
-    rclone          # 多云存储挂载/同步（OneDrive, GDrive 等）
+    rclone # 多云存储挂载/同步（OneDrive, GDrive 等）
   ];
 
   # ── 文档格式 MIME 关联 ──
@@ -125,7 +132,30 @@ in
     };
   };
 
-  # Claude Code / Codex / Gemini / OpenCode providers: configured manually.
+  # Claude Code / Codex / Gemini / OpenCode / Cursor: MCP servers 配置
+
+  # ── Cursor: ~/.cursor/mcp.json ─────────────────────────────────────────
+  home.file.".cursor/mcp.json".text = builtins.toJSON {
+    mcpServers = {
+      context7 = {
+        url = "https://mcp.context7.com/mcp";
+        apiKey = env.context7ApiKey or "";
+      };
+      nixos = {
+        command = "nix";
+        args = [ "run" "github:utensils/mcp-nixos" "--" ];
+      };
+      rust-docs = {
+        command = "${config.home.homeDirectory}/.cargo/bin/rust-docs-mcp";
+        transport = "stdio";
+      };
+      chrome-agent = {
+        command = "${config.home.homeDirectory}/.cargo/bin/chrome-agent";
+        args = [ "pipe" ];
+        transport = "stdio";
+      };
+    };
+  };
 
   # ── OpenCode: opencode.json + oh-my-openagent.json ──────────────────────
   xdg.configFile."opencode/opencode.json".text = builtins.toJSON {
@@ -133,14 +163,25 @@ in
     permission = "allow";
     model = "bigbigdog/claude-opus-4-6";
     small_model = "deepseek/deepseek-v4-pro";
-    plugin = [ "oh-my-openagent" ];
+    plugin = [
+      "oh-my-openagent"
+      "island-agent-opencode"
+    ];
     provider = {
       bytecatcode = {
         models = {
-          "claude-fable-5" = { name = "claude-fable-5"; };
-          "claude-opus-4-8" = { name = "claude-opus-4-8"; };
-          "claude-opus-4-7" = { name = "claude-opus-4-7"; };
-          "claude-opus-4-6" = { name = "claude-opus-4-6"; };
+          "claude-fable-5" = {
+            name = "claude-fable-5";
+          };
+          "claude-opus-4-8" = {
+            name = "claude-opus-4-8";
+          };
+          "claude-opus-4-7" = {
+            name = "claude-opus-4-7";
+          };
+          "claude-opus-4-6" = {
+            name = "claude-opus-4-6";
+          };
         };
         npm = "@ai-sdk/anthropic";
         options = {
@@ -150,7 +191,9 @@ in
       };
       "bytecatcode-cn" = {
         models = {
-          "GLM-5.1" = { name = "glm-5.1"; };
+          "GLM-5.1" = {
+            name = "glm-5.1";
+          };
         };
         npm = "@ai-sdk/anthropic";
         options = {
@@ -166,19 +209,45 @@ in
           baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1");
         };
         models = {
-          "claude-fable-5" = { name = "claude-fable-5"; };
-          "claude-opus-4-8" = { name = "claude-opus-4-8"; };
-          "claude-opus-4-7" = { name = "claude-opus-4-7"; };
-          "claude-opus-4-6" = { name = "claude-opus-4-6"; };
-          "gpt-5.3-codex" = { name = "gpt-5.3-codex"; };
-          "gpt-5.4" = { name = "gpt-5.4"; };
-          "gpt-5.4-mini" = { name = "gpt-5.4-mini"; };
-          "gpt-5.5" = { name = "gpt-5.5"; };
-          "gpt-5.3-codex-spark" = { name = "gpt-5.3-codex-spark"; };
-          "gemini-3-flash" = { name = "gemini-3-flash"; };
-          "gemini-3.1-flash-lite" = { name = "gemini-3.1-flash-lite"; };
-          "gemini-3.1-flash-lite-preview" = { name = "gemini-3.1-flash-lite-preview"; };
-          "gemini-3.1-pro-preview" = { name = "gemini-3.1-pro-preview"; };
+          "claude-fable-5" = {
+            name = "claude-fable-5";
+          };
+          "claude-opus-4-8" = {
+            name = "claude-opus-4-8";
+          };
+          "claude-opus-4-7" = {
+            name = "claude-opus-4-7";
+          };
+          "claude-opus-4-6" = {
+            name = "claude-opus-4-6";
+          };
+          "gpt-5.3-codex" = {
+            name = "gpt-5.3-codex";
+          };
+          "gpt-5.4" = {
+            name = "gpt-5.4";
+          };
+          "gpt-5.4-mini" = {
+            name = "gpt-5.4-mini";
+          };
+          "gpt-5.5" = {
+            name = "gpt-5.5";
+          };
+          "gpt-5.3-codex-spark" = {
+            name = "gpt-5.3-codex-spark";
+          };
+          "gemini-3-flash" = {
+            name = "gemini-3-flash";
+          };
+          "gemini-3.1-flash-lite" = {
+            name = "gemini-3.1-flash-lite";
+          };
+          "gemini-3.1-flash-lite-preview" = {
+            name = "gemini-3.1-flash-lite-preview";
+          };
+          "gemini-3.1-pro-preview" = {
+            name = "gemini-3.1-pro-preview";
+          };
         };
       };
       deepseek = {
@@ -189,8 +258,12 @@ in
           baseURL = "https://api.deepseek.com/v1";
         };
         models = {
-          "deepseek-v4-pro" = { name = "deepseek-v4-pro"; };
-          "DeepSeek-V4-Pro" = { name = "deepseek-v4-pro"; };
+          "deepseek-v4-pro" = {
+            name = "deepseek-v4-pro";
+          };
+          "DeepSeek-V4-Pro" = {
+            name = "deepseek-v4-pro";
+          };
         };
       };
     };
@@ -278,99 +351,151 @@ in
   };
 
   xdg.configFile."opencode/oh-my-openagent.json".text = builtins.toJSON {
-    "$schema" = "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
+    "$schema" =
+      "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
     agents = {
-      hephaestus = { model = "bigbigdog/gpt-5.5"; };
-      oracle = { model = "deepseek/deepseek-v4-pro"; };
-      librarian = { model = "deepseek/deepseek-v4-pro"; };
-      explore = { model = "deepseek/deepseek-v4-pro"; };
-      multimodal-looker = { model = "bigbigdog/claude-opus-4-6"; };
-      prometheus = { model = "bigbigdog/claude-opus-4-6"; };
-      metis = { model = "bigbigdog/claude-opus-4-6"; };
-      momus = { model = "bigbigdog/claude-opus-4-6"; };
-      atlas = { model = "bigbigdog/claude-opus-4-6"; };
+      hephaestus = {
+        model = "bigbigdog/gpt-5.5";
+      };
+      oracle = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      librarian = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      explore = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      multimodal-looker = {
+        model = "bigbigdog/claude-opus-4-6";
+      };
+      prometheus = {
+        model = "bigbigdog/claude-opus-4-6";
+      };
+      metis = {
+        model = "bigbigdog/claude-opus-4-6";
+      };
+      momus = {
+        model = "bigbigdog/claude-opus-4-6";
+      };
+      atlas = {
+        model = "bigbigdog/claude-opus-4-6";
+      };
     };
     categories = {
-      visual-engineering = { model = "bigbigdog/claude-opus-4-6"; };
-      ultrabrain = { model = "deepseek/deepseek-v4-pro"; };
-      deep = { model = "bigbigdog/gpt-5.5"; };
-      artistry = { model = "deepseek/deepseek-v4-pro"; };
-      quick = { model = "deepseek/deepseek-v4-pro"; };
-      unspecified-low = { model = "deepseek/deepseek-v4-pro"; };
-      unspecified-high = { model = "deepseek/deepseek-v4-pro"; };
-      writing = { model = "deepseek/deepseek-v4-pro"; };
+      visual-engineering = {
+        model = "bigbigdog/gpt-5.5";
+      };
+      ultrabrain = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      deep = {
+        model = "bigbigdog/gpt-5.5";
+      };
+      artistry = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      quick = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      unspecified-low = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      unspecified-high = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+      writing = {
+        model = "deepseek/deepseek-v4-pro";
+      };
+    };
+    mcpServers = {
+      context7 = {
+        url = "https://mcp.context7.com/mcp";
+        apiKey = env.context7ApiKey or "";
+      };
+      nixos = {
+        command = "nix";
+        args = [ "run" "github:utensils/mcp-nixos" "--" ];
+      };
+      rust-docs = {
+        command = "${config.home.homeDirectory}/.cargo/bin/rust-docs-mcp";
+        transport = "stdio";
+      };
+      chrome-agent = {
+        command = "${config.home.homeDirectory}/.cargo/bin/chrome-agent";
+        args = [ "pipe" ];
+        transport = "stdio";
+      };
     };
   };
 
-
-
-
-
   # ── omp (oh-my-pi): config.yml (activation, 可写) + models.yml ─────────
   # config.yml 不能做 symlink，omp 运行时需要写入。用 activation 每次 rebuild 覆盖。
-  home.activation.ompConfig = let
-    ompConfigContent = pkgs.writeText "omp-config.yml" ''
-      setupVersion: 1
-      startup:
-        setupWizard: false
-        checkUpdate: false
+  home.activation.ompConfig =
+    let
+      ompConfigContent = pkgs.writeText "omp-config.yml" ''
+        setupVersion: 1
+        startup:
+          setupWizard: false
+          checkUpdate: false
 
-      theme:
-        dark: moss-fern
+        theme:
+          dark: moss-fern
 
-      symbolPreset: nerd
+        symbolPreset: nerd
 
-      statusLine:
-        preset: custom
-        separator: none
-        leftSegments:
-          - mode
-          - model
-          - cwd
-        rightSegments:
-          - git
-          - tokens
-          - cost
-          - time
+        statusLine:
+          preset: custom
+          separator: none
+          leftSegments:
+            - mode
+            - model
+            - cwd
+          rightSegments:
+            - git
+            - tokens
+            - cost
+            - time
 
-      tui:
-        tight: true
+        tui:
+          tight: true
 
-      display:
-        shimmer: kitt
+        display:
+          shimmer: kitt
 
-      modelRoles:
-        default: bigbigdog/claude-opus-4-6
-        smol: deepseek/deepseek-v4-pro
-        slow: bigbigdog/claude-opus-4-6:high
-        plan: bigbigdog/claude-opus-4-6
-        vision: bigbigdog/gpt-5.5
-        commit: deepseek/deepseek-v4-pro
+        modelRoles:
+          default: bigbigdog/claude-opus-4-6
+          smol: deepseek/deepseek-v4-pro
+          slow: bigbigdog/claude-opus-4-6:high
+          plan: bigbigdog/claude-opus-4-6
+          vision: bigbigdog/gpt-5.5
+          commit: deepseek/deepseek-v4-pro
 
-      defaultThinkingLevel: high
+        defaultThinkingLevel: high
 
-      providers:
-        webSearch: searxng
+        providers:
+          webSearch: searxng
 
-      searxng:
-        endpoint: "http://127.0.0.1:18980"
+        searxng:
+          endpoint: "http://127.0.0.1:18980"
 
-      disabledProviders:
-        - ollama
+        disabledProviders:
+          - ollama
 
-      tools:
-        approvalMode: yolo
+        tools:
+          approvalMode: yolo
 
-      retry:
-        modelFallback: true
+        retry:
+          modelFallback: true
 
+      '';
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      mkdir -p "${config.home.homeDirectory}/.omp/agent"
+      rm -f "${config.home.homeDirectory}/.omp/agent/config.yml"
+      cp "${ompConfigContent}" "${config.home.homeDirectory}/.omp/agent/config.yml"
+      chmod 644 "${config.home.homeDirectory}/.omp/agent/config.yml"
     '';
-  in lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "${config.home.homeDirectory}/.omp/agent"
-    rm -f "${config.home.homeDirectory}/.omp/agent/config.yml"
-    cp "${ompConfigContent}" "${config.home.homeDirectory}/.omp/agent/config.yml"
-    chmod 644 "${config.home.homeDirectory}/.omp/agent/config.yml"
-  '';
 
   home.file.".omp/agent/models.yml".text = ''
     providers:
@@ -379,6 +504,12 @@ in
         apiKey: "${env.bigbigdogApiKey or ""}"
         api: openai-completions
         models:
+          - id: claude-fable-5
+            name: Claude Fable 5 (BigBigDog)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text, image]
           - id: claude-opus-4-6
             name: Claude Opus 4.6 (BigBigDog)
             contextWindow: 200000
@@ -414,6 +545,12 @@ in
         apiKey: "${env.bytekatApiKey or ""}"
         api: openai-completions
         models:
+          - id: claude-fable-5
+            name: Claude Fable 5 (ByteCat)
+            contextWindow: 200000
+            maxTokens: 64000
+            reasoning: true
+            input: [text, image]
           - id: claude-opus-4-6
             name: Claude Opus 4.6 (ByteCat)
             contextWindow: 200000
@@ -740,13 +877,25 @@ in
     terminal = false;
     icon = "google-chrome";
     type = "Application";
-    categories = [ "Network" "WebBrowser" ];
+    categories = [
+      "Network"
+      "WebBrowser"
+    ];
     mimeType = [
-      "application/pdf" "application/rdf+xml" "application/rss+xml"
-      "application/xhtml+xml" "application/xhtml_xml" "application/xml"
-      "image/gif" "image/jpeg" "image/png" "image/webp"
-      "text/html" "text/xml"
-      "x-scheme-handler/http" "x-scheme-handler/https"
+      "application/pdf"
+      "application/rdf+xml"
+      "application/rss+xml"
+      "application/xhtml+xml"
+      "application/xhtml_xml"
+      "application/xml"
+      "image/gif"
+      "image/jpeg"
+      "image/png"
+      "image/webp"
+      "text/html"
+      "text/xml"
+      "x-scheme-handler/http"
+      "x-scheme-handler/https"
       "x-scheme-handler/google-chrome"
     ];
     startupNotify = true;
@@ -778,27 +927,27 @@ in
 
   # Chrome: 默认启用垂直标签栏（仅首次 seed，不覆盖用户后续修改）
   home.activation.seedChromeVerticalTabs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    prefs_file="${config.home.homeDirectory}/.config/google-chrome/Default/Preferences"
-    if [ -f "$prefs_file" ]; then
-      if ! ${pkgs.python3}/bin/python3 -c "
-import json, sys
-with open('$prefs_file') as f:
-    p = json.load(f)
-if p.get('tab_strip', {}).get('tab_strip_layout_type') is not None:
-    sys.exit(1)
-p.setdefault('tab_strip', {})['tab_strip_layout_type'] = 1
-with open('$prefs_file', 'w') as f:
-    json.dump(p, f)
-"; then
-        echo "chrome: vertical tabs already configured, skipping"
-      else
-        echo "chrome: enabled vertical tabs (tab_strip_layout_type=1)"
-      fi
-    else
-      run mkdir -p "$(dirname "$prefs_file")"
-      echo '{"tab_strip":{"tab_strip_layout_type":1}}' > "$prefs_file"
-      echo "chrome: created Preferences with vertical tabs enabled"
-    fi
+        prefs_file="${config.home.homeDirectory}/.config/google-chrome/Default/Preferences"
+        if [ -f "$prefs_file" ]; then
+          if ! ${pkgs.python3}/bin/python3 -c "
+    import json, sys
+    with open('$prefs_file') as f:
+        p = json.load(f)
+    if p.get('tab_strip', {}).get('tab_strip_layout_type') is not None:
+        sys.exit(1)
+    p.setdefault('tab_strip', {})['tab_strip_layout_type'] = 1
+    with open('$prefs_file', 'w') as f:
+        json.dump(p, f)
+    "; then
+            echo "chrome: vertical tabs already configured, skipping"
+          else
+            echo "chrome: enabled vertical tabs (tab_strip_layout_type=1)"
+          fi
+        else
+          run mkdir -p "$(dirname "$prefs_file")"
+          echo '{"tab_strip":{"tab_strip_layout_type":1}}' > "$prefs_file"
+          echo "chrome: created Preferences with vertical tabs enabled"
+        fi
   '';
 
   # ── Gamescope HDR 包裹脚本 ──────────────────────────────────────────────
@@ -832,11 +981,21 @@ with open('$prefs_file', 'w') as f:
     terminal = false;
     icon = "vlc";
     type = "Application";
-    categories = [ "AudioVideo" "Player" ];
+    categories = [
+      "AudioVideo"
+      "Player"
+    ];
     mimeType = [
-      "video/x-matroska" "video/mp4" "video/webm" "video/avi"
-      "video/x-msvideo" "video/quicktime" "video/mpeg"
-      "audio/flac" "audio/mpeg" "audio/ogg"
+      "video/x-matroska"
+      "video/mp4"
+      "video/webm"
+      "video/avi"
+      "video/x-msvideo"
+      "video/quicktime"
+      "video/mpeg"
+      "audio/flac"
+      "audio/mpeg"
+      "audio/ogg"
     ];
   };
 
@@ -867,7 +1026,10 @@ with open('$prefs_file', 'w') as f:
     terminal = false;
     icon = "google-chrome";
     type = "Application";
-    categories = [ "Network" "WebBrowser" ];
+    categories = [
+      "Network"
+      "WebBrowser"
+    ];
   };
 
   # 通用 gamescope HDR 启动器：任意应用可通过 gamescope-hdr <command> 使用 HDR
@@ -970,272 +1132,275 @@ with open('$prefs_file', 'w') as f:
   home.file.".local/bin/omo-supervisor".executable = true;
 
   home.file.".local/bin/omo-launch".text = ''
-    #!/usr/bin/env bash
-    set -euo pipefail
+        #!/usr/bin/env bash
+        set -euo pipefail
 
-    if [ "$#" -ne 0 ]; then
-      echo "usage: omo" >&2
-      exit 1
-    fi
-
-    for cmd in zellij mktemp ss awk grep; do
-      if ! command -v "$cmd" >/dev/null 2>&1; then
-        echo "omo: required command not found: $cmd" >&2
-        exit 127
-      fi
-    done
-
-    cwd="$PWD"
-    helper_dir="${config.home.homeDirectory}/.local/bin"
-    for helper in "$helper_dir/omo-server" "$helper_dir/omo-client" "$helper_dir/omo-supervisor"; do
-      if [ ! -x "$helper" ]; then
-        echo "omo: helper not found or not executable: $helper" >&2
-        exit 1
-      fi
-    done
-
-    layout_file="$(mktemp /tmp/omo-layout-XXXXXX.kdl)"
-    cleanup() {
-      rm -f "$layout_file"
-    }
-    trap cleanup EXIT
-
-    find_port() {
-      local candidate
-      for _ in $(seq 1 200); do
-        candidate="$(shuf -i 20000-65000 -n 1)"
-        if ! ss -ltnH 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)$candidate$"; then
-          printf '%s\n' "$candidate"
-          return 0
+        if [ "$#" -ne 0 ]; then
+          echo "usage: omo" >&2
+          exit 1
         fi
-      done
-      return 1
-    }
 
-    port="$(find_port)" || {
-      echo "omo: failed to find a free TCP port" >&2
-      exit 1
-    }
+        for cmd in zellij mktemp ss awk grep; do
+          if ! command -v "$cmd" >/dev/null 2>&1; then
+            echo "omo: required command not found: $cmd" >&2
+            exit 127
+          fi
+        done
 
-    OMO_CWD="$cwd" OMO_PORT="$port" OMO_HOME="${config.home.homeDirectory}" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
-import os
+        cwd="$PWD"
+        helper_dir="${config.home.homeDirectory}/.local/bin"
+        for helper in "$helper_dir/omo-server" "$helper_dir/omo-client" "$helper_dir/omo-supervisor"; do
+          if [ ! -x "$helper" ]; then
+            echo "omo: helper not found or not executable: $helper" >&2
+            exit 1
+          fi
+        done
 
-cwd = os.environ["OMO_CWD"]
-port = os.environ["OMO_PORT"]
-home = os.environ["OMO_HOME"]
+        layout_file="$(mktemp /tmp/omo-layout-XXXXXX.kdl)"
+        cleanup() {
+          rm -f "$layout_file"
+        }
+        trap cleanup EXIT
 
-client = f'{home}/.local/bin/omo-client'
-supervisor = f'{home}/.local/bin/omo-supervisor'
+        find_port() {
+          local candidate
+          for _ in $(seq 1 200); do
+            candidate="$(shuf -i 20000-65000 -n 1)"
+            if ! ss -ltnH 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)$candidate$"; then
+              printf '%s\n' "$candidate"
+              return 0
+            fi
+          done
+          return 1
+        }
 
-def q(value: str) -> str:
-    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+        port="$(find_port)" || {
+          echo "omo: failed to find a free TCP port" >&2
+          exit 1
+        }
 
-print("layout {")
-print("    default_tab_template {")
-print('        pane size=1 borderless=true {')
-print('            plugin location="zellij:tab-bar"')
-print("        }")
-print("        children")
-print('        pane size=1 borderless=true {')
-print('            plugin location="zellij:status-bar"')
-print("        }")
-print("    }")
-print(f'    tab name="omo" focus=true cwd={q(cwd)} {{')
-print('        pane split_direction="horizontal" {')
-print('            pane split_direction="vertical" {')
-print(f'                pane command={q(client)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print(f'                pane command={q(client)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print("            }")
-print('            pane split_direction="vertical" {')
-print(f'                pane command={q(client)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print(f'                pane command={q(client)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print("            }")
-print("        }")
-print("    }")
-print(f'    tab name="fish" cwd={q(cwd)} {{')
-print('        pane split_direction="horizontal" {')
-print('            pane split_direction="vertical" {')
-print(f'                pane command={q(supervisor)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print(f'                pane command={q(client)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print("            }")
-print('            pane split_direction="vertical" {')
-print(f'                pane command={q(client)} {{')
-print(f'                    args {q(port)} {q(cwd)}')
-print("                }")
-print("                pane")
-print("            }")
-print("        }")
-print("    }")
-print("}")
-PY
+        OMO_CWD="$cwd" OMO_PORT="$port" OMO_HOME="${config.home.homeDirectory}" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
+    import os
 
-    command zellij --layout "$layout_file"
+    cwd = os.environ["OMO_CWD"]
+    port = os.environ["OMO_PORT"]
+    home = os.environ["OMO_HOME"]
+
+    client = f'{home}/.local/bin/omo-client'
+    supervisor = f'{home}/.local/bin/omo-supervisor'
+
+    def q(value: str) -> str:
+        return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+    print("layout {")
+    print("    default_tab_template {")
+    print('        pane size=1 borderless=true {')
+    print('            plugin location="zellij:tab-bar"')
+    print("        }")
+    print("        children")
+    print('        pane size=1 borderless=true {')
+    print('            plugin location="zellij:status-bar"')
+    print("        }")
+    print("    }")
+    print(f'    tab name="omo" focus=true cwd={q(cwd)} {{')
+    print('        pane split_direction="horizontal" {')
+    print('            pane split_direction="vertical" {')
+    print(f'                pane command={q(client)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print(f'                pane command={q(client)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print("            }")
+    print('            pane split_direction="vertical" {')
+    print(f'                pane command={q(client)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print(f'                pane command={q(client)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print("            }")
+    print("        }")
+    print("    }")
+    print(f'    tab name="fish" cwd={q(cwd)} {{')
+    print('        pane split_direction="horizontal" {')
+    print('            pane split_direction="vertical" {')
+    print(f'                pane command={q(supervisor)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print(f'                pane command={q(client)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print("            }")
+    print('            pane split_direction="vertical" {')
+    print(f'                pane command={q(client)} {{')
+    print(f'                    args {q(port)} {q(cwd)}')
+    print("                }")
+    print("                pane")
+    print("            }")
+    print("        }")
+    print("    }")
+    print("}")
+    PY
+
+        command zellij --layout "$layout_file"
   '';
   home.file.".local/bin/omo-launch".executable = true;
 
   home.file.".local/bin/lo-launch".text = ''
-    #!/usr/bin/env bash
-    set -euo pipefail
+        #!/usr/bin/env bash
+        set -euo pipefail
 
-    if [ "$#" -ne 1 ]; then
-      echo "usage: lo <cols>x<rows>" >&2
-      exit 1
-    fi
+        if [ "$#" -ne 2 ]; then
+          echo "usage: lo-launch <cols>x<rows> <name>" >&2
+          exit 1
+        fi
 
-    spec="$1"
-    if [[ ! "$spec" =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
-      echo "lo: invalid layout spec: $spec" >&2
-      echo "usage: lo <cols>x<rows>" >&2
-      exit 1
-    fi
+        spec="$1"
+        session_name="$2"
+        if [[ ! "$spec" =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
+          echo "lo: invalid layout spec: $spec" >&2
+          exit 1
+        fi
 
-    for cmd in zellij mktemp; do
-      if ! command -v "$cmd" >/dev/null 2>&1; then
-        echo "lo: required command not found: $cmd" >&2
-        exit 127
-      fi
-    done
+        for cmd in zellij mktemp; do
+          if ! command -v "$cmd" >/dev/null 2>&1; then
+            echo "lo: required command not found: $cmd" >&2
+            exit 127
+          fi
+        done
 
-    cols="''${BASH_REMATCH[1]}"
-    rows="''${BASH_REMATCH[2]}"
-    cwd="$PWD"
-    layout_file="$(mktemp /tmp/lo-layout-XXXXXX.kdl)"
-    cleanup() {
-      rm -f "$layout_file"
-    }
-    trap cleanup EXIT
+        cols="''${BASH_REMATCH[1]}"
+        rows="''${BASH_REMATCH[2]}"
+        cwd="$PWD"
+        layout_file="$(mktemp /tmp/lo-layout-XXXXXX.kdl)"
+        cleanup() {
+          rm -f "$layout_file"
+        }
+        trap cleanup EXIT
 
-    LO_CWD="$cwd" LO_COLS="$cols" LO_ROWS="$rows" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
-import os
+        LO_CWD="$cwd" LO_COLS="$cols" LO_ROWS="$rows" LO_NAME="$session_name" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
+    import os
 
-cwd = os.environ["LO_CWD"]
-cols = int(os.environ["LO_COLS"])
-rows = int(os.environ["LO_ROWS"])
+    cwd = os.environ["LO_CWD"]
+    cols = int(os.environ["LO_COLS"])
+    rows = int(os.environ["LO_ROWS"])
+    name = os.environ["LO_NAME"]
 
-def q(value: str) -> str:
-    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    def q(value: str) -> str:
+        return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
-def emit_grid(indent: str, cols: int, rows: int) -> None:
-    print(f'{indent}pane split_direction="horizontal" {{')
-    for _ in range(cols):
-        print(f'{indent}    pane split_direction="vertical" {{')
-        for _ in range(rows):
-            print(f"{indent}        pane")
-        print(f'{indent}    }}')
-    print(f'{indent}}}')
+    def emit_grid(indent: str, cols: int, rows: int) -> None:
+        print(f'{indent}pane split_direction="horizontal" {{')
+        for _ in range(cols):
+            print(f'{indent}    pane split_direction="vertical" {{')
+            for _ in range(rows):
+                print(f"{indent}        pane")
+            print(f'{indent}    }}')
+        print(f'{indent}}}')
 
-print("layout {")
-print("    default_tab_template {")
-print('        pane size=1 borderless=true {')
-print('            plugin location="zellij:tab-bar"')
-print("        }")
-print("        children")
-print('        pane size=1 borderless=true {')
-print('            plugin location="zellij:status-bar"')
-print("        }")
-print("    }")
-print(f'    tab focus=true cwd={q(cwd)} {{')
-emit_grid("        ", cols, rows)
-print("    }")
-print("}")
-PY
+    print("layout {")
+    print("    default_tab_template {")
+    print('        pane size=1 borderless=true {')
+    print('            plugin location="zellij:tab-bar"')
+    print("        }")
+    print("        children")
+    print('        pane size=1 borderless=true {')
+    print('            plugin location="zellij:status-bar"')
+    print("        }")
+    print("    }")
+    print(f'    tab name={q(name)} focus=true cwd={q(cwd)} {{')
+    emit_grid("        ", cols, rows)
+    print("    }")
+    print("}")
+    PY
 
-    if [ -n "''${ZELLIJ:-}" ]; then
-      command zellij action new-tab --layout "$layout_file" --cwd "$cwd"
-    else
-      command zellij --layout "$layout_file"
-    fi
+        if [ -n "''${ZELLIJ:-}" ]; then
+          command zellij action new-tab --layout "$layout_file" --name "$session_name" --cwd "$cwd"
+        else
+          command zellij --session "$session_name" --layout "$layout_file"
+        fi
   '';
   home.file.".local/bin/lo-launch".executable = true;
 
   home.file.".local/bin/omp-launch".text = ''
-    #!/usr/bin/env bash
-    set -euo pipefail
+        #!/usr/bin/env bash
+        set -euo pipefail
 
-    if [ "$#" -gt 1 ]; then
-      echo "usage: omp-launch [<cols>x<rows>]" >&2
-      exit 1
-    fi
+        if [ "$#" -gt 1 ]; then
+          echo "usage: omp-launch [<cols>x<rows>]" >&2
+          exit 1
+        fi
 
-    for cmd in zellij omp mktemp; do
-      if ! command -v "$cmd" >/dev/null 2>&1; then
-        echo "omp-launch: required command not found: $cmd" >&2
-        exit 127
-      fi
-    done
+        for cmd in zellij omp mktemp; do
+          if ! command -v "$cmd" >/dev/null 2>&1; then
+            echo "omp-launch: required command not found: $cmd" >&2
+            exit 127
+          fi
+        done
 
-    cols=1
-    rows=1
-    if [ "$#" -eq 1 ]; then
-      spec="$1"
-      if [[ ! "$spec" =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
-        echo "omp-launch: invalid layout spec: $spec" >&2
-        echo "usage: omp-launch [<cols>x<rows>]" >&2
-        exit 1
-      fi
-      cols="''${BASH_REMATCH[1]}"
-      rows="''${BASH_REMATCH[2]}"
-    fi
+        cols=1
+        rows=1
+        if [ "$#" -eq 1 ]; then
+          spec="$1"
+          if [[ ! "$spec" =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
+            echo "omp-launch: invalid layout spec: $spec" >&2
+            echo "usage: omp-launch [<cols>x<rows>]" >&2
+            exit 1
+          fi
+          cols="''${BASH_REMATCH[1]}"
+          rows="''${BASH_REMATCH[2]}"
+        fi
 
-    cwd="$PWD"
-    layout_file="$(mktemp /tmp/omp-layout-XXXXXX.kdl)"
-    cleanup() {
-      rm -f "$layout_file"
-    }
-    trap cleanup EXIT
+        cwd="$PWD"
+        layout_file="$(mktemp /tmp/omp-layout-XXXXXX.kdl)"
+        cleanup() {
+          rm -f "$layout_file"
+        }
+        trap cleanup EXIT
 
-    OMP_CWD="$cwd" OMP_COLS="$cols" OMP_ROWS="$rows" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
-import os
+        OMP_CWD="$cwd" OMP_COLS="$cols" OMP_ROWS="$rows" "${pkgs.python3}/bin/python3" - <<'PY' >"$layout_file"
+    import os
 
-cwd = os.environ["OMP_CWD"]
-cols = int(os.environ["OMP_COLS"])
-rows = int(os.environ["OMP_ROWS"])
+    cwd = os.environ["OMP_CWD"]
+    cols = int(os.environ["OMP_COLS"])
+    rows = int(os.environ["OMP_ROWS"])
 
-def q(value: str) -> str:
-    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    def q(value: str) -> str:
+        return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
-def emit_grid(indent: str, cols: int, rows: int) -> None:
-    print(f'{indent}pane split_direction="horizontal" {{')
-    for _ in range(cols):
-        print(f'{indent}    pane split_direction="vertical" {{')
-        for _ in range(rows):
-            print(f'{indent}        pane command="omp" close_on_exit=true')
-        print(f'{indent}    }}')
-    print(f'{indent}}}')
+    def emit_grid(indent: str, cols: int, rows: int) -> None:
+        print(f'{indent}pane split_direction="horizontal" {{')
+        for _ in range(cols):
+            print(f'{indent}    pane split_direction="vertical" {{')
+            for _ in range(rows):
+                print(f'{indent}        pane command="omp" close_on_exit=true {{')
+                print(f'{indent}            args "--hook=${config.home.homeDirectory}/.config/dynamic-island/island-agent-hook-omp.js"')
+                print(f'{indent}        }}')
+            print(f'{indent}    }}')
+        print(f'{indent}}}')
 
-print("layout {")
-print("    default_tab_template {")
-print('        pane size=1 borderless=true {')
-print('            plugin location="zellij:tab-bar"')
-print("        }")
-print("        children")
-print('        pane size=1 borderless=true {')
-print('            plugin location="zellij:status-bar"')
-print("        }")
-print("    }")
-print(f'    tab name="pi" focus=true cwd={q(cwd)} {{')
-emit_grid("        ", cols, rows)
-print("    }")
-print("}")
-PY
+    print("layout {")
+    print("    default_tab_template {")
+    print('        pane size=1 borderless=true {')
+    print('            plugin location="zellij:tab-bar"')
+    print("        }")
+    print("        children")
+    print('        pane size=1 borderless=true {')
+    print('            plugin location="zellij:status-bar"')
+    print("        }")
+    print("    }")
+    print(f'    tab name="pi" focus=true cwd={q(cwd)} {{')
+    emit_grid("        ", cols, rows)
+    print("    }")
+    print("}")
+    PY
 
-    if [ -n "''${ZELLIJ:-}" ]; then
-      command zellij action new-tab --layout "$layout_file" --cwd "$cwd"
-    else
-      command zellij --layout "$layout_file"
-    fi
+        if [ -n "''${ZELLIJ:-}" ]; then
+          command zellij action new-tab --layout "$layout_file" --cwd "$cwd"
+        else
+          command zellij --layout "$layout_file"
+        fi
   '';
   home.file.".local/bin/omp-launch".executable = true;
 
@@ -1252,10 +1417,10 @@ PY
   #   "Maximum number of clients reached" and Steam aborts during init with
   #   the misleading XOpenIM() failure + breakpad assert.
   #
-   # niri starts a *second* Xwayland on :1 specifically as a spare. We always
-   # route Steam to :1 so it gets a dedicated Xwayland with fresh client budget
-   # (the primary :0 routinely saturates its 256-client limit). Steam UI still
-   # renders on the niri Wayland compositor regardless of which Xwayland it uses.
+  # niri starts a *second* Xwayland on :1 specifically as a spare. We always
+  # route Steam to :1 so it gets a dedicated Xwayland with fresh client budget
+  # (the primary :0 routinely saturates its 256-client limit). Steam UI still
+  # renders on the niri Wayland compositor regardless of which Xwayland it uses.
   home.file.".local/bin/steam-wrapper".text = ''
     #!/bin/sh
     if command -v systemctl >/dev/null 2>&1; then
@@ -1446,7 +1611,6 @@ PY
     fi
   '';
 
-
   # ── AppImage 应用（rebuild 时自动解压安装，幂等） ──────────────────────
   # 源文件在仓库 appimages/ 目录，解压到 ~/.local/opt/<name>/
   # activation 脚本：比较 AppImage 的 sha256，变了才重新解压，没变跳过
@@ -1484,6 +1648,25 @@ PY
     _install_ai "osu"       "$REPO/osu.AppImage"
     _install_ai "obsidian"  "$REPO/obsidian.AppImage"
     _install_ai "skills-manager" "$REPO/skills-manager.AppImage"
+  '';
+
+  # ── chrome-agent: browser automation for AI agents (cargo install) ──────
+  # 幂等: 只在版本变化或二进制不存在时重新安装
+  home.activation.installChromeAgent = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    CHROME_AGENT_VERSION="0.7.0"
+    BINARY="${config.home.homeDirectory}/.cargo/bin/chrome-agent"
+    if [ -f "$BINARY" ]; then
+      CURRENT=$("$BINARY" --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' || echo "")
+      if [ "$CURRENT" = "$CHROME_AGENT_VERSION" ]; then
+        echo "chrome-agent: already at v$CHROME_AGENT_VERSION"
+      else
+        echo "chrome-agent: upgrading to v$CHROME_AGENT_VERSION..."
+        ${config.home.homeDirectory}/.cargo/bin/cargo install chrome-agent --version "$CHROME_AGENT_VERSION" --locked 2>/dev/null || true
+      fi
+    else
+      echo "chrome-agent: installing v$CHROME_AGENT_VERSION..."
+      ${config.home.homeDirectory}/.cargo/bin/cargo install chrome-agent --version "$CHROME_AGENT_VERSION" --locked 2>/dev/null || true
+    fi
   '';
 
   # Java wrapper for Minecraft: 注入 LD_LIBRARY_PATH 让 GLFW 能 dlopen 系统库，
