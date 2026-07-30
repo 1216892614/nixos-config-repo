@@ -97,38 +97,6 @@ let
             blur true
         }
     }
-    // Dynamic Island：液态玻璃 + 圆角裁剪
-    // geometry-corner-radius 18 → pill 态(h≈36)为完整胶囊，card 态(h≈200)为轻圆角
-    layer-rule {
-        match namespace="dynamic-island"
-        geometry-corner-radius 18
-        background-effect {
-            blur true
-            xray true
-            liquid-glass {
-                refraction-strength 3.0
-                power-factor 4
-                refraction-power 1.0
-                glow-weight 0.4
-                glow-bias 0.3
-                glow-edge0 0.05
-                glow-edge1 0.95
-                edge-lighting 1.8
-                brightness 0.2
-                contrast 1.0
-                saturation 0.85
-                vibrancy 0.1
-                adaptive-dim 0.0
-                adaptive-boost 0.0
-                physical-refraction 0
-                lens-distortion 0
-                fringing 1.0
-                edge-thickness 0.3
-                edge-padding 0.0
-            }
-        }
-        block-out-from "screen-capture"
-    }
     // statusbar 内容层：保持透明，禁用所有背景效果
     layer-rule {
         match namespace="^noctalia-bar-content"

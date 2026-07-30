@@ -34,7 +34,6 @@ in
     ./desktop/noctalia.nix
     ./desktop/walker.nix
     ./desktop/heroic.nix
-    ./desktop/dynamic-island
     ./shell/fish.nix
     ./dev/git.nix
     ./dev/zed.nix
@@ -1374,9 +1373,7 @@ in
         for _ in range(cols):
             print(f'{indent}    pane split_direction="vertical" {{')
             for _ in range(rows):
-                print(f'{indent}        pane command="omp" close_on_exit=true {{')
-                print(f'{indent}            args "--hook=${config.home.homeDirectory}/.config/dynamic-island/island-agent-hook-omp.js"')
-                print(f'{indent}        }}')
+                print(f'{indent}        pane command="omp" close_on_exit=true')
             print(f'{indent}    }}')
         print(f'{indent}}}')
 
