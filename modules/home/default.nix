@@ -496,90 +496,99 @@ in
       chmod 644 "${config.home.homeDirectory}/.omp/agent/config.yml"
     '';
 
-  home.file.".omp/agent/models.yml".text = ''
-    providers:
-      bigbigdog:
-        baseUrl: ${env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1"}
-        apiKey: "${env.bigbigdogApiKey or ""}"
-        api: openai-completions
-        models:
-          - id: claude-fable-5
-            name: Claude Fable 5 (BigBigDog)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: claude-opus-4-6
-            name: Claude Opus 4.6 (BigBigDog)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: claude-opus-4-7
-            name: Claude Opus 4.7 (BigBigDog)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: claude-opus-4-8
-            name: Claude Opus 4.8 (BigBigDog)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: gpt-5.4
-            name: GPT-5.4 (BigBigDog)
-            contextWindow: 200000
-            maxTokens: 32000
-            reasoning: true
-            input: [text, image]
-          - id: gpt-5.5
-            name: GPT-5.5 (BigBigDog)
-            contextWindow: 200000
-            maxTokens: 32000
-            reasoning: true
-            input: [text, image]
-      bytecatcode:
-        baseUrl: https://bytecat.lamclod.cn/v1
-        apiKey: "${env.bytekatApiKey or ""}"
-        api: openai-completions
-        models:
-          - id: claude-fable-5
-            name: Claude Fable 5 (ByteCat)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: claude-opus-4-6
-            name: Claude Opus 4.6 (ByteCat)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: claude-opus-4-7
-            name: Claude Opus 4.7 (ByteCat)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-          - id: claude-opus-4-8
-            name: Claude Opus 4.8 (ByteCat)
-            contextWindow: 200000
-            maxTokens: 64000
-            reasoning: true
-            input: [text, image]
-      deepseek:
-        baseUrl: https://api.deepseek.com/v1
-        apiKey: "${env.deepseekApiKey or ""}"
-        api: openai-completions
-        models:
-          - id: deepseek-v4-pro
-            name: DeepSeek V4 Pro
-            contextWindow: 128000
-            maxTokens: 16384
-            reasoning: true
-            input: [text]
-  '';
+  home.file.".omp/agent/models.yml".text = let
+    # 只有 apiKey 非空的 provider 才会被写入 models.yml，避免 schema 校验报错
+    bigbigdogKey = env.bigbigdogApiKey or "";
+    bytekatKey = env.bytekatApiKey or "";
+    deepseekKey = env.deepseekApiKey or "";
+    bigbigdogBlock = lib.optionalString (bigbigdogKey != "") (lib.concatStrings [
+      "  bigbigdog:\n"
+      "    baseUrl: ${env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1"}\n"
+      "    apiKey: \"${bigbigdogKey}\"\n"
+      "    api: openai-completions\n"
+      "    models:\n"
+      "      - id: claude-fable-5\n"
+      "        name: Claude Fable 5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-6\n"
+      "        name: Claude Opus 4.6 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-7\n"
+      "        name: Claude Opus 4.7 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-8\n"
+      "        name: Claude Opus 4.8 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.4\n"
+      "        name: GPT-5.4 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.5\n"
+      "        name: GPT-5.5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+    ]);
+    bytecatBlock = lib.optionalString (bytekatKey != "") (lib.concatStrings [
+      "  bytecatcode:\n"
+      "    baseUrl: https://bytecat.lamclod.cn/v1\n"
+      "    apiKey: \"${bytekatKey}\"\n"
+      "    api: openai-completions\n"
+      "    models:\n"
+      "      - id: claude-fable-5\n"
+      "        name: Claude Fable 5 (ByteCat)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-6\n"
+      "        name: Claude Opus 4.6 (ByteCat)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-7\n"
+      "        name: Claude Opus 4.7 (ByteCat)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-8\n"
+      "        name: Claude Opus 4.8 (ByteCat)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+    ]);
+    deepseekBlock = lib.optionalString (deepseekKey != "") (lib.concatStrings [
+      "  deepseek:\n"
+      "    baseUrl: https://api.deepseek.com/v1\n"
+      "    apiKey: \"${deepseekKey}\"\n"
+      "    api: openai-completions\n"
+      "    models:\n"
+      "      - id: deepseek-v4-pro\n"
+      "        name: DeepSeek V4 Pro\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 16384\n"
+      "        reasoning: true\n"
+      "        input: [text]\n"
+    ]);
+  in "providers:\n${bigbigdogBlock}${bytecatBlock}${deepseekBlock}";
 
   # ── omp theme: Moss & Fern (from lib/colors.nix) ─────────────────────────
   home.file.".omp/agent/themes/moss-fern.json".text = builtins.toJSON {
@@ -1658,11 +1667,11 @@ in
         echo "chrome-agent: already at v$CHROME_AGENT_VERSION"
       else
         echo "chrome-agent: upgrading to v$CHROME_AGENT_VERSION..."
-        ${config.home.homeDirectory}/.cargo/bin/cargo install chrome-agent --version "$CHROME_AGENT_VERSION" --locked 2>/dev/null || true
+        RUSTC_WRAPPER="" ${config.home.homeDirectory}/.cargo/bin/cargo install chrome-agent --version "$CHROME_AGENT_VERSION" --locked 2>/dev/null || true
       fi
     else
       echo "chrome-agent: installing v$CHROME_AGENT_VERSION..."
-      ${config.home.homeDirectory}/.cargo/bin/cargo install chrome-agent --version "$CHROME_AGENT_VERSION" --locked 2>/dev/null || true
+      RUSTC_WRAPPER="" ${config.home.homeDirectory}/.cargo/bin/cargo install chrome-agent --version "$CHROME_AGENT_VERSION" --locked 2>/dev/null || true
     fi
   '';
 
