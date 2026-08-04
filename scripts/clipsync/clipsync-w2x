@@ -17,7 +17,7 @@ if [[ "$TYPE" =~ "application/x-qt-image" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
-        timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|' | timeout $TIMEOUT xclip -sel clip -t text/uri-list -loops 1
+        timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|' | xclip -sel clip -t text/uri-list
         log "synced: wechat uri-list → X11"
     fi
 
@@ -26,7 +26,7 @@ elif [[ "$TYPE" =~ "text/uri-list" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
-        { echo "copy"; timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|'; } | timeout $TIMEOUT xclip -sel clip -t x-special/gnome-copied-files -loops 1
+        { echo "copy"; timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|'; } | xclip -sel clip -t x-special/gnome-copied-files
         log "synced: uri-list → X11 gnome-copied-files"
     fi
 
@@ -36,7 +36,7 @@ elif [[ "$TYPE" =~ "text/plain" ]]; then
     if [[ "$W_HASH" != "$EMPTY_HASH" ]]; then
         X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | hash_data)
         if [[ "$W_HASH" != "$X_HASH" ]]; then
-            timeout $TIMEOUT wl-paste -t text/plain | xclip -sel clip &
+            timeout $TIMEOUT wl-paste -t text/plain | xclip -sel clip
             log "synced: text → X11"
         fi
     fi
@@ -46,11 +46,14 @@ elif [[ "$TYPE" =~ "text/html" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/html 2>/dev/null | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t text/html 2>/dev/null | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ -n "$W_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
-        timeout $TIMEOUT wl-paste -t text/html | timeout $TIMEOUT xclip -sel clip -t text/html -loops 1
+        timeout $TIMEOUT wl-paste -t text/html | xclip -sel clip -t text/html
         log "synced: text/html → X11"
     fi
 
 # --- Image (PNG then JPEG) ---
+# Qt/xcb apps (WeChat) cache clipboard internally and may miss selection owner changes.
+# Workaround: save to file, clear X11 selection briefly, then set new content.
+# The ownership transition forces Qt to discard its stale cache.
 elif [[ "$TYPE" =~ "image/" ]]; then
     TARGET_MIME="image/png"
     W_HASH=$(timeout $TIMEOUT wl-paste -t "$TARGET_MIME" 2>/dev/null | hash_data)
@@ -61,7 +64,13 @@ elif [[ "$TYPE" =~ "image/" ]]; then
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ -n "$W_HASH" ]]; then
         X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t "$TARGET_MIME" 2>/dev/null | hash_data)
         if [[ "$W_HASH" != "$X_HASH" ]]; then
-            timeout $TIMEOUT wl-paste -t "$TARGET_MIME" | timeout $TIMEOUT xclip -sel clip -t "$TARGET_MIME" -loops 1
+            CLIP_IMG="/tmp/clipsync-clipboard.${TARGET_MIME##*/}"
+            timeout $TIMEOUT wl-paste -t "$TARGET_MIME" > "$CLIP_IMG" 2>/dev/null
+            # Briefly claim then release selection to trigger XFixesSelectionNotify
+            echo -n | xclip -sel clip
+            sleep 0.05
+            # Set actual image content
+            xclip -sel clip -t "$TARGET_MIME" < "$CLIP_IMG"
             log "synced: $TARGET_MIME → X11"
         fi
     fi
