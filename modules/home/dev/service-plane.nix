@@ -47,6 +47,7 @@ let
     plane  = { backend = "http://service-plane-portal:80"; scaleToZero = false; };
     files  = { backend = "http://service-plane-filebrowser:80"; scaleToZero = true; };
     comfyui = { backend = "http://service-plane-comfyui:8188"; scaleToZero = true; };
+    llm    = { backend = "http://service-plane-llm:8080"; scaleToZero = true; };
     ocr    = { backend = "http://service-plane-ocr:8000"; scaleToZero = true; };
     agent  = { backend = "http://host.docker.internal:${toString piAgentPort}"; scaleToZero = false; };
     traefik = { backend = "http://127.0.0.1:8080"; scaleToZero = false; };  # Traefik API (internal)
@@ -61,7 +62,7 @@ let
       hostPort = 6399;
       containerPort = 6379;
       volumes = [ "${dataDir}/dragonfly:/data" ];
-      command = [ "--maxmemory" "2G" "--dbfilename" "dump.rdb" "--save_schedule" "*:*" "--proactor_threads" "4" ];
+      command = [ "--maxmemory" "2G" "--dbfilename" "dump" "--snapshot_cron" "* * * * *" "--proactor_threads" "4" "--force_epoll" ];
       healthCheck = "redis-cli -h dragonfly -p 6379 ping";
       idleTimeout = 600;
     };
@@ -238,6 +239,13 @@ let
           service = "ocr";
           tls = {};
         };
+        llm = {
+          rule = "Host(`llm.${localDomain}`)";
+          entryPoints = [ "websecure" ];
+          middlewares = [ "llm-sablier" ];
+          service = "llm";
+          tls = {};
+        };
         # ── Always-on services ──────────────────────────────────────────
         pi-agent = {
           rule = "Host(`agent.${localDomain}`)";
@@ -277,6 +285,9 @@ let
         ocr.loadBalancer.servers = [
           { url = "http://service-plane-ocr:8000"; }
         ];
+        llm.loadBalancer.servers = [
+          { url = "http://service-plane-llm:8080"; }
+        ];
       };
       middlewares = {
         # ── Sablier: FileBrowser 自动唤醒 + 自定义等待页 ────────────────
@@ -310,6 +321,17 @@ let
             displayName = "OCR (Qwen 3.5)";
             customThemesPath = "/portal/waiting.html";
             refreshFrequency = "5s";
+          };
+        };
+        # ── Sablier: LLM (llama.cpp) 自动唤醒 ───────────────────────────
+        llm-sablier.plugin.sablier = {
+          sablierUrl = "http://service-plane-sablier:10000";
+          names = "service-plane-llm";
+          sessionDuration = "5m";
+          dynamic = {
+            displayName = "LLM (Qwen3 4B)";
+            customThemesPath = "/portal/waiting.html";
+            refreshFrequency = "2s";
           };
         };
         # ── 错误页中间件: 后端异常时由 portal 返回错误页 ────────────────
@@ -510,12 +532,33 @@ let
         environment = {
           NVIDIA_VISIBLE_DEVICES = "all";
         };
-        deploy.resources.reservations.devices = [
-          { driver = "nvidia"; count = "all"; capabilities = [ "gpu" ]; }
-        ];
+        devices = [ "nvidia.com/gpu=all" ];
         labels = {
           "sablier.enable" = "true";
           "sablier.group" = "comfyui";
+        };
+      };
+
+      # ── Scale-to-zero (HTTP): LLM llama.cpp (Qwen3 4B, GPU, Sablier) ──
+      llm = {
+        image = "ghcr.io/ggml-org/llama.cpp:server-cuda";
+        container_name = "service-plane-llm";
+        restart = "no";
+        volumes = [
+          "${dataDir}/llm/models:/models:ro"
+        ];
+        command = [
+          "--model" "/models/qwen3-4b-q4_k_m.gguf"
+          "--port" "8080"
+          "--host" "0.0.0.0"
+          "--ctx-size" "2048"
+          "--n-gpu-layers" "99"
+          "--flash-attn"
+        ];
+        devices = [ "nvidia.com/gpu=all" ];
+        labels = {
+          "sablier.enable" = "true";
+          "sablier.group" = "llm";
         };
       };
 
@@ -526,31 +569,32 @@ let
         restart = "no";
         volumes = [
           "${dataDir}/ocr/models:/mnt/models"
+          "${config.home.homeDirectory}/.cache/huggingface:/root/.cache/huggingface"
         ];
         environment = {
           NVIDIA_VISIBLE_DEVICES = "all";
           PORT = "8000";
           SERVED_NAME = "Qwen/Qwen3.5-4B";
-          GPU_MEMORY = "0.85";
-          MAX_NUM_BATCHED_TOKENS = "32768";
+          GPU_MEMORY = "0.90";
+          MAX_NUM_BATCHED_TOKENS = "2048";
           MAX_NUM_SEQS = "64";
-          MAX_MODEL_LEN = "8192";
+          MAX_MODEL_LEN = "2048";
+          HF_HOME = "/root/.cache/huggingface";
         };
         command = [
+          "Qwen/Qwen3.5-4B"
           "--served-model-name" "Qwen/Qwen3.5-4B"
           "--port" "8000"
-          "--gpu-memory-utilization" "0.85"
-          "--max-model-len" "8192"
-          "--max-num-batched-tokens" "32768"
+          "--gpu-memory-utilization" "0.90"
+          "--max-model-len" "2048"
+          "--max-num-batched-tokens" "2048"
           "--max-num-seqs" "64"
           "--limit-mm-per-prompt" "{\"image\":1, \"video\":0}"
           "--trust-remote-code"
           "--enable-chunked-prefill"
           "--dtype" "float16"
         ];
-        deploy.resources.reservations.devices = [
-          { driver = "nvidia"; count = "all"; capabilities = [ "gpu" ]; }
-        ];
+        devices = [ "nvidia.com/gpu=all" ];
         labels = {
           "sablier.enable" = "true";
           "sablier.group" = "ocr";
@@ -657,7 +701,7 @@ in
   xdg.configFile."service-plane/portal/waiting.html".source = ./portal/waiting.html;
   xdg.configFile."service-plane/portal/nginx.conf".source = ./portal/nginx.conf;
 
-  # ── Data directories ─────────────────────────────────────────────────────
+  # ── Data directories + model downloads ─────────────────────────────────
   home.activation.servicePlaneDataDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _:
       ''mkdir -p "${dataDir}/${name}"''
@@ -667,6 +711,16 @@ in
     mkdir -p "${dataDir}/rustdesk"
     mkdir -p "${dataDir}/comfyui"
     mkdir -p "${dataDir}/ocr/models"
+    mkdir -p "${dataDir}/llm/models"
+
+    # ── 下载 LLM GGUF 模型（幂等：文件存在则跳过）──────────────────
+    LLM_MODEL="${dataDir}/llm/models/qwen3-4b-q4_k_m.gguf"
+    if [ ! -f "$LLM_MODEL" ]; then
+      echo "Downloading Qwen3-4B GGUF model (~2.7GB)..."
+      $DRY_RUN_CMD ${pkgs.curl}/bin/curl -L --progress-bar \
+        "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/qwen3-4b-q4_k_m.gguf" \
+        -o "$LLM_MODEL" || echo "WARNING: Model download failed, LLM service won't start until model is available"
+    fi
   '';
 
   # ── systemd user service ─────────────────────────────────────────────────
@@ -691,6 +745,7 @@ in
         ${pkgs.docker}/bin/docker stop service-plane-filebrowser 2>/dev/null || true
         ${pkgs.docker}/bin/docker stop service-plane-comfyui 2>/dev/null || true
         ${pkgs.docker}/bin/docker stop service-plane-ocr 2>/dev/null || true
+        ${pkgs.docker}/bin/docker stop service-plane-llm 2>/dev/null || true
         ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _: ''
           ${pkgs.docker}/bin/docker stop "service-plane-${name}-1" 2>/dev/null || true
         '') tcpServices)}

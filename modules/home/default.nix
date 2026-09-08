@@ -16,11 +16,14 @@ let
   '';
   # WhiteSur 打包的 icon-theme.cache 是无效的（magic bytes 不对），GTK 无法解析导致图标回退到 hicolor。
   # 重新生成有效的 gtk icon cache。
+  # 同时修复 Inherits 行：原始只继承 hicolor,breeze（breeze 未安装），补上 Adwaita
+  # 使 Qt/GTK 能找到 symbolic 图标（如 input-keyboard-symbolic），否则系统托盘图标显示为空白/棋盘。
   whitesurIconTheme = pkgs.whitesur-icon-theme.overrideAttrs (old: {
     nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.gtk3 ];
     postFixup = (old.postFixup or "") + ''
       for theme in $out/share/icons/WhiteSur*; do
         if [ -f "$theme/index.theme" ]; then
+          sed -i 's/^Inherits=.*/Inherits=Adwaita,hicolor/' "$theme/index.theme"
           gtk-update-icon-cache --force --quiet "$theme"
         fi
       done
@@ -208,45 +211,48 @@ in
           baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1");
         };
         models = {
-          "claude-fable-5" = {
-            name = "claude-fable-5";
-          };
-          "claude-opus-4-8" = {
-            name = "claude-opus-4-8";
-          };
-          "claude-opus-4-7" = {
-            name = "claude-opus-4-7";
-          };
-          "claude-opus-4-6" = {
-            name = "claude-opus-4-6";
-          };
-          "gpt-5.3-codex" = {
-            name = "gpt-5.3-codex";
-          };
-          "gpt-5.4" = {
-            name = "gpt-5.4";
-          };
-          "gpt-5.4-mini" = {
-            name = "gpt-5.4-mini";
-          };
-          "gpt-5.5" = {
-            name = "gpt-5.5";
-          };
-          "gpt-5.3-codex-spark" = {
-            name = "gpt-5.3-codex-spark";
-          };
-          "gemini-3-flash" = {
-            name = "gemini-3-flash";
-          };
-          "gemini-3.1-flash-lite" = {
-            name = "gemini-3.1-flash-lite";
-          };
-          "gemini-3.1-flash-lite-preview" = {
-            name = "gemini-3.1-flash-lite-preview";
-          };
-          "gemini-3.1-pro-preview" = {
-            name = "gemini-3.1-pro-preview";
-          };
+          # ── Claude 系列 ──
+          "claude-haiku-4-5-20251001" = { name = "claude-haiku-4-5-20251001"; };
+          "claude-haiku-4-5-20251001-thinking" = { name = "claude-haiku-4-5-20251001-thinking"; };
+          "claude-opus-4-6" = { name = "claude-opus-4-6"; };
+          "claude-opus-4-6-thinking" = { name = "claude-opus-4-6-thinking"; };
+          "claude-opus-4-7" = { name = "claude-opus-4-7"; };
+          "claude-opus-4-7-thinking" = { name = "claude-opus-4-7-thinking"; };
+          "claude-opus-4-8" = { name = "claude-opus-4-8"; };
+          "claude-opus-4-8-thinking" = { name = "claude-opus-4-8-thinking"; };
+          "claude-opus-5" = { name = "claude-opus-5"; };
+          "claude-opus-5-thinking" = { name = "claude-opus-5-thinking"; };
+          "claude-sonnet-4-6" = { name = "claude-sonnet-4-6"; };
+          "claude-sonnet-4-6-thinking" = { name = "claude-sonnet-4-6-thinking"; };
+          "claude-sonnet-5" = { name = "claude-sonnet-5"; };
+          "claude-sonnet-5-thinking" = { name = "claude-sonnet-5-thinking"; };
+          # ── OpenAI 系列 ──
+          "codex-auto-review" = { name = "codex-auto-review"; };
+          "composer-2.5" = { name = "composer-2.5"; };
+          "gpt-5.4-mini" = { name = "gpt-5.4-mini"; };
+          "gpt-5.5" = { name = "gpt-5.5"; };
+          "gpt-5.5-openai-compact" = { name = "gpt-5.5-openai-compact"; };
+          "gpt-5.6-luna" = { name = "gpt-5.6-luna"; };
+          "gpt-5.6-sol" = { name = "gpt-5.6-sol"; };
+          "gpt-5.6-sol-openai-compact" = { name = "gpt-5.6-sol-openai-compact"; };
+          "gpt-5.6-terra" = { name = "gpt-5.6-terra"; };
+          "gpt-5.6-terra-openai-compact" = { name = "gpt-5.6-terra-openai-compact"; };
+          "gpt-6-astra" = { name = "gpt-6-astra"; };
+          "gpt-image-2" = { name = "gpt-image-2"; };
+          "gpt-oss-120b-free" = { name = "gpt-oss-120b-free"; };
+          # ── DeepSeek 系列 ──
+          "deepseek-v4-flash" = { name = "deepseek-v4-flash"; };
+          "deepseek-v4-flash-free" = { name = "deepseek-v4-flash-free"; };
+          "deepseek-v4-pro" = { name = "deepseek-v4-pro"; };
+          # ── Grok 系列 ──
+          "grok-4.5" = { name = "grok-4.5"; };
+          "grok-4.6" = { name = "grok-4.6"; };
+          # ── MiniMax 系列 ──
+          "minimax-m2.7-free" = { name = "minimax-m2.7-free"; };
+          "minimax-m3" = { name = "minimax-m3"; };
+          # ── 其他 ──
+          "muse-spark-1.3" = { name = "muse-spark-1.3"; };
+          "musk-4.5" = { name = "musk-4.5"; };
         };
       };
       deepseek = {
@@ -496,6 +502,29 @@ in
       chmod 644 "${config.home.homeDirectory}/.omp/agent/config.yml"
     '';
 
+  # ── omp plugins: 确保声明式插件在 rebuild 时自动安装 ─────────────────────
+  home.activation.ompPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    export PATH="${pkgs.git}/bin:$PATH"
+    PLUGINS_DIR="${config.home.homeDirectory}/.omp/plugins"
+    OMP_BIN="${pkgs.omp}/bin/omp"
+
+    # 声明需要的插件列表
+    WANTED_PLUGINS=(
+      "git:github.com/vedang/pi-prompt-history"
+    )
+
+    mkdir -p "$PLUGINS_DIR"
+
+    for plugin in "''${WANTED_PLUGINS[@]}"; do
+      # 从 git:github.com/user/repo 提取包名
+      pkg_name="''${plugin##*/}"
+      if [ ! -d "$PLUGINS_DIR/node_modules/$pkg_name" ]; then
+        echo "omp-plugins: installing $plugin..."
+        $OMP_BIN plugin install "$plugin" 2>&1 || echo "  ⚠ failed: $plugin"
+      fi
+    done
+  '';
+
   home.file.".omp/agent/models.yml".text = let
     # 只有 apiKey 非空的 provider 才会被写入 models.yml，避免 schema 校验报错
     bigbigdogKey = env.bigbigdogApiKey or "";
@@ -507,8 +536,13 @@ in
       "    apiKey: \"${bigbigdogKey}\"\n"
       "    api: openai-completions\n"
       "    models:\n"
-      "      - id: claude-fable-5\n"
-      "        name: Claude Fable 5 (BigBigDog)\n"
+      "      - id: claude-haiku-4-5-20251001\n"
+      "        name: Claude Haiku 4.5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        input: [text, image]\n"
+      "      - id: claude-haiku-4-5-20251001-thinking\n"
+      "        name: Claude Haiku 4.5 Thinking (BigBigDog)\n"
       "        contextWindow: 200000\n"
       "        maxTokens: 64000\n"
       "        reasoning: true\n"
@@ -519,8 +553,20 @@ in
       "        maxTokens: 64000\n"
       "        reasoning: true\n"
       "        input: [text, image]\n"
+      "      - id: claude-opus-4-6-thinking\n"
+      "        name: Claude Opus 4.6 Thinking (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
       "      - id: claude-opus-4-7\n"
       "        name: Claude Opus 4.7 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-4-7-thinking\n"
+      "        name: Claude Opus 4.7 Thinking (BigBigDog)\n"
       "        contextWindow: 200000\n"
       "        maxTokens: 64000\n"
       "        reasoning: true\n"
@@ -531,17 +577,164 @@ in
       "        maxTokens: 64000\n"
       "        reasoning: true\n"
       "        input: [text, image]\n"
-      "      - id: gpt-5.4\n"
-      "        name: GPT-5.4 (BigBigDog)\n"
+      "      - id: claude-opus-4-8-thinking\n"
+      "        name: Claude Opus 4.8 Thinking (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-5\n"
+      "        name: Claude Opus 5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-5-thinking\n"
+      "        name: Claude Opus 5 Thinking (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-sonnet-4-6\n"
+      "        name: Claude Sonnet 4.6 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        input: [text, image]\n"
+      "      - id: claude-sonnet-4-6-thinking\n"
+      "        name: Claude Sonnet 4.6 Thinking (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-sonnet-5\n"
+      "        name: Claude Sonnet 5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        input: [text, image]\n"
+      "      - id: claude-sonnet-5-thinking\n"
+      "        name: Claude Sonnet 5 Thinking (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: codex-auto-review\n"
+      "        name: Codex Auto Review (BigBigDog)\n"
       "        contextWindow: 200000\n"
       "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: composer-2.5\n"
+      "        name: Composer 2.5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: deepseek-v4-flash\n"
+      "        name: DeepSeek V4 Flash (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: deepseek-v4-flash-free\n"
+      "        name: DeepSeek V4 Flash Free (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: deepseek-v4-pro\n"
+      "        name: DeepSeek V4 Pro (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
       "        reasoning: true\n"
+      "        input: [text]\n"
+      "      - id: gpt-5.4-mini\n"
+      "        name: GPT-5.4 Mini (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
       "        input: [text, image]\n"
       "      - id: gpt-5.5\n"
       "        name: GPT-5.5 (BigBigDog)\n"
-      "        contextWindow: 200000\n"
+      "        contextWindow: 272000\n"
       "        maxTokens: 32000\n"
       "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.5-openai-compact\n"
+      "        name: GPT-5.5 Compact (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.6-luna\n"
+      "        name: GPT-5.6 Luna (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.6-sol\n"
+      "        name: GPT-5.6 Sol (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.6-sol-openai-compact\n"
+      "        name: GPT-5.6 Sol Compact (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.6-terra\n"
+      "        name: GPT-5.6 Terra (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-5.6-terra-openai-compact\n"
+      "        name: GPT-5.6 Terra Compact (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-6-astra\n"
+      "        name: GPT-6 Astra (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-image-2\n"
+      "        name: GPT Image 2 (BigBigDog)\n"
+      "        contextWindow: 32000\n"
+      "        maxTokens: 4096\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-oss-120b-free\n"
+      "        name: GPT OSS 120B Free (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: grok-4.5\n"
+      "        name: Grok 4.5 (BigBigDog)\n"
+      "        contextWindow: 131072\n"
+      "        maxTokens: 32000\n"
+      "        input: [text, image]\n"
+      "      - id: grok-4.6\n"
+      "        name: Grok 4.6 (BigBigDog)\n"
+      "        contextWindow: 131072\n"
+      "        maxTokens: 32000\n"
+      "        input: [text, image]\n"
+      "      - id: minimax-m2.7-free\n"
+      "        name: MiniMax M2.7 Free (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: minimax-m3\n"
+      "        name: MiniMax M3 (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: muse-spark-1.3\n"
+      "        name: Muse Spark 1.3 (BigBigDog)\n"
+      "        contextWindow: 128000\n"
+      "        maxTokens: 32000\n"
+      "        input: [text]\n"
+      "      - id: musk-4.5\n"
+      "        name: Musk 4.5 (BigBigDog)\n"
+      "        contextWindow: 131072\n"
+      "        maxTokens: 32000\n"
       "        input: [text, image]\n"
     ]);
     bytecatBlock = lib.optionalString (bytekatKey != "") (lib.concatStrings [
@@ -1447,6 +1640,14 @@ in
       fi
     }
     pick_display
+
+    # ── 着色器缓存持久化 ──
+    # 核心修复已在系统级 environment.variables 设置（见 modules/nixos/desktop.nix）：
+    #   __GL_SHADER_DISK_CACHE_SIZE=10GB + SKIP_CLEANUP 解决 NVIDIA 驱动清理缓存
+    # 此处补充 Steam/DXVK 专用变量：
+    export MESA_SHADER_CACHE_DIR="$HOME/.cache/mesa-shader-cache"
+    export DXVK_STATE_CACHE=1
+    export DXVK_STATE_CACHE_PATH="$HOME/.local/share/Steam/dxvk-cache"
 
     # Fix: Steam's bundled libaudio.so (2012) crashes in pa_card_info callback
     # with PipeWire. Intercept pa_context_get_card_info_list to make it a no-op.

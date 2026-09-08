@@ -247,56 +247,48 @@ in
           bigbigdog = {
             api_url = "https://www.hongkongdog.cc/v1";
             available_models = [
-              {
-                name = "claude-fable-5";
-                display_name = "Claude Fable 5";
-                max_tokens = 200000;
-              }
-              {
-                name = "claude-opus-4-8";
-                display_name = "Claude Opus 4.8";
-                max_tokens = 200000;
-              }
-              {
-                name = "claude-opus-4-7";
-                display_name = "Claude Opus 4.7";
-                max_tokens = 200000;
-              }
-              {
-                name = "claude-opus-4-6";
-                display_name = "Claude Opus 4.6";
-                max_tokens = 200000;
-              }
-              {
-                name = "gpt-5.3-codex";
-                display_name = "GPT 5.3 Codex";
-                max_tokens = 272000;
-              }
-              {
-                name = "gpt-5.4";
-                display_name = "GPT 5.4";
-                max_tokens = 272000;
-              }
-              {
-                name = "gpt-5.4-mini";
-                display_name = "GPT 5.4 Mini";
-                max_tokens = 272000;
-              }
-              {
-                name = "gpt-5.5";
-                display_name = "GPT 5.5";
-                max_tokens = 272000;
-              }
-              {
-                name = "gemini-3-flash";
-                display_name = "Gemini 3 Flash";
-                max_tokens = 1000000;
-              }
-              {
-                name = "gemini-3.1-pro-preview";
-                display_name = "Gemini 3.1 Pro";
-                max_tokens = 1000000;
-              }
+              # ── Claude 系列 ──
+              { name = "claude-haiku-4-5-20251001"; display_name = "Claude Haiku 4.5"; max_tokens = 200000; }
+              { name = "claude-haiku-4-5-20251001-thinking"; display_name = "Claude Haiku 4.5 Thinking"; max_tokens = 200000; }
+              { name = "claude-opus-4-6"; display_name = "Claude Opus 4.6"; max_tokens = 200000; }
+              { name = "claude-opus-4-6-thinking"; display_name = "Claude Opus 4.6 Thinking"; max_tokens = 200000; }
+              { name = "claude-opus-4-7"; display_name = "Claude Opus 4.7"; max_tokens = 200000; }
+              { name = "claude-opus-4-7-thinking"; display_name = "Claude Opus 4.7 Thinking"; max_tokens = 200000; }
+              { name = "claude-opus-4-8"; display_name = "Claude Opus 4.8"; max_tokens = 200000; }
+              { name = "claude-opus-4-8-thinking"; display_name = "Claude Opus 4.8 Thinking"; max_tokens = 200000; }
+              { name = "claude-opus-5"; display_name = "Claude Opus 5"; max_tokens = 200000; }
+              { name = "claude-opus-5-thinking"; display_name = "Claude Opus 5 Thinking"; max_tokens = 200000; }
+              { name = "claude-sonnet-4-6"; display_name = "Claude Sonnet 4.6"; max_tokens = 200000; }
+              { name = "claude-sonnet-4-6-thinking"; display_name = "Claude Sonnet 4.6 Thinking"; max_tokens = 200000; }
+              { name = "claude-sonnet-5"; display_name = "Claude Sonnet 5"; max_tokens = 200000; }
+              { name = "claude-sonnet-5-thinking"; display_name = "Claude Sonnet 5 Thinking"; max_tokens = 200000; }
+              # ── OpenAI 系列 ──
+              { name = "codex-auto-review"; display_name = "Codex Auto Review"; max_tokens = 200000; }
+              { name = "composer-2.5"; display_name = "Composer 2.5"; max_tokens = 200000; }
+              { name = "gpt-5.4-mini"; display_name = "GPT 5.4 Mini"; max_tokens = 272000; }
+              { name = "gpt-5.5"; display_name = "GPT 5.5"; max_tokens = 272000; }
+              { name = "gpt-5.5-openai-compact"; display_name = "GPT 5.5 Compact"; max_tokens = 272000; }
+              { name = "gpt-5.6-luna"; display_name = "GPT 5.6 Luna"; max_tokens = 272000; }
+              { name = "gpt-5.6-sol"; display_name = "GPT 5.6 Sol"; max_tokens = 272000; }
+              { name = "gpt-5.6-sol-openai-compact"; display_name = "GPT 5.6 Sol Compact"; max_tokens = 272000; }
+              { name = "gpt-5.6-terra"; display_name = "GPT 5.6 Terra"; max_tokens = 272000; }
+              { name = "gpt-5.6-terra-openai-compact"; display_name = "GPT 5.6 Terra Compact"; max_tokens = 272000; }
+              { name = "gpt-6-astra"; display_name = "GPT 6 Astra"; max_tokens = 272000; }
+              { name = "gpt-image-2"; display_name = "GPT Image 2"; max_tokens = 32000; }
+              { name = "gpt-oss-120b-free"; display_name = "GPT OSS 120B Free"; max_tokens = 128000; }
+              # ── DeepSeek 系列 ──
+              { name = "deepseek-v4-flash"; display_name = "DeepSeek V4 Flash"; max_tokens = 128000; }
+              { name = "deepseek-v4-flash-free"; display_name = "DeepSeek V4 Flash Free"; max_tokens = 128000; }
+              { name = "deepseek-v4-pro"; display_name = "DeepSeek V4 Pro"; max_tokens = 128000; }
+              # ── Grok 系列 ──
+              { name = "grok-4.5"; display_name = "Grok 4.5"; max_tokens = 131072; }
+              { name = "grok-4.6"; display_name = "Grok 4.6"; max_tokens = 131072; }
+              # ── MiniMax 系列 ──
+              { name = "minimax-m2.7-free"; display_name = "MiniMax M2.7 Free"; max_tokens = 128000; }
+              { name = "minimax-m3"; display_name = "MiniMax M3"; max_tokens = 128000; }
+              # ── 其他 ──
+              { name = "muse-spark-1.3"; display_name = "Muse Spark 1.3"; max_tokens = 128000; }
+              { name = "musk-4.5"; display_name = "Musk 4.5"; max_tokens = 131072; }
             ];
           };
 

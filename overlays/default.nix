@@ -62,21 +62,21 @@ final: prev: {
 
   omp = prev.callPackage ../pkgs/omp.nix { };
 
-  # opencode 1.18.5 — nixpkgs 尚未更新，覆盖 src + node_modules hash
+  # opencode 1.18.29 — nixpkgs 尚未更新，覆盖 src + node_modules hash
   opencode = prev.opencode.overrideAttrs (old: rec {
-    version = "1.18.5";
+    version = "1.18.29";
     src = prev.fetchFromGitHub {
       owner = "anomalyco";
       repo = "opencode";
       tag = "v${version}";
-      hash = "sha256-qO26isOZNzdVX0Pd6IYRhhnOtcrvL3nI0C34kczzW0k=";
+      hash = "sha256-lCXlxTOhcX70jxJAbpolyGlIxQK2nst+6bFhq3Xzdmc=";
     };
     env = (old.env or {}) // {
       OPENCODE_VERSION = version;
     };
     node_modules = old.node_modules.overrideAttrs (_: {
       inherit version src;
-      outputHash = "sha256-DDrijxS2geI1uFyj82gn5JPFOM6Mlwzi0OohG7vxoag=";
+      outputHash = "sha256-2HEUv4eTo8307D4GTqxFIyq/yCj/c9LPDL4dZEDhMwU=";
     });
   });
 
@@ -183,5 +183,19 @@ os.makedirs(args.directory, exist_ok=True)
 # fish 4.8+ no longer ships this script; stub for HM compat
 STUB
     '';
+  });
+
+  # wechat AppImage FHS 沙箱默认不含 v4l-utils（libv4l2 用户空间库），
+  # 导致微信无法通过 V4L2 API 枚举/打开摄像头；同时缺少 pipewire 客户端库，
+  # 造成麦克风设备枚举失败。利用 passthru.args 重建 FHS 环境注入缺失依赖。
+  wechat = let
+    orig = prev.wechat;
+    origArgs = orig.passthru.args;
+  in prev.buildFHSEnv (origArgs // {
+    targetPkgs = pkgs: origArgs.targetPkgs pkgs ++ (with pkgs; [
+      v4l-utils        # libv4l2.so — 摄像头 V4L2 用户空间枚举
+      pipewire         # libpipewire 客户端（PipeWire Camera portal）
+      libcamera        # libcamera SPA 插件
+    ]);
   });
 }

@@ -18,6 +18,7 @@ in
       "files.local"       # FileBrowser (scale-to-zero)
       "comfyui.local"     # ComfyUI (scale-to-zero, GPU)
       "ocr.local"         # OCR vLLM (scale-to-zero, GPU)
+      "llm.local"         # LLM llama.cpp (scale-to-zero, GPU)
       "agent.local"       # Pi Agent (opencode serve)
       "traefik.local"     # Traefik dashboard
     ];

@@ -39,6 +39,11 @@ let
   patchMoqiScript = ./patch-moqi.py;
   punctuatorYaml = ./rime-punctuator.yaml;
 
+  # AI 候选词组件
+  aiImeFilter = ./ai-ime/rime_ai_filter.lua;
+  aiImeProcessor = ./ai-ime/rime_ai_processor.lua;
+  aiImePatchScript = ./ai-ime/patch-register-filter.py;
+
   rimeWithCustom = pkgs.runCommand "fcitx5-rime-with-custom" {
     nativeBuildInputs = [ pkgs.python3 ];
   } ''
@@ -52,6 +57,18 @@ let
 
     python3 ${patchSpellerScript} ${fuzzyQuanpinYaml} $out/moqi_speller.yaml
     python3 ${patchMoqiScript} $out/moqi.yaml ${punctuatorYaml}
+
+    # AI 候选词: processor + filter + rime.lua 注册
+    cp ${aiImeFilter} $out/lua/ai_ime.lua
+    cp ${aiImeProcessor} $out/lua/rime_ai_processor.lua
+    python3 ${aiImePatchScript} $out/moqi.yaml
+
+    # rime.lua: 确保模块被加载（librime-lua 自动发现需要此文件存在）
+    cat > $out/rime.lua << 'RIMEEOF'
+    -- Rime lua 模块入口
+    -- librime-lua 通过 @* 语法自动匹配 lua/ 目录下同名文件
+    -- 此文件确保 rime 加载 lua 环境
+    RIMEEOF
   '';
 in
 {
@@ -100,4 +117,26 @@ in
       $DRY_RUN_CMD rm -f "$FCITX_PROFILE"
     fi
   '';
+
+  # ── AI IME Daemon (本地 Qwen 输入法候选) ────────────────────────
+  systemd.user.services.ai-ime-daemon = {
+    Unit = {
+      Description = "AI IME candidate daemon (local Qwen via Ollama)";
+      After = [ "graphical-session.target" ];
+      Requires = [ "default.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.python3.withPackages (ps: with ps; [ redis requests watchdog ])}/bin/python3 ${./ai-ime/daemon.py}";
+      Restart = "on-failure";
+      RestartSec = 3;
+      Environment = [
+        "AI_IME_REDIS_HOST=127.0.0.1"
+        "AI_IME_REDIS_PORT=6399"
+        "AI_IME_LLM_URL=http://127.0.0.1:11434/v1"
+        "AI_IME_LLM_MODEL=qwen3:4b"
+        "AI_IME_LLM_TIMEOUT=5"
+      ];
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 }
