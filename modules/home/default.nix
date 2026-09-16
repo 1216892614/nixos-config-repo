@@ -83,8 +83,8 @@ in
     fastfetch
     wechat # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
     qq # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
-    wemeet # 腾讯会议（屏幕共享通过 xdg-desktop-portal ScreenCast）
     qqmusic
+    telegram-desktop
     # ── 文档阅读 ──
     foliate # PDF / EPUB / DjVu / CBR / FB2 / MOBI 阅读器
     (callPackage ../../pkgs/doxx.nix { }) # 终端 DOCX 查看器 (doxx file.docx)
@@ -1924,6 +1924,25 @@ in
     MimeType=text/plain;
   '';
 
+  # Qoder Desktop — bin: opt/Qoder/qoder (Electron)
+  home.file.".local/bin/qoder-desktop".text = ''
+    #!/usr/bin/env bash
+    exec "${config.home.homeDirectory}/.local/opt/qoder/opt/Qoder/qoder" --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime "$@"
+  '';
+  home.file.".local/bin/qoder-desktop".executable = true;
+  xdg.dataFile."applications/qoder.desktop".text = ''
+    [Desktop Entry]
+    Name=Qoder
+    Comment=Agentic Coding Platform
+    Exec=${config.home.homeDirectory}/.local/bin/qoder-desktop --no-sandbox --ozone-platform-hint=auto --enable-wayland-ime %F
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/qoder/usr/share/icons/hicolor/512x512/apps/qoder.png
+    Categories=Development;IDE;
+    Keywords=qoder;code;editor;ai;agent;
+    MimeType=text/plain;
+  '';
+
   # osu! — bin: usr/bin/osu! (dotnet)
   home.file.".local/bin/osu".text = ''
     #!/usr/bin/env bash
@@ -1959,6 +1978,35 @@ in
     Categories=Office;
     Keywords=obsidian;notes;markdown;knowledge;
     MimeType=x-scheme-handler/obsidian;
+  '';
+
+  # 钉钉 DingTalk — bin: com.alibabainc.dingtalk (Qt native)
+  # 通过 Elevator.sh 启动，需要 cd 到版本目录并 LD_PRELOAD libgbm + libcef
+  home.file.".local/bin/dingtalk".text = ''
+    #!/usr/bin/env bash
+    DINGTALK_BASE="${config.home.homeDirectory}/.local/opt/dingtalk/opt/apps/com.alibabainc.dingtalk/files"
+    # 自动检测版本目录（取第一个匹配的 *-Release.* 目录）
+    VERSION_DIR="$(find "$DINGTALK_BASE" -maxdepth 1 -type d -name '*-Release.*' | head -1)"
+    if [ -z "$VERSION_DIR" ]; then
+      echo "DingTalk: version directory not found in $DINGTALK_BASE" >&2
+      exit 1
+    fi
+    cd "$VERSION_DIR"
+    LD_PRELOAD="./libgbm.so ./plugins/dtwebview/libcef.so" exec ./com.alibabainc.dingtalk "$@"
+  '';
+  home.file.".local/bin/dingtalk".executable = true;
+  xdg.dataFile."applications/dingtalk.desktop".text = ''
+    [Desktop Entry]
+    Name=钉钉
+    Name[en_US]=DingTalk
+    Comment=AI 时代的工作方式
+    Exec=${config.home.homeDirectory}/.local/bin/dingtalk %u
+    Terminal=false
+    Type=Application
+    Icon=${config.home.homeDirectory}/.local/opt/dingtalk/opt/apps/com.alibabainc.dingtalk/files/logo.ico
+    Categories=Chat;Office;Network;
+    Keywords=dingtalk;钉钉;alibaba;
+    MimeType=x-scheme-handler/dingtalk;
   '';
 
   # QQ (nixpkgs): desktop entry so Walker shows it; absolute Exec path.
