@@ -18,9 +18,17 @@ in
       };
 
       opener = {
+        edit = [
+          {
+            run = ''zed "$@"'';
+            orphan = true;
+            desc = "Edit in Zed";
+            "for" = "linux";
+          }
+        ];
         terminal = [
           {
-            run = ''kitty --directory "%s" -e zellij'';
+            run = ''kitty --directory "$1" -e zellij'';
             orphan = true;
             desc = "Open in Zellij (kitty)";
             "for" = "linux";
@@ -44,6 +52,14 @@ in
 
       open = {
         prepend_rules = [
+          # 文本文件 → Zed
+          { mime = "text/*"; use = "edit"; }
+          { mime = "application/json"; use = "edit"; }
+          { mime = "application/toml"; use = "edit"; }
+          { mime = "application/xml"; use = "edit"; }
+          { mime = "application/x-nix"; use = "edit"; }
+          { mime = "application/javascript"; use = "edit"; }
+          # 目录 → Zellij
           { url = "*/"; use = "terminal"; }
           # 图片格式 → imv
           { mime = "image/*"; use = "image"; }

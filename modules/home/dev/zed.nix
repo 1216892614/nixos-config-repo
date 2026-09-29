@@ -258,6 +258,8 @@ in
               { name = "claude-opus-4-8-thinking"; display_name = "Claude Opus 4.8 Thinking"; max_tokens = 200000; }
               { name = "claude-opus-5"; display_name = "Claude Opus 5"; max_tokens = 200000; }
               { name = "claude-opus-5-thinking"; display_name = "Claude Opus 5 Thinking"; max_tokens = 200000; }
+              { name = "claude-opus-5-5"; display_name = "Claude Opus 5.5"; max_tokens = 200000; }
+              { name = "claude-opus-5-5-thinking"; display_name = "Claude Opus 5.5 Thinking"; max_tokens = 200000; }
               { name = "claude-sonnet-4-6"; display_name = "Claude Sonnet 4.6"; max_tokens = 200000; }
               { name = "claude-sonnet-4-6-thinking"; display_name = "Claude Sonnet 4.6 Thinking"; max_tokens = 200000; }
               { name = "claude-sonnet-5"; display_name = "Claude Sonnet 5"; max_tokens = 200000; }
@@ -265,29 +267,22 @@ in
               # ── OpenAI 系列 ──
               { name = "codex-auto-review"; display_name = "Codex Auto Review"; max_tokens = 200000; }
               { name = "composer-2.5"; display_name = "Composer 2.5"; max_tokens = 200000; }
-              { name = "gpt-5.4-mini"; display_name = "GPT 5.4 Mini"; max_tokens = 272000; }
               { name = "gpt-5.5"; display_name = "GPT 5.5"; max_tokens = 272000; }
               { name = "gpt-5.5-openai-compact"; display_name = "GPT 5.5 Compact"; max_tokens = 272000; }
-              { name = "gpt-5.6-luna"; display_name = "GPT 5.6 Luna"; max_tokens = 272000; }
               { name = "gpt-5.6-sol"; display_name = "GPT 5.6 Sol"; max_tokens = 272000; }
               { name = "gpt-5.6-sol-openai-compact"; display_name = "GPT 5.6 Sol Compact"; max_tokens = 272000; }
               { name = "gpt-5.6-terra"; display_name = "GPT 5.6 Terra"; max_tokens = 272000; }
               { name = "gpt-5.6-terra-openai-compact"; display_name = "GPT 5.6 Terra Compact"; max_tokens = 272000; }
               { name = "gpt-6-astra"; display_name = "GPT 6 Astra"; max_tokens = 272000; }
+              { name = "gpt-6-luna"; display_name = "GPT 6 Luna"; max_tokens = 272000; }
+              { name = "gpt-6-sol"; display_name = "GPT 6 Sol"; max_tokens = 272000; }
               { name = "gpt-image-2"; display_name = "GPT Image 2"; max_tokens = 32000; }
+              { name = "gpt-image-2.5"; display_name = "GPT Image 2.5"; max_tokens = 32000; }
               { name = "gpt-oss-120b-free"; display_name = "GPT OSS 120B Free"; max_tokens = 128000; }
-              # ── DeepSeek 系列 ──
-              { name = "deepseek-v4-flash"; display_name = "DeepSeek V4 Flash"; max_tokens = 128000; }
-              { name = "deepseek-v4-flash-free"; display_name = "DeepSeek V4 Flash Free"; max_tokens = 128000; }
-              { name = "deepseek-v4-pro"; display_name = "DeepSeek V4 Pro"; max_tokens = 128000; }
               # ── Grok 系列 ──
               { name = "grok-4.5"; display_name = "Grok 4.5"; max_tokens = 131072; }
               { name = "grok-4.6"; display_name = "Grok 4.6"; max_tokens = 131072; }
-              # ── MiniMax 系列 ──
-              { name = "minimax-m2.7-free"; display_name = "MiniMax M2.7 Free"; max_tokens = 128000; }
-              { name = "minimax-m3"; display_name = "MiniMax M3"; max_tokens = 128000; }
               # ── 其他 ──
-              { name = "muse-spark-1.3"; display_name = "Muse Spark 1.3"; max_tokens = 128000; }
               { name = "musk-4.5"; display_name = "Musk 4.5"; max_tokens = 131072; }
             ];
           };
@@ -370,13 +365,76 @@ in
     Name=Open a new workspace
   '';
 
-  # Set Zed as default application for text files
+  # Zed 作为所有文本/代码/配置文件的默认编辑器；显式声明浏览器处理 http/https
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
+      # ── 纯文本 / 空文件 ──
       "text/plain" = "zed.desktop";
       "application/x-zerosize" = "zed.desktop";
+      # ── 结构化数据格式 ──
+      "application/json" = "zed.desktop";
+      "application/xml" = "zed.desktop";
+      "application/x-yaml" = "zed.desktop";
+      "application/yaml" = "zed.desktop";
+      "application/toml" = "zed.desktop";
+      "text/xml" = "zed.desktop";
+      "text/csv" = "zed.desktop";
+      "text/tab-separated-values" = "zed.desktop";
+      # ── Web 前端 ──
+      "text/html" = "zed.desktop";
+      "text/css" = "zed.desktop";
+      "text/javascript" = "zed.desktop";
+      "application/javascript" = "zed.desktop";
+      "application/x-javascript" = "zed.desktop";
+      "application/xhtml+xml" = "zed.desktop";
+      "application/x-httpd-php" = "zed.desktop";
+      # ── 编程语言源码 ──
+      "text/x-python" = "zed.desktop";
+      "text/x-python3" = "zed.desktop";
+      "text/x-script.python" = "zed.desktop";
+      "text/x-csrc" = "zed.desktop";
+      "text/x-chdr" = "zed.desktop";
+      "text/x-c++src" = "zed.desktop";
+      "text/x-c++hdr" = "zed.desktop";
+      "text/x-java" = "zed.desktop";
+      "text/x-go" = "zed.desktop";
+      "text/x-rust" = "zed.desktop";
+      "text/x-lua" = "zed.desktop";
+      "text/x-ruby" = "zed.desktop";
+      "text/x-perl" = "zed.desktop";
+      "text/x-haskell" = "zed.desktop";
+      "text/x-kotlin" = "zed.desktop";
+      "text/x-scala" = "zed.desktop";
+      "text/x-swift" = "zed.desktop";
+      "text/x-dart" = "zed.desktop";
+      "text/typescript" = "zed.desktop";
+      "text/x-typescript" = "zed.desktop";
+      "application/x-typescript" = "zed.desktop";
+      # ── Shell / 脚本 ──
+      "text/x-shellscript" = "zed.desktop";
+      "application/x-shellscript" = "zed.desktop";
+      "text/x-sh" = "zed.desktop";
+      # ── 配置 / 构建 ──
+      "text/x-makefile" = "zed.desktop";
+      "text/x-cmake" = "zed.desktop";
+      "text/x-dockerfile" = "zed.desktop";
+      "application/x-nix" = "zed.desktop";
+      "text/x-nix" = "zed.desktop";
+      "text/markdown" = "zed.desktop";
+      "text/x-markdown" = "zed.desktop";
+      "text/x-tex" = "zed.desktop";
+      "text/x-log" = "zed.desktop";
+      "text/x-diff" = "zed.desktop";
+      "text/x-patch" = "zed.desktop";
+      "application/x-desktop" = "zed.desktop";
+      "application/sql" = "zed.desktop";
+      "text/x-sql" = "zed.desktop";
+      # ── Zed URL scheme ──
       "x-scheme-handler/zed" = "zed.desktop";
+      # ── 浏览器：显式声明避免链接被其他应用抢占 ──
+      "x-scheme-handler/http" = "com.google.Chrome.desktop";
+      "x-scheme-handler/https" = "com.google.Chrome.desktop";
     };
   };
 

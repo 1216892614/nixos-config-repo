@@ -222,6 +222,8 @@ in
           "claude-opus-4-8-thinking" = { name = "claude-opus-4-8-thinking"; };
           "claude-opus-5" = { name = "claude-opus-5"; };
           "claude-opus-5-thinking" = { name = "claude-opus-5-thinking"; };
+          "claude-opus-5-5" = { name = "claude-opus-5-5"; };
+          "claude-opus-5-5-thinking" = { name = "claude-opus-5-5-thinking"; };
           "claude-sonnet-4-6" = { name = "claude-sonnet-4-6"; };
           "claude-sonnet-4-6-thinking" = { name = "claude-sonnet-4-6-thinking"; };
           "claude-sonnet-5" = { name = "claude-sonnet-5"; };
@@ -229,29 +231,22 @@ in
           # ── OpenAI 系列 ──
           "codex-auto-review" = { name = "codex-auto-review"; };
           "composer-2.5" = { name = "composer-2.5"; };
-          "gpt-5.4-mini" = { name = "gpt-5.4-mini"; };
           "gpt-5.5" = { name = "gpt-5.5"; };
           "gpt-5.5-openai-compact" = { name = "gpt-5.5-openai-compact"; };
-          "gpt-5.6-luna" = { name = "gpt-5.6-luna"; };
           "gpt-5.6-sol" = { name = "gpt-5.6-sol"; };
           "gpt-5.6-sol-openai-compact" = { name = "gpt-5.6-sol-openai-compact"; };
           "gpt-5.6-terra" = { name = "gpt-5.6-terra"; };
           "gpt-5.6-terra-openai-compact" = { name = "gpt-5.6-terra-openai-compact"; };
           "gpt-6-astra" = { name = "gpt-6-astra"; };
+          "gpt-6-luna" = { name = "gpt-6-luna"; };
+          "gpt-6-sol" = { name = "gpt-6-sol"; };
           "gpt-image-2" = { name = "gpt-image-2"; };
+          "gpt-image-2.5" = { name = "gpt-image-2.5"; };
           "gpt-oss-120b-free" = { name = "gpt-oss-120b-free"; };
-          # ── DeepSeek 系列 ──
-          "deepseek-v4-flash" = { name = "deepseek-v4-flash"; };
-          "deepseek-v4-flash-free" = { name = "deepseek-v4-flash-free"; };
-          "deepseek-v4-pro" = { name = "deepseek-v4-pro"; };
           # ── Grok 系列 ──
           "grok-4.5" = { name = "grok-4.5"; };
           "grok-4.6" = { name = "grok-4.6"; };
-          # ── MiniMax 系列 ──
-          "minimax-m2.7-free" = { name = "minimax-m2.7-free"; };
-          "minimax-m3" = { name = "minimax-m3"; };
           # ── 其他 ──
-          "muse-spark-1.3" = { name = "muse-spark-1.3"; };
           "musk-4.5" = { name = "musk-4.5"; };
         };
       };
@@ -595,6 +590,18 @@ in
       "        maxTokens: 64000\n"
       "        reasoning: true\n"
       "        input: [text, image]\n"
+      "      - id: claude-opus-5-5\n"
+      "        name: Claude Opus 5.5 (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: claude-opus-5-5-thinking\n"
+      "        name: Claude Opus 5.5 Thinking (BigBigDog)\n"
+      "        contextWindow: 200000\n"
+      "        maxTokens: 64000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
       "      - id: claude-sonnet-4-6\n"
       "        name: Claude Sonnet 4.6 (BigBigDog)\n"
       "        contextWindow: 200000\n"
@@ -627,27 +634,6 @@ in
       "        contextWindow: 200000\n"
       "        maxTokens: 32000\n"
       "        input: [text]\n"
-      "      - id: deepseek-v4-flash\n"
-      "        name: DeepSeek V4 Flash (BigBigDog)\n"
-      "        contextWindow: 128000\n"
-      "        maxTokens: 32000\n"
-      "        input: [text]\n"
-      "      - id: deepseek-v4-flash-free\n"
-      "        name: DeepSeek V4 Flash Free (BigBigDog)\n"
-      "        contextWindow: 128000\n"
-      "        maxTokens: 32000\n"
-      "        input: [text]\n"
-      "      - id: deepseek-v4-pro\n"
-      "        name: DeepSeek V4 Pro (BigBigDog)\n"
-      "        contextWindow: 128000\n"
-      "        maxTokens: 32000\n"
-      "        reasoning: true\n"
-      "        input: [text]\n"
-      "      - id: gpt-5.4-mini\n"
-      "        name: GPT-5.4 Mini (BigBigDog)\n"
-      "        contextWindow: 272000\n"
-      "        maxTokens: 32000\n"
-      "        input: [text, image]\n"
       "      - id: gpt-5.5\n"
       "        name: GPT-5.5 (BigBigDog)\n"
       "        contextWindow: 272000\n"
@@ -656,12 +642,6 @@ in
       "        input: [text, image]\n"
       "      - id: gpt-5.5-openai-compact\n"
       "        name: GPT-5.5 Compact (BigBigDog)\n"
-      "        contextWindow: 272000\n"
-      "        maxTokens: 32000\n"
-      "        reasoning: true\n"
-      "        input: [text, image]\n"
-      "      - id: gpt-5.6-luna\n"
-      "        name: GPT-5.6 Luna (BigBigDog)\n"
       "        contextWindow: 272000\n"
       "        maxTokens: 32000\n"
       "        reasoning: true\n"
@@ -696,8 +676,25 @@ in
       "        maxTokens: 32000\n"
       "        reasoning: true\n"
       "        input: [text, image]\n"
+      "      - id: gpt-6-luna\n"
+      "        name: GPT-6 Luna (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-6-sol\n"
+      "        name: GPT-6 Sol (BigBigDog)\n"
+      "        contextWindow: 272000\n"
+      "        maxTokens: 32000\n"
+      "        reasoning: true\n"
+      "        input: [text, image]\n"
       "      - id: gpt-image-2\n"
       "        name: GPT Image 2 (BigBigDog)\n"
+      "        contextWindow: 32000\n"
+      "        maxTokens: 4096\n"
+      "        input: [text, image]\n"
+      "      - id: gpt-image-2.5\n"
+      "        name: GPT Image 2.5 (BigBigDog)\n"
       "        contextWindow: 32000\n"
       "        maxTokens: 4096\n"
       "        input: [text, image]\n"
@@ -716,21 +713,6 @@ in
       "        contextWindow: 131072\n"
       "        maxTokens: 32000\n"
       "        input: [text, image]\n"
-      "      - id: minimax-m2.7-free\n"
-      "        name: MiniMax M2.7 Free (BigBigDog)\n"
-      "        contextWindow: 128000\n"
-      "        maxTokens: 32000\n"
-      "        input: [text]\n"
-      "      - id: minimax-m3\n"
-      "        name: MiniMax M3 (BigBigDog)\n"
-      "        contextWindow: 128000\n"
-      "        maxTokens: 32000\n"
-      "        input: [text]\n"
-      "      - id: muse-spark-1.3\n"
-      "        name: Muse Spark 1.3 (BigBigDog)\n"
-      "        contextWindow: 128000\n"
-      "        maxTokens: 32000\n"
-      "        input: [text]\n"
       "      - id: musk-4.5\n"
       "        name: Musk 4.5 (BigBigDog)\n"
       "        contextWindow: 131072\n"
