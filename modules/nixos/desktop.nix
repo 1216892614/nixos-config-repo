@@ -277,11 +277,26 @@ EOF
   '';
 
   boot = {
-    # 注意：v4l2loopback 不能放在 kernelModules 里，否则 howdy 面部识别会失效
-    # 只放在 extraModulePackages 里让它按需加载
+    # v4l2loopback 不能放在 kernelModules 里（有 assertion 阻止，会影响 howdy）
+    # 通过 systemd modules-load 在启动后加载，howdy 先绑定真实 IR 设备不受影响
     kernelModules = [ "uvcvideo" "uinput" ];
     extraModulePackages = with config.boot.kernelPackages; [
       v4l2loopback
     ];
+    extraModprobeConfig = ''
+      options v4l2loopback video_nr=10 exclusive_caps=1 card_label="OBS_Virtual_Camera"
+    '';
+  };
+
+  # 延迟加载 v4l2loopback（绕过 boot.kernelModules assertion）
+  systemd.services.v4l2loopback-load = {
+    description = "Load v4l2loopback kernel module";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-modules-load.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.kmod}/bin/modprobe v4l2loopback";
+    };
   };
 }
