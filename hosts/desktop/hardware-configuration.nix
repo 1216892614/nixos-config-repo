@@ -66,6 +66,20 @@
     ];
   };
 
+  # NVIDIA Container Toolkit — 让 Docker 可以分配 GPU 给容器（ComfyUI 等）
+  hardware.nvidia-container-toolkit.enable = true;
+
+  # ── NVIDIA 着色器缓存：解决每次启动游戏重编译着色器 ──
+  # 根因：NVIDIA 驱动 shader disk cache 默认 1GB，超出后停止写入新着色器或清理旧缓存，
+  # 导致下次启动重新编译。NixOS rebuild 换驱动 store path 会加速失效。
+  # 修复：加大缓存至 10GB + 禁止自动清理。必须全局设置（仅 launch options 无效）。
+  # 参考：https://github.com/ValveSoftware/steam-for-linux/issues/11392
+  environment.variables = {
+    __GL_SHADER_DISK_CACHE = "1";
+    __GL_SHADER_DISK_CACHE_SIZE = "10737418240";          # 10GB
+    __GL_SHADER_DISK_CACHE_SKIP_CLEANUP = "1";
+  };
+
   hardware.enableRedistributableFirmware = true;
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
