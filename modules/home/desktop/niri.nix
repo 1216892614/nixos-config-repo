@@ -3,6 +3,7 @@
 let
   colors = import ../../../lib/colors.nix;
   noctalia = cmd: "dbus-send --session --dest=org.freedesktop.Notifications --type=method_call /org/noctalia ${cmd}";
+  noctaliaIpc = args: [ "${config.home.homeDirectory}/.local/bin/noctalia-ipc" ] ++ args;
 
   # niri-flake schema 尚未覆盖 blur / background-effect（26.04 新功能）
   # 追加原始 KDL 到 finalConfig 输出
@@ -204,15 +205,15 @@ in
           fi
         ''
       ];
-      "Super+P".action.spawn = [ "noctalia-shell" "ipc" "call" "controlCenter" "toggle" ];
-      "Super+Ctrl+P".action.spawn = [ "noctalia-shell" "ipc" "call" "settings" "toggle" ];
+      "Super+P".action.spawn = noctaliaIpc [ "controlCenter" "toggle" ];
+      "Super+Ctrl+P".action.spawn = noctaliaIpc [ "settings" "toggle" ];
       "Super+L".action.focus-column-or-monitor-right = { };
-      "Super+Ctrl+Shift+L".action.spawn = [ "noctalia-shell" "ipc" "call" "lockScreen" "lock" ];
+      "Super+Ctrl+Shift+L".action.spawn = noctaliaIpc [ "lockScreen" "lock" ];
 
-      "XF86AudioRaiseVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "increase" ];
-      "XF86AudioLowerVolume".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "decrease" ];
-      "XF86AudioMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteOutput" ];
-      "XF86AudioMicMute".action.spawn = [ "noctalia-shell" "ipc" "call" "volume" "muteInput" ];
+      "XF86AudioRaiseVolume".action.spawn = noctaliaIpc [ "volume" "increase" ];
+      "XF86AudioLowerVolume".action.spawn = noctaliaIpc [ "volume" "decrease" ];
+      "XF86AudioMute".action.spawn = noctaliaIpc [ "volume" "muteOutput" ];
+      "XF86AudioMicMute".action.spawn = noctaliaIpc [ "volume" "muteInput" ];
 
       "XF86MonBrightnessUp".action.spawn = [ "brightnessctl" "set" "+5%" ];
       "XF86MonBrightnessDown".action.spawn = [ "brightnessctl" "set" "5%-" ];
