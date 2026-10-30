@@ -72,7 +72,6 @@ in
     gemini-cli
     codex
     opencode
-    claude-code
     omp
     docker-buildx
     brightnessctl # backlight control for laptop fn keys
