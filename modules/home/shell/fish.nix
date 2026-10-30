@@ -3,6 +3,22 @@
 let
   colors = import ../../../lib/colors.nix;
   env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else import ../../../env.nix.example;
+  fishAiRev = "acb3892e1d058f997d958e385fe100dbafea1f0b";
+  fishAiSrc = pkgs.fetchFromGitHub {
+    owner = "Realiserad";
+    repo = "fish-ai";
+    rev = fishAiRev;
+    hash = "sha256-UUVPh36/UArWl7XkocLcgJ3BqwlmkGslOguHnaAR4nU=";
+  };
+  # Avoid startup errors if the venv is missing or an installation was interrupted.
+  fishAiGuarded = pkgs.runCommand "fish-ai-guarded" { src = fishAiSrc; } ''
+    mkdir -p "$out"
+    cp -R "$src"/. "$out"/
+    chmod -R u+w "$out"
+    substituteInPlace "$out/conf.d/fish_ai.fish" \
+      --replace-fail 'if status is-interactive && test -d "$_fish_ai_install_dir"' \
+                     'if status is-interactive && test -x "$_fish_ai_install_dir/bin/lookup_setting"'
+  '';
 in
 {
   programs.fish = {
@@ -57,12 +73,7 @@ in
       }
       {
         name = "fish-ai";
-        src = pkgs.fetchFromGitHub {
-          owner = "Realiserad";
-          repo = "fish-ai";
-          rev = "acb3892e1d058f997d958e385fe100dbafea1f0b";
-          hash = "sha256-UUVPh36/UArWl7XkocLcgJ3BqwlmkGslOguHnaAR4nU=";
-        };
+        src = fishAiGuarded;
       }
     ];
 
@@ -439,16 +450,14 @@ in
   # fish-ai venv 引导：首次或更新后自动安装 Python 依赖
   home.activation.bootstrapFishAi = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     FISH_AI_DIR="''${XDG_DATA_HOME:-$HOME/.local/share}/fish-ai"
-    FISH_AI_SRC="${pkgs.fetchFromGitHub {
-      owner = "Realiserad";
-      repo = "fish-ai";
-      rev = "acb3892e1d058f997d958e385fe100dbafea1f0b";
-      hash = "sha256-UUVPh36/UArWl7XkocLcgJ3BqwlmkGslOguHnaAR4nU=";
-    }}"
+    FISH_AI_SRC="${fishAiSrc}"
     MARKER="$FISH_AI_DIR/.installed-rev"
-    CURRENT_REV="acb3892e1d058f997d958e385fe100dbafea1f0b"
+    CURRENT_REV="${fishAiRev}"
 
-    if [ ! -f "$MARKER" ] || [ "$(cat "$MARKER" 2>/dev/null)" != "$CURRENT_REV" ]; then
+    if [ ! -f "$MARKER" ] || [ "$(cat "$MARKER" 2>/dev/null)" != "$CURRENT_REV" ] \
+       || [ ! -x "$FISH_AI_DIR/bin/python3" ] || [ ! -x "$FISH_AI_DIR/bin/lookup_setting" ]; then
+      # Never keep a successful marker across a failed or partial install.
+      rm -f "$MARKER"
       echo "🥡 fish-ai: bootstrapping Python venv..."
       ${pkgs.uv}/bin/uv venv --quiet --clear --python 3.13 "$FISH_AI_DIR"
       echo "🍬 fish-ai: installing dependencies..."
@@ -458,6 +467,10 @@ in
       chmod -R u+w "$FISH_AI_TMP"
       ${pkgs.uv}/bin/uv pip install --quiet --python "$FISH_AI_DIR/bin/python3" "$FISH_AI_TMP"
       rm -rf "$FISH_AI_TMP"
+      if [ ! -x "$FISH_AI_DIR/bin/lookup_setting" ]; then
+        echo "fish-ai: missing lookup_setting after installation" >&2
+        exit 1
+      fi
       # 符号链接系统 CA 证书
       if [ -f /etc/ssl/certs/ca-certificates.crt ]; then
         ln -snf /etc/ssl/certs/ca-certificates.crt \
