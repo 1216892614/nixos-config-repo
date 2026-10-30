@@ -219,8 +219,7 @@ in
   # Same patched Noctalia binary as the systemd service; stable IPC entry point for niri.
   home.file.".local/bin/noctalia-ipc" = {
     executable = true;
-    text = ''
-      #!/bin/sh
+    source = pkgs.writeShellScript "noctalia-ipc" ''
       exec "${patchedNoctaliaShell}/bin/noctalia-shell" ipc call "$@"
     '';
   };
