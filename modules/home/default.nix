@@ -82,7 +82,7 @@ in
     uv # provides uvx for running Python tools (e.g. astrbot)
     fastfetch
     wechat # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
-    qq # nixpkgs package, https://mynixos.com/nixpkgs/package/qq
+    (inputs.nixpkgs-qq.legacyPackages.${pkgs.stdenv.hostPlatform.system}.qq) # QQ from isolated nixpkgs
     qqmusic
     telegram-desktop
     # ── 文档阅读 ──
