@@ -216,6 +216,15 @@ in
 {
   home.packages = [ patchedNoctaliaShell ];
 
+  # Same patched Noctalia binary as the systemd service; stable IPC entry point for niri.
+  home.file.".local/bin/noctalia-ipc" = {
+    executable = true;
+    text = ''
+      #!/bin/sh
+      exec "${patchedNoctaliaShell}/bin/noctalia-shell" ipc call "$@"
+    '';
+  };
+
   # ── 声明式配置文件 ────────────────────────────────────────────────────
   home.file.".config/noctalia/settings.json".text = settingsJson;
   home.file.".config/noctalia/plugins.json".text = pluginsJson;
@@ -256,7 +265,7 @@ in
     Service = {
       Type = "oneshot";
       ExecStart = toString (pkgs.writeShellScript "noctalia-lock-on-start" ''
-        cmd="/etc/profiles/per-user/ep-o1/bin/noctalia-shell"
+        cmd="${patchedNoctaliaShell}/bin/noctalia-shell"
         for _ in $(seq 1 30); do
           "$cmd" ipc call lockScreen lock 2>/dev/null && exit 0
           sleep 0.2
