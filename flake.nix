@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-qq.url = "github:NixOS/nixpkgs/nixos-unstable"; # independent QQ package source
 
     home-manager = {
       url = "github:nix-community/home-manager";
