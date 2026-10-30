@@ -10,6 +10,10 @@ let
   env = if builtins.pathExists ../../env.nix then import ../../env.nix else { };
   colors = import ../../lib/colors.nix;
   steamPulseFix = pkgs.callPackage ../../pkgs/steam-pulse-fix.nix { };
+  qqPackage = (import inputs.nixpkgs-qq {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  }).qq;
   w11CursorTheme = pkgs.runCommand "w11-cc-v2.2-dark-default-wayland" { } ''
     mkdir -p $out/share/icons
     cp -R "${inputs.self}/icons/W11-CC-V2.2-Dark-Default-wayland" "$out/share/icons/W11-CC-V2.2-Dark-Default-wayland"
@@ -82,10 +86,7 @@ in
     uv # provides uvx for running Python tools (e.g. astrbot)
     fastfetch
     wechat # nixpkgs package, https://mynixos.com/nixpkgs/package/wechat
-    ((import inputs.nixpkgs-qq {
-      system = pkgs.stdenv.hostPlatform.system;
-      config.allowUnfree = true;
-    }).qq) # QQ from isolated nixpkgs
+    qqPackage # QQ from isolated nixpkgs
     qqmusic
     telegram-desktop
     # ── 文档阅读 ──
@@ -2002,7 +2003,7 @@ in
     [Desktop Entry]
     Name=QQ
     Name[zh_CN]=QQ
-    Exec=env LD_LIBRARY_PATH=${pkgs.libpulseaudio}/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} ${pkgs.qq}/bin/qq --enable-features=WebRTCPipeWireCapturer --ozone-platform=wayland --enable-wayland-ime %U
+    Exec=env LD_LIBRARY_PATH=${pkgs.libpulseaudio}/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} ${qqPackage}/bin/qq --enable-features=WebRTCPipeWireCapturer --ozone-platform=wayland --enable-wayland-ime %U
     Terminal=false
     Type=Application
     Icon=qq
