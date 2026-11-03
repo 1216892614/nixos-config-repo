@@ -16,7 +16,9 @@
   programs.clash-verge = {
     enable = true;
     package = pkgs.clash-verge-rev;
-    autoStart = true;     # 开机自启（XDG autostart）
+    autoStart = true;       # 开机自启（XDG autostart）
+    serviceMode = true;     # root systemd service → IPC socket → GUI 可安装/控制 mihomo
+    tunMode = true;         # 给二进制加 cap_net_admin capabilities → 可创建 TUN 接口
   };
 
   # ── TUN 模式相关防火墙 / 转发 ─────────────────────────────────────

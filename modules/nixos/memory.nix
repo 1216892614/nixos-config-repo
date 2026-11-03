@@ -57,4 +57,9 @@
     # for apps that malloc large but touch little (e.g. JVM, Electron).
     "vm.overcommit_memory" = 0;        # keep heuristic (safe default)
   };
+
+  # ── 内核抢占模式 ──────────────────────────────────────────────────
+  # Linux 7.x 默认 PREEMPT_LAZY，吞吐优先但交互延迟大幅增加；
+  # 桌面使用需要 full preemption 保证 UI / CLI 响应速度。
+  boot.kernelParams = [ "preempt=full" ];
 }

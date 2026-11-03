@@ -184,6 +184,23 @@
         "type": "github"
       }
     },
+    "nixpkgs-qq": {
+      "locked": {
+        "lastModified": 1793540411,
+        "narHash": "sha256-fiPJ88izTVucjeo2EQ3jk4aWmLg03I1D4vxnX2QjEgE=",
+        "ref": "nixos-unstable",
+        "rev": "0bb2eedc20e4739f29e8045034f2828ad7054f8f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/NixOS/nixpkgs"
+      },
+      "original": {
+        "ref": "nixos-unstable",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/NixOS/nixpkgs"
+      }
+    },
     "nixpkgs-stable": {
       "locked": {
         "lastModified": 1780511130,
@@ -257,6 +274,7 @@
         "niri-glass": "niri-glass",
         "nix-flatpak": "nix-flatpak",
         "nixpkgs": "nixpkgs_3",
+        "nixpkgs-qq": "nixpkgs-qq",
         "walker": "walker"
       }
     },

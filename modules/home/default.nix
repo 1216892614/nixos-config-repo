@@ -1638,6 +1638,10 @@ in
     # Load both 32-bit and 64-bit; ld.so silently ignores the wrong ELF class.
     export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix64.so:${steamPulseFix}/lib/steam_pulse_fix32.so''${LD_PRELOAD:+:$LD_PRELOAD}"
 
+    # Wayland Remote Play: Steam 需要通过 PipeWire portal 截屏
+    # XDG_CURRENT_DESKTOP 让 Steam 知道走 portal 协议而非 X11 截帧
+    export XDG_CURRENT_DESKTOP="''${XDG_CURRENT_DESKTOP:-GNOME}"
+
     # Ensure we run NixOS Steam (programs.steam) so extraPackages/fonts are present.
     exec /run/current-system/sw/bin/steam "$@"
   '';

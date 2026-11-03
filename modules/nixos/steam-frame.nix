@@ -65,9 +65,12 @@ let
   '';
 in
 {
-  # ── 1. 内核需要 7.0+（rtw89_8852cu 驱动从 7.0 起支持 28de:2432）──
-  # 内核升级在 hosts/desktop/hardware-configuration.nix 中设置
-  # 参考 commit: 5f65ebf9aaf00c7443252136066138435ec03958
+  # ── 1. 内核需要 7.2+（Steam Frame 官方要求）──
+  # 7.2: rtw89_8852cu 解除 6 GHz no-IR 限制 + CONFIG_RTW89_DEBUGFS 支持
+  # 7.3: 修复 2.4 GHz 扫描导致适配器 USB 崩溃 (commit 355626a2)
+  # 内核升级在 hosts/desktop/hardware-configuration.nix 中设置 (linuxPackages_latest)
+  # 参考：https://github.com/ValveSoftware/SteamVR-for-Linux/issues/946
+  #       https://github.com/AnotherMike-exe/SteamFrameDongleFix
 
   # ── 2. 无线监管域 + 驱动省电 ──
   boot.extraModprobeConfig = ''
@@ -86,8 +89,20 @@ in
     "usbcore.quirks=28de:2432:k"
   ];
 
-  # ── 5. NetworkManager WiFi 省电关闭 ──
+  # ── 5. NetworkManager WiFi 配置 ──
+  # 省电关闭 + 禁用随机 MAC 扫描：rtw89_8852cu 驱动在 NM 后台扫描时
+  # 容易触发 nl80211 锁死（cfg80211 mutex），导致系统范围卡顿。
+  # 禁用 scan-rand-mac-address 减少触发频率；wifi.powersave 关闭降低延迟。
   networking.networkmanager.wifi.powersave = false;
+  networking.networkmanager.wifi.scanRandMacAddress = false;
+
+  # ── Steam Frame 串流防火墙放行 ──
+  # 用 systemd .link 给适配器固定接口名，不受 USB 端口变化影响
+  systemd.network.links."10-steam-frame" = {
+    matchConfig.Property = "ID_USB_VENDOR_ID=28de ID_USB_MODEL_ID=2432";
+    linkConfig.Name = "steamframe0";
+  };
+  networking.firewall.trustedInterfaces = [ "steamframe0" ];
 
   # ── 6. udev 规则：USB 省电 + 热插拔触发 ──
   # 等效于 Windows 工具的"禁止计算机关闭此设备以节省电源"

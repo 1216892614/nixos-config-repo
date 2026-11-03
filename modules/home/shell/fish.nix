@@ -373,8 +373,11 @@ in
     enable = true;
     settings = {
       color_theme = "custom";
-      theme_background = false;
     };
+    # btop 1.4.x (Rust rewrite) 要求小写 true/false，
+    # 但 HM btop 模块会序列化为 Python 风格 True/False，导致解析失败。
+    # 改用 extraConfig 绕过。
+    extraConfig = "theme_background = false";
   };
 
   xdg.configFile."btop/themes/custom.theme".text = ''
