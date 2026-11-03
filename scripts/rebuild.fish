@@ -32,7 +32,7 @@ and begin
   # home-manager 重载 systemd user units 时会 stop 正在运行的服务，
   # 但 graphical-session.target 不会重新触发，导致桌面组件消失。
   systemctl --user daemon-reload
-  systemctl --user restart noctalia-shell 2>/dev/null
+  systemctl --user restart noctalia 2>/dev/null
   systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null
   systemctl --user restart service-plane 2>/dev/null
 

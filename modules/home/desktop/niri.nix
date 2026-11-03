@@ -205,15 +205,15 @@ in
           fi
         ''
       ];
-      "Super+P".action.spawn = noctaliaIpc [ "controlCenter" "toggle" ];
-      "Super+Ctrl+P".action.spawn = noctaliaIpc [ "settings" "toggle" ];
+      "Super+P".action.spawn = noctaliaIpc [ "panel-toggle" "control-center" ];
+      "Super+Ctrl+P".action.spawn = noctaliaIpc [ "settings-toggle" ];
       "Super+L".action.focus-column-or-monitor-right = { };
-      "Super+Ctrl+Shift+L".action.spawn = noctaliaIpc [ "lockScreen" "lock" ];
+      "Super+Ctrl+Shift+L".action.spawn = noctaliaIpc [ "session" "lock" ];
 
-      "XF86AudioRaiseVolume".action.spawn = noctaliaIpc [ "volume" "increase" ];
-      "XF86AudioLowerVolume".action.spawn = noctaliaIpc [ "volume" "decrease" ];
-      "XF86AudioMute".action.spawn = noctaliaIpc [ "volume" "muteOutput" ];
-      "XF86AudioMicMute".action.spawn = noctaliaIpc [ "volume" "muteInput" ];
+      "XF86AudioRaiseVolume".action.spawn = noctaliaIpc [ "volume-up" ];
+      "XF86AudioLowerVolume".action.spawn = noctaliaIpc [ "volume-down" ];
+      "XF86AudioMute".action.spawn = noctaliaIpc [ "volume-mute" ];
+      "XF86AudioMicMute".action.spawn = noctaliaIpc [ "mic-mute" ];
 
       "XF86MonBrightnessUp".action.spawn = [ "brightnessctl" "set" "+5%" ];
       "XF86MonBrightnessDown".action.spawn = [ "brightnessctl" "set" "5%-" ];
