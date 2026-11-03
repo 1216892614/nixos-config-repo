@@ -29,7 +29,9 @@
     powerManagement.enable = true;
     open = true;
     nvidiaSettings = true;
-    package = config.boot.kernelPackages.nvidiaPackages.beta;
+    # 595.84 (stable) 起原生支持 Linux 7.1（of_gpio.h 修复已内置）
+    # 595.45.04 (beta) 在 7.1 上编译失败，无需手动补丁
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
   hardware.graphics = {
     enable = true;
@@ -79,6 +81,8 @@
     __GL_SHADER_DISK_CACHE_SIZE = "10737418240";          # 10GB
     __GL_SHADER_DISK_CACHE_SKIP_CLEANUP = "1";
   };
+  # 升级到 7.x 内核：rtw89_8852cu 驱动从 7.0 起支持 Steam Frame (28de:2432)
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   hardware.enableRedistributableFirmware = true;
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

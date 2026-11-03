@@ -69,7 +69,6 @@ in
   home.packages = with pkgs; [
     google-chrome
     rustdesk-flutter
-    gemini-cli
     codex
     opencode
     omp
@@ -1840,7 +1839,68 @@ in
     _install_ai "osu"       "$REPO/osu.AppImage"
     _install_ai "obsidian"  "$REPO/obsidian.AppImage"
     _install_ai "skills-manager" "$REPO/skills-manager.AppImage"
+    _install_ai "flclash"  "$REPO/flclash.AppImage"
   '';
+
+  # ── Herdr: native terminal for coding agents (curl installer) ────────────
+  # 安装到 ~/.local/share/herdr-app/，二进制链接到 ~/.local/bin/herdr-app
+  # 同时安装 herdr-core 和 hc CLI
+  home.activation.installHerdr = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    HERDR_BIN="${config.home.homeDirectory}/.local/bin/herdr-app"
+    if [ ! -f "$HERDR_BIN" ]; then
+      echo "Herdr: installing..."
+      ${pkgs.curl}/bin/curl -fsSL https://releases.herdr.dev/app/install.sh | sh || echo "⚠️  Herdr install failed (network?), skipping"
+    else
+      echo "Herdr: already installed"
+    fi
+  '';
+
+  # ── Herdr 桌面入口：启动 omp / opencode / codex ─────────────────────────
+  # Herdr 安装脚本已将图标放在 ~/.local/share/icons/hicolor/scalable/apps/herdr-app.svg
+
+  xdg.desktopEntries.herdr-omp = {
+    name = "Herdr (omp)";
+    genericName = "AI Coding Agent";
+    comment = "Launch oh-my-pi in Herdr";
+    exec = "${config.home.homeDirectory}/.local/bin/herdr-app -- omp";
+    terminal = false;
+    icon = "herdr-app";
+    categories = [ "Development" ];
+    startupNotify = true;
+  };
+
+  xdg.desktopEntries.herdr-opencode = {
+    name = "Herdr (OpenCode)";
+    genericName = "AI Coding Agent";
+    comment = "Launch OpenCode in Herdr";
+    exec = "${config.home.homeDirectory}/.local/bin/herdr-app -- opencode";
+    terminal = false;
+    icon = "herdr-app";
+    categories = [ "Development" ];
+    startupNotify = true;
+  };
+
+  xdg.desktopEntries.herdr-codex = {
+    name = "Herdr (Codex)";
+    genericName = "AI Coding Agent";
+    comment = "Launch OpenAI Codex in Herdr";
+    exec = "${config.home.homeDirectory}/.local/bin/herdr-app -- codex";
+    terminal = false;
+    icon = "herdr-app";
+    categories = [ "Development" ];
+    startupNotify = true;
+  };
+
+  # ── FlClash 桌面入口（AppImage 解压后） ────────────────────────────────
+  xdg.desktopEntries.flclash = {
+    name = "FlClash";
+    genericName = "Proxy Client";
+    comment = "A multi-platform proxy client based on Clash Meta (mihomo)";
+    exec = "${config.home.homeDirectory}/.local/opt/flclash/FlClash %u";
+    terminal = false;
+    icon = "${config.home.homeDirectory}/.local/opt/flclash/data/flutter_assets/assets/images/icon.png";
+    categories = [ "Network" ];
+  };
 
   # ── chrome-agent: browser automation for AI agents (cargo install) ──────
   # 幂等: 只在版本变化或二进制不存在时重新安装

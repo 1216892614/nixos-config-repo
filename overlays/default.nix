@@ -62,6 +62,30 @@ final: prev: {
 
   omp = prev.callPackage ../pkgs/omp.nix { };
 
+  # codex 0.166.0 — standalone musl binary from GitHub releases
+  codex = prev.stdenv.mkDerivation rec {
+    pname = "codex";
+    version = "0.166.0";
+    src = prev.fetchurl {
+      url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-x86_64-unknown-linux-musl.tar.gz";
+      hash = "sha256-oL9XLS+T8FbGcSpto0jpYHjchPOIX9e+Z4B+84nLOXg=";
+    };
+    dontStrip = true;
+    sourceRoot = ".";
+    installPhase = ''
+      mkdir -p $out/bin
+      cp codex-x86_64-unknown-linux-musl $out/bin/codex
+      chmod +x $out/bin/codex
+    '';
+    meta = with prev.lib; {
+      description = "OpenAI Codex CLI — AI coding agent";
+      homepage = "https://github.com/openai/codex";
+      license = licenses.asl20;
+      platforms = [ "x86_64-linux" ];
+      mainProgram = "codex";
+    };
+  };
+
   # opencode 1.18.29 — nixpkgs 尚未更新，覆盖 src + node_modules hash
   opencode = prev.opencode.overrideAttrs (old: rec {
     version = "1.18.29";
