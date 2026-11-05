@@ -90,6 +90,17 @@ in
   # 参考：https://github.com/ValveSoftware/SteamVR-for-Linux/issues/946
   #       https://github.com/AnotherMike-exe/SteamFrameDongleFix
 
+  # ── 1b. 内核 cfg80211 regulatory relaxation ──
+  # NixOS 默认内核未开启 CFG80211_REG_RELAX_NO_IR。
+  boot.kernelPatches = [{
+    name = "cfg80211-relax-no-ir";
+    patch = null;
+    structuredExtraConfig = with lib.kernel; {
+      CFG80211_REG_RELAX_NO_IR = yes;
+    };
+  }];
+
+
   # ── 2. 无线监管域 + 驱动省电 ──
   boot.extraModprobeConfig = ''
     options cfg80211 ieee80211_regdom=US
@@ -113,6 +124,10 @@ in
   # 禁用 scan-rand-mac-address 减少触发频率；wifi.powersave 关闭降低延迟。
   networking.networkmanager.wifi.powersave = false;
   networking.networkmanager.wifi.scanRandMacAddress = false;
+
+  # wpa_supplicant 需要知道监管域才能解除 6 GHz 的 no-IR 限制
+  # NM 通过 wifi.country 传递 country_code 给 wpa_supplicant
+  networking.networkmanager.settings.wifi.country = "US";
 
   # ── Steam Frame 串流防火墙放行 ──
   # 用 systemd .link 给适配器固定接口名，不受 USB 端口变化影响

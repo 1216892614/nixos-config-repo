@@ -208,6 +208,10 @@ in
     functions.__cccp_preexec = {
       onEvent = "fish_preexec";
       body = ''
+        # cccp 本身不能覆盖上一条命令的输出边界，允许连续复制。
+        if string match -qr '^\s*cccp(?:\s|$)' -- "$argv[1]"
+          return
+        end
         # 记录命令执行前日志文件的字节偏移
         if set -q __CCCP_SCRIPT_LOG; and test -f $__CCCP_SCRIPT_LOG
           set -g __CCCP_PRE_OFFSET (command wc -c < $__CCCP_SCRIPT_LOG | string trim)
@@ -218,6 +222,9 @@ in
     functions.__cccp_postexec = {
       onEvent = "fish_postexec";
       body = ''
+        if string match -qr '^\s*cccp(?:\s|$)' -- "$argv[1]"
+          return
+        end
         # 记录命令执行后日志文件的字节偏移
         if set -q __CCCP_SCRIPT_LOG; and test -f $__CCCP_SCRIPT_LOG
           set -g __CCCP_POST_OFFSET (command wc -c < $__CCCP_SCRIPT_LOG | string trim)
@@ -249,7 +256,7 @@ in
       # 提取并清理：dd 取字节切片 → 去 ANSI/CR → 去首尾空行 → 写入临时文件
       set -l tmpf (mktemp -t cccp_out.XXXXXX)
       command dd if=$__CCCP_SCRIPT_LOG bs=1 skip=$__CCCP_PRE_OFFSET count=$count 2>/dev/null \
-        | command sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\][^\x07]*\x07//g; s/\r//g' \
+        | command sed -E 's/\x1b\][^\x07\x1b]*(\x07|\x1b[\\])//g; s/\x1b\[[0-?]*[ -/]*[@-~]//g; s/\r//g' \
         | command sed '/./,$!d' \
         | command sed -e :a -e '/^$/{ $d; N; ba; }' > $tmpf
 

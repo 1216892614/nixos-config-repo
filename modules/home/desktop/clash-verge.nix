@@ -84,6 +84,13 @@ in
       else
         echo "clash-verge: config.yaml exists, leaving GUI-managed config untouched"
       fi
+
+      # ── 强制修补：确保 config.yaml 的 tun.enable = true ──
+      # Clash Verge 的 enable_tun_mode 通过运行时 API 注入，
+      # 但若 config.yaml 已有 tun 段却缺 enable 字段，合并后 TUN 不会启用。
+      if [ -e "$_appdir/config.yaml" ]; then
+        run ${yq} -i '.tun.enable = true' "$_appdir/config.yaml"
+      fi
     '';
 
   # 注册 .desktop 文件，供 mimeApps 引用（解决 init_scheme() 写只读 mimeapps.list 的 EROFS 错误）

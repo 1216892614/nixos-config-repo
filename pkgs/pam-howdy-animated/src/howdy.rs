@@ -74,5 +74,11 @@ pub unsafe fn call_pam_howdy(howdy_path: &str, pamh: *mut libc::c_void, flags: c
     };
 
     // Call howdy's pam_sm_authenticate with no extra args
-    func(pamh, flags, 0, std::ptr::null())
+    let result = func(pamh, flags, 0, std::ptr::null());
+
+    // 不能 dlclose：pam_howdy 会把指向自身 .rodata 的指针留在 PAM handle 里
+    // （item/data），卸载后后续模块（pam_unix 写 syslog）解引用即 segfault。
+    // dlopen 有引用计数，重复调用不会重复映射。
+    std::mem::forget(lib);
+    result
 }

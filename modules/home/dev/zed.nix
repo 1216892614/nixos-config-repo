@@ -1,7 +1,8 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else {};
+  env = if builtins.pathExists ../../../env.nix then import ../../../env.nix else
+    throw "Zed 缺少 env.nix：请通过 scripts/rebuild.fish 或 path: flake 构建，避免生成空密钥。";
   colors = import ../../../lib/colors.nix;
 
   # Zed theme generated from lib/colors.nix (Moss & Fern v2)
@@ -198,6 +199,20 @@ in
   programs.zed-editor = {
     enable = true;
 
+    # 桌面进程可能仍继承旧会话的空环境变量，启动时直接注入声明式密钥。
+    package = pkgs.symlinkJoin {
+      name = "zed-with-model-credentials";
+      paths = [ pkgs.zed-editor ];
+      nativeBuildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        wrapProgram "$out/bin/zeditor" \
+          --set DEEPSEEK_API_KEY ${lib.escapeShellArg (env.deepseekApiKey or "")} \
+          --set BIGBIGDOG_API_KEY ${lib.escapeShellArg (env.bigbigdogApiKey or "")} \
+          --set BYTECATCODE_API_KEY ${lib.escapeShellArg (env.bytekatApiKey or "")}
+        ln -s zeditor "$out/bin/zed"
+      '';
+    };
+
     extensions = [ "nix" "toml" "fish" ];
 
     userSettings = {
@@ -328,7 +343,11 @@ in
     BYTECATCODE_API_KEY = env.bytekatApiKey or "";
   };
 
-  # Expose `zeditor` CLI alias (the package ships `bin/zed`)
+  # Fish 和桌面入口都可以使用简短的 zed 命令。
+  programs.fish.shellAliases.zed = "${config.programs.zed-editor.package}/bin/zeditor";
+  home.file.".local/bin/zed".source = "${config.programs.zed-editor.package}/bin/zed";
+
+  # 同时保留 zed / zeditor 两个命令名。
   home.file.".local/bin/zeditor" = {
     executable = true;
     text = ''

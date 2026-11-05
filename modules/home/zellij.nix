@@ -65,6 +65,12 @@ in
   programs.zellij = {
     enable = true;
     enableFishIntegration = false;
+    # cccp 的 script 录制进程不随 shell 切换目录，读取实际 shell 的 cwd。
+    package = pkgs.zellij.override {
+      zellij-unwrapped = pkgs.zellij-unwrapped.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ../../patches/zellij-script-cwd.patch ];
+      });
+    };
 
     settings = {
       theme = "moss-fern";

@@ -30,8 +30,10 @@
     open = true;
     nvidiaSettings = true;
     # 595.84 (stable) 起原生支持 Linux 7.1（of_gpio.h 修复已内置）
-    # 595.45.04 (beta) 在 7.1 上编译失败，无需手动补丁
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    # 改用 latest (615.x)：595.112.07 在影之刃零中反复触发 Xid 109 CTX SWITCH TIMEOUT（GPU 挂起），
+    # descriptor_heap 无效；610.43+ 有用户报告已修复。
+    # 参考：https://github.com/NVIDIA/open-gpu-kernel-modules/issues/1097
+    package = config.boot.kernelPackages.nvidiaPackages.latest;
   };
   hardware.graphics = {
     enable = true;
@@ -147,12 +149,20 @@
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
+    # Noctalia 锁屏密码认证：不含 howdy，面部识别由 noctalia-face 并行处理
     noctalia = {
+      howdy.enable = false;
+      # 同上：避免 pam_unix acct_mgmt segfault
+      rules.account.unix.modulePath = lib.mkForce
+        "${pkgs.pam}/lib/security/pam_permit.so";
+    };
+    # Noctalia 锁屏面部识别：仅 howdy，失败即拒绝（不回落到密码）
+    noctalia-face = {
+      unixAuth = false;
       howdy.enable = true;
       howdy.control = "sufficient";
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
-      # 同上：避免 pam_unix acct_mgmt segfault
       rules.account.unix.modulePath = lib.mkForce
         "${pkgs.pam}/lib/security/pam_permit.so";
     };

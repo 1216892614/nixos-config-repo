@@ -1,0 +1,137 @@
+[bar.main]
+capsule = true
+end = [ "media", "tray", "notifications", "battery", "session" ]
+padding = 4
+position = "bottom"
+reserve_space = false
+scale = 1.2000000104308128
+shadow = false
+smart_auto_hide = true
+thickness = 43
+widget_spacing = 4
+
+[control_center]
+width = 600
+
+[desktop_widgets]
+schema_version = 2
+widget_order = []
+
+    [desktop_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [desktop_widgets.widget]
+
+[dock]
+auto_hide = true
+
+[lockscreen_widgets]
+enabled = true
+schema_version = 2
+widget_order = [ "lockscreen-login-box@DP-3", "lockscreen-login-box@HDMI-A-3" ]
+
+    [lockscreen_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@DP-3"]
+    box_height = 196.0
+    box_width = 720.0
+    cx = 1280.0
+    cy = 1321.0
+    output = "DP-3"
+    placement_height = 1440.0
+    placement_width = 2560.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@DP-3".settings]
+        background_color = "surface_container"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_password_reveal = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-3"]
+    box_height = 196.0
+    box_width = 720.0
+    cx = 960.0
+    cy = 961.0
+    output = "HDMI-A-3"
+    placement_height = 1080.0
+    placement_width = 1920.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-3".settings]
+        background_color = "surface_container"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_password_reveal = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+[shell.panel]
+control_center_placement = "floating"
+launcher_placement = "floating"
+session_placement = "floating"
+transparency_mode = "soft"
+wallpaper_placement = "floating"
+
+[theme]
+builtin = "Noctalia"
+community_palette = "Oxocarbon"
+mode = "dark"
+source = "wallpaper"
+wallpaper_scheme = "m3-content"
+
+    [theme.templates]
+    builtin_ids = [
+        "alacritty",
+        "foot",
+        "gtk3",
+        "gtk4",
+        "helix",
+        "kcolorscheme",
+        "qt"
+    ]
+
+[wallpaper.default]
+path = "/home/ep-o1/.config/noctalia/wallpapers/moss-fern.jpg"
+
+[wallpaper.last]
+path = "/home/ep-o1/.config/noctalia/wallpapers/moss-fern.jpg"
+
+[wallpaper.monitors.DP-3]
+path = "/home/ep-o1/.config/noctalia/wallpapers/moss-fern.jpg"
+
+[wallpaper.monitors.HDMI-A-3]
+path = "/home/ep-o1/.config/noctalia/wallpapers/moss-fern.jpg"
+
+[widget.tray]
+drawer = true
+
+[widget.workspaces]
+show_labels = false

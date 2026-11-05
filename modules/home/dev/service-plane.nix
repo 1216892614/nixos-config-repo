@@ -701,7 +701,7 @@ in
   xdg.configFile."service-plane/portal/waiting.html".source = ./portal/waiting.html;
   xdg.configFile."service-plane/portal/nginx.conf".source = ./portal/nginx.conf;
 
-  # ── Data directories + model downloads ─────────────────────────────────
+  # ── Data directories ───────────────────────────────────────────────────
   home.activation.servicePlaneDataDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _:
       ''mkdir -p "${dataDir}/${name}"''
@@ -712,16 +712,30 @@ in
     mkdir -p "${dataDir}/comfyui"
     mkdir -p "${dataDir}/ocr/models"
     mkdir -p "${dataDir}/llm/models"
-
-    # ── 下载 LLM GGUF 模型（幂等：文件存在则跳过）──────────────────
-    LLM_MODEL="${dataDir}/llm/models/qwen3-4b-q4_k_m.gguf"
-    if [ ! -f "$LLM_MODEL" ]; then
-      echo "Downloading Qwen3-4B GGUF model (~2.7GB)..."
-      $DRY_RUN_CMD ${pkgs.curl}/bin/curl -L --progress-bar \
-        "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/qwen3-4b-q4_k_m.gguf" \
-        -o "$LLM_MODEL" || echo "WARNING: Model download failed, LLM service won't start until model is available"
-    fi
   '';
+
+  # ── 下载 LLM GGUF 模型（幂等：文件存在则跳过）─────────────────────────
+  # 不放在 home.activation：~2.7GB 下载会超过 home-manager-<user>.service 启动超时。
+  systemd.user.services.service-plane-llm-model = {
+    Unit = {
+      Description = "Download Qwen3-4B GGUF model for service-plane LLM";
+      ConditionPathExists = "!${dataDir}/llm/models/qwen3-4b-q4_k_m.gguf";
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = toString (pkgs.writeShellScript "service-plane-llm-model" ''
+        set -eu
+        LLM_MODEL="${dataDir}/llm/models/qwen3-4b-q4_k_m.gguf"
+        mkdir -p "$(dirname "$LLM_MODEL")"
+        # 先写临时文件，成功后再改名，避免中断后留下半截文件被当作已下载
+        ${pkgs.curl}/bin/curl -fL --connect-timeout 15 --retry 3 \
+          "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/qwen3-4b-q4_k_m.gguf" \
+          -o "$LLM_MODEL.part"
+        mv "$LLM_MODEL.part" "$LLM_MODEL"
+      '');
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
 
   # ── systemd user service ─────────────────────────────────────────────────
   systemd.user.services.service-plane = {

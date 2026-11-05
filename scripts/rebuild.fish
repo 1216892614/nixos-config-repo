@@ -12,12 +12,18 @@ if not test -d $src
   exit 1
 end
 
+if not test -f $src/env.nix
+  echo "Missing $src/env.nix; refusing to build empty credentials."
+  exit 1
+end
+
 sudo rsync -a --delete \
   --exclude .git \
   --exclude result \
   --exclude 'result-*' \
   --exclude .direnv \
   $src/ $dst/
+or exit $status
 
 sudo systemctl stop nixos-rebuild-switch-to-configuration.service >/dev/null 2>&1
 sudo systemctl reset-failed nixos-rebuild-switch-to-configuration.service >/dev/null 2>&1
@@ -26,7 +32,8 @@ sudo systemctl daemon-reload >/dev/null 2>&1
 # 记录 clash-verge.service 当前启动时间戳，rebuild 后对比决定是否重启 GUI
 set -l clash_active_pre (systemctl show clash-verge.service --property=ActiveEnterTimestamp --value 2>/dev/null)
 set -l host (hostname)
-sudo NIXOS_NO_CHECK=1 nixos-rebuild switch --flake $dst#$host
+# 显式使用 path flake，确保未被 Git 跟踪的 env.nix 也参与构建。
+sudo NIXOS_NO_CHECK=1 nixos-rebuild switch --flake path:$dst#$host
 and begin
   # ── 重启可能被 rebuild 中断的用户服务 ──────────────────────────────────
   # home-manager 重载 systemd user units 时会 stop 正在运行的服务，

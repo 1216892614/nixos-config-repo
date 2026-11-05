@@ -49,8 +49,6 @@ in
     };
   };
 
-  services.gnome.gnome-keyring.enable = true;
-
   # ─── 自动登录：greetd + 直接启动 niri（无密码、无 greeter）───
   services.greetd = {
     enable = true;
@@ -69,11 +67,14 @@ in
     extraPortals = with pkgs; [
       xdg-desktop-portal-gnome
       xdg-desktop-portal-gtk
+      xdg-desktop-portal-wlr            # Steam Remote Play: auto-approve screencast
       xdg-desktop-portal-termfilechooser
     ];
     config.niri = {
       default = [ "gnome" "gtk" ];
-      "org.freedesktop.impl.portal.ScreenCast" = [ "gnome" ];
+      # ScreenCast → wlr portal（可配 chooser_type=none 自动授权，见 home 侧配置）
+      # 解决 Steam Remote Play 无画面：GNOME portal 弹框在 Xwayland 下无法交互
+      "org.freedesktop.impl.portal.ScreenCast" = [ "wlr" ];
       "org.freedesktop.impl.portal.Screenshot" = [ "gnome" ];
       "org.freedesktop.impl.portal.FileChooser" = [ "termfilechooser" ];
     };
@@ -92,9 +93,11 @@ in
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
+    # 不启用 nixpkgs 的 gamescope 会话（GDM 会话 + steam-gamescope 命令）；游戏模式改用
+    # modules/nixos/steam-gamescope.nix，这里的 args 只供它读取
     gamescopeSession = {
-      enable = true;
-      args = [ "--hdr-enabled" "--hdr-itm-enable" "--prefer-output" "DP-3" ];
+      enable = false;
+      args = [ "--prefer-output" "DP-3" ];
     };
     # Same idea as: pkgs.steam.override { extraPkgs = pkgs: [ ...fonts... ]; }
     # Force fonts to exist inside Steam's FHS env (some setups still show □□□ without this).
@@ -106,7 +109,12 @@ in
       noto-fonts-color-emoji
       sarasa-gothic
       gamescope
+      # Electron AppImage (XMCL) 通过 steam-run 启动时需要 nss/nspr
+      nss
+      nspr
     ];
+    # Proton-CachyOS：修复影之刃零过场动画 0 帧（winegstreamer 输出类型重协商），见 pkgs/proton-cachyos.nix
+    extraCompatPackages = [ pkgs.proton-cachyos ];
   };
 
   environment.variables = {
@@ -139,6 +147,7 @@ in
     };
   };
 
+  system.activationScripts.rustdeskPermissions.deps = [ "users" ];
   system.activationScripts.rustdeskPermissions.text = ''
     set -eu
 
@@ -146,7 +155,11 @@ in
     cfg_user="/home/${rustdeskUser}/.config/rustdesk"
     pw=${lib.escapeShellArg rustdeskPassword}
 
-    mkdir -p "$cfg_root" "$cfg_user"
+    mkdir -p "$cfg_root"
+    # 以用户身份逐级创建缺失目录（仅缺失时），避免全新安装时 ~/.config 归 root 导致 Home Manager 激活失败
+    for d in "/home/${rustdeskUser}/.config" "$cfg_user"; do
+      [ -d "$d" ] || install -d -o ${rustdeskUser} -g users "$d"
+    done
 
     ensure_options() {
       local file="$1"

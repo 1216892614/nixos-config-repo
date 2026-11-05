@@ -74,8 +74,6 @@
   # PAM 集成：为各认证场景启用面部识别（使用带动画的包装模块）
   # pam_howdy_animated.so 在终端场景显示摄像机风格动画，非终端静默透传
   security.pam.services = {
-    # greetd 自动登录 —— 禁用 pam_gnome_keyring（由 unlock-gnome-keyring user service 负责解锁）
-    greetd.enableGnomeKeyring = lib.mkForce false;
     # Noctalia v5 锁屏硬编码使用 login PAM service
     login = {
       howdy.enable = true;
@@ -115,13 +113,20 @@
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
     };
-    # Noctalia Shell 锁屏专用（面部识别 + 密码 fallback）
+    # Noctalia 锁屏密码认证：不含 howdy，面部识别由 noctalia-face 并行处理
     noctalia = {
+      howdy.enable = false;
+      # 同上：避免 pam_unix acct_mgmt segfault
+      rules.account.unix.modulePath = lib.mkForce
+        "${pkgs.pam}/lib/security/pam_permit.so";
+    };
+    # Noctalia 锁屏面部识别：仅 howdy，失败即拒绝（不回落到密码）
+    noctalia-face = {
+      unixAuth = false;
       howdy.enable = true;
       howdy.control = "sufficient";
       rules.auth.howdy.modulePath = lib.mkForce
         "${pkgs.pam-howdy-animated}/lib/security/pam_howdy_animated.so";
-      # 同上：避免 pam_unix acct_mgmt segfault
       rules.account.unix.modulePath = lib.mkForce
         "${pkgs.pam}/lib/security/pam_permit.so";
     };
@@ -134,105 +139,4 @@
     };
   };
 
-  # ─── Keyring 自动解锁基础设施 ─────────────────────────────────────
-  #
-  # 安全模型：
-  # 1. 磁盘上：keyring 密码用 systemd-creds 加密（绑定本机 TPM/host key）
-  #    → 文件：/var/lib/keyring-secret.encrypted
-  # 2. 开机时：systemd service 解密到 /run/keyring-secret（tmpfs, RAM only, 0400 root）
-  # 3. 用户 session 启动后：user service 读取密码 → 解锁 gnome-keyring → 删除文件
-  # 4. 文件删除后：即使 root 也无法再获取密码（只在 RAM 中存在过）
-  #
-  # 首次部署：activation script 生成随机密码 + 加密存储 + 重建 keyring
-
-  # 开机时解密 keyring 密码到 tmpfs
-  systemd.services.keyring-secret-loader = {
-    description = "Decrypt keyring password to tmpfs";
-    wantedBy = [ "multi-user.target" ];
-    before = [ "display-manager.service" "greetd.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = pkgs.writeShellScript "load-keyring-secret" ''
-        ENCRYPTED="/var/lib/keyring-secret.encrypted"
-        RUNTIME="/run/keyring-secret"
-
-        if [ ! -f "$ENCRYPTED" ]; then
-          echo "No encrypted keyring secret found, skipping."
-          exit 0
-        fi
-
-        # 解密到 tmpfs（RAM only），只有 ep-o1 用户可读
-        ${pkgs.systemd}/bin/systemd-creds decrypt --name=keyring-secret "$ENCRYPTED" "$RUNTIME"
-        chmod 0400 "$RUNTIME"
-        chown ep-o1:users "$RUNTIME"
-      '';
-    };
-  };
-
-  # 用户 session 启动后自动解锁 gnome-keyring
-  systemd.user.services.unlock-gnome-keyring = {
-    description = "Unlock gnome-keyring with decrypted password";
-    wantedBy = [ "graphical-session.target" ];
-    after = [ "graphical-session.target" "gnome-keyring-daemon.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = pkgs.writeShellScript "unlock-keyring-user" ''
-        SECRET_FILE="/run/keyring-secret"
-
-        # 等待密钥文件（最多 5 秒）
-        for i in $(seq 1 50); do
-          [ -f "$SECRET_FILE" ] && break
-          sleep 0.1
-        done
-
-        if [ ! -f "$SECRET_FILE" ]; then
-          echo "No keyring secret available, skipping unlock."
-          exit 0
-        fi
-
-        PASSWORD=$(cat "$SECRET_FILE")
-
-        # 用 --replace 替换已运行的实例并解锁
-        # （PAM 的 pam_gnome_keyring.so auto_start 会先启动一个未解锁的实例）
-        echo -n "$PASSWORD" | ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --replace --unlock > /dev/null 2>&1
-
-        # 销毁密钥文件
-        rm -f "$SECRET_FILE" 2>/dev/null || true
-      '';
-    };
-  };
-
-  # 首次部署时生成 keyring 密码 + 加密存储
-  system.activationScripts.keyringSecret = {
-    deps = [];
-    text = ''
-      ENCRYPTED="/var/lib/keyring-secret.encrypted"
-
-      # 确保 systemd credential host key 存在
-      ${pkgs.systemd}/bin/systemd-creds setup 2>/dev/null || true
-
-      if [ ! -f "$ENCRYPTED" ]; then
-        echo "keyring-secret: generating new random password and encrypting..."
-        PLAIN=$(${pkgs.openssl}/bin/openssl rand -base64 32 | tr -d '\n')
-
-        # 用 systemd-creds 加密（绑定本机，磁盘上无法被其他机器解密）
-        echo -n "$PLAIN" | ${pkgs.systemd}/bin/systemd-creds encrypt --name=keyring-secret - "$ENCRYPTED"
-        chmod 0600 "$ENCRYPTED"
-
-        # 删除旧的 keyring 文件（将用新密码重建）
-        KEYRING_DIR="/home/ep-o1/.local/share/keyrings"
-        if [ -d "$KEYRING_DIR" ]; then
-          echo "keyring-secret: removing old keyring files (will be recreated with new password)..."
-          rm -f "$KEYRING_DIR"/*.keyring "$KEYRING_DIR"/*.keystore
-        fi
-
-        # 同时写一份到 /run 供本次 boot 使用
-        echo -n "$PLAIN" > /run/keyring-secret
-        chmod 0400 /run/keyring-secret
-        chown ep-o1:users /run/keyring-secret
-      fi
-    '';
-  };
 }

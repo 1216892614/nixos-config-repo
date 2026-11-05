@@ -1,0 +1,118 @@
+diff --git a/src/shell/lockscreen/lock_screen.cpp b/src/shell/lockscreen/lock_screen.cpp
+index def54cf..4c4f212 100644
+--- a/src/shell/lockscreen/lock_screen.cpp
++++ b/src/shell/lockscreen/lock_screen.cpp
+@@ -482,6 +482,9 @@ void LockScreen::onPointerEvent(const PointerEvent& event) {
+       (event.type == PointerEvent::Type::Button || event.type == PointerEvent::Type::Axis) && event.surface != nullptr
+   ) {
+     m_pointerSurface = event.surface;
++    if (event.type == PointerEvent::Type::Button) {
++      startFaceAuth();
++    }
+   }
+ 
+   if (event.type == PointerEvent::Type::Motion && isInGracePeriod()) {
+@@ -525,6 +528,9 @@ void LockScreen::onKeyboardEvent(const KeyboardEvent& event) {
+     return;
+   }
+ 
++  // 上一轮面部识别失败/超时后，任意按键重新触发（运行中则忽略）
++  startFaceAuth();
++
+   LockSurface* targetSurface = nullptr;
+   if (m_pointerSurface != nullptr) {
+     for (auto& instance : m_instances) {
+@@ -639,6 +645,9 @@ void LockScreen::onSystemResumed() {
+   resetGracePeriod();
+   cancelPendingAfterLocked();
+   cancelOutputPowerOff();
++  if (m_locked) {
++    startFaceAuth();
++  }
+ }
+ 
+ bool LockScreen::isSessionLocked() const noexcept { return m_locked; }
+@@ -892,6 +901,7 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
+   self->updatePromptOnSurfaces();
+   self->updateIndicatorsOnSurfaces();
+   self->startFingerprint();
++  self->startFaceAuth();
+   kLog.info("session is locked");
+   if (self->m_onSessionLocked) {
+     self->m_onSessionLocked();
+@@ -1429,6 +1439,7 @@ void LockScreen::onKeyboardLayoutChanged() {
+ 
+ void LockScreen::invalidatePendingAuthentication() {
+   ++m_authGeneration;
++  ++m_faceAuthGeneration;
+   m_authenticating = false;
+ }
+ 
+@@ -1525,6 +1536,44 @@ void LockScreen::stopFingerprint() {
+   }
+ }
+ 
++void LockScreen::startFaceAuth() {
++  if (m_faceAuthRunning || !m_locked || m_unlocking) {
++    return;
++  }
++  m_faceAuthRunning = true;
++  const std::uint64_t generation = ++m_faceAuthGeneration;
++  const PamAuthenticator authenticator = m_authenticator;
++  const std::string language(i18n::Service::instance().language());
++  const std::weak_ptr<void> guard = m_aliveGuard;
++  std::thread([this, guard, generation, authenticator, language] {
++    const auto result = authenticator.authenticateCurrentUser("", "noctalia-face", language, "");
++    DeferredCall::callLater([this, guard, generation, success = result.success] {
++      if (guard.expired()) {
++        return;
++      }
++      handleFaceAuthResult(generation, success);
++    });
++  }).detach();
++}
++
++void LockScreen::handleFaceAuthResult(std::uint64_t generation, bool success) {
++  // 无论结果是否过期都清除运行标记：helper 进程已退出，摄像头已释放
++  m_faceAuthRunning = false;
++  if (generation != m_faceAuthGeneration || !m_locked || m_unlocking) {
++    return;
++  }
++  if (!success) {
++    kLog.debug("face authentication failed; retrying on next user activity");
++    return;
++  }
++  kLog.info("face authentication succeeded");
++  clearSensitiveString(m_password);
++  m_status = i18n::tr("lockscreen.unlocked");
++  m_statusIsError = false;
++  updatePromptOnSurfaces();
++  unlock();
++}
++
+ void LockScreen::handleFingerprintStatus(const std::string& message, bool isError) {
+   if (!isActive()) {
+     return;
+diff --git a/src/shell/lockscreen/lock_screen.h b/src/shell/lockscreen/lock_screen.h
+index 3aa43c5..9da1986 100644
+--- a/src/shell/lockscreen/lock_screen.h
++++ b/src/shell/lockscreen/lock_screen.h
+@@ -152,6 +152,9 @@ private:
+   void startFingerprint();
+   void stopFingerprint();
+   void handleFingerprintStatus(const std::string& message, bool isError);
++  // 面部识别走独立 PAM service（仅 howdy），与密码认证并行，任一成功即解锁
++  void startFaceAuth();
++  void handleFaceAuthResult(std::uint64_t generation, bool success);
+   static void clearSensitiveString(std::string& value);
+   /// Passwordless grace window: any keypress or pointer movement beyond 5px unlocks
+   /// without a password while the window is live (matches hyprlock).
+@@ -179,6 +182,8 @@ private:
+   bool m_statusIsError = false;
+   bool m_authenticating = false;
+   std::uint64_t m_authGeneration = 0;
++  bool m_faceAuthRunning = false;
++  std::uint64_t m_faceAuthGeneration = 0;
+   bool m_lockPending = false;
+   bool m_locked = false;
+   bool m_lockStarting = false;

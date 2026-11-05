@@ -62,47 +62,17 @@ final: prev: {
 
   omp = prev.callPackage ../pkgs/omp.nix { };
 
-  # codex 0.166.0 — standalone musl binary from GitHub releases
-  codex = prev.stdenv.mkDerivation rec {
-    pname = "codex";
-    version = "0.166.0";
-    src = prev.fetchurl {
-      url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-oL9XLS+T8FbGcSpto0jpYHjchPOIX9e+Z4B+84nLOXg=";
-    };
-    dontStrip = true;
-    sourceRoot = ".";
-    installPhase = ''
-      mkdir -p $out/bin
-      cp codex-x86_64-unknown-linux-musl $out/bin/codex
-      chmod +x $out/bin/codex
-    '';
-    meta = with prev.lib; {
-      description = "OpenAI Codex CLI — AI coding agent";
-      homepage = "https://github.com/openai/codex";
-      license = licenses.asl20;
-      platforms = [ "x86_64-linux" ];
-      mainProgram = "codex";
-    };
-  };
+  proton-cachyos = prev.callPackage ../pkgs/proton-cachyos.nix { };
 
-  # opencode 1.18.29 — nixpkgs 尚未更新，覆盖 src + node_modules hash
-  opencode = prev.opencode.overrideAttrs (old: rec {
-    version = "1.18.29";
-    src = prev.fetchFromGitHub {
-      owner = "anomalyco";
-      repo = "opencode";
-      tag = "v${version}";
-      hash = "sha256-lCXlxTOhcX70jxJAbpolyGlIxQK2nst+6bFhq3Xzdmc=";
-    };
-    env = (old.env or {}) // {
-      OPENCODE_VERSION = version;
-    };
-    node_modules = old.node_modules.overrideAttrs (_: {
-      inherit version src;
-      outputHash = "sha256-2HEUv4eTo8307D4GTqxFIyq/yCj/c9LPDL4dZEDhMwU=";
-    });
-  });
+  # Codex 使用 nixpkgs 的完整打包，包含 code-mode-host、语音组件和 Nix 路径适配。
+  # 上游单文件 musl 压缩包缺少辅助程序，会导致命令工具无法启动。
+
+  # TODO: opencode 1.18.29 overlay 与新 nixpkgs 不兼容（源码结构变化），
+  # 暂用 nixpkgs 自带版本 (1.18.3)，等 nixpkgs 更新后移除此注释。
+  # opencode = prev.opencode.overrideAttrs (old: rec {
+  #   version = "1.18.29";
+  #   ...
+  # });
 
   baidupcs-go = prev.buildGoModule {
     pname = "baidupcs-go";
@@ -145,32 +115,8 @@ EOF
     };
   };
 
-  # gdal-minimal 3.13.1 zarr sharding 测试在 nixpkgs unstable 上失败（上游 bug），
-  # 阻塞 vtk → opencv → howdy 依赖链。跳过该单测以解除构建阻塞。
-  gdal = prev.gdal.overrideAttrs (old: {
-    disabledTests = (old.disabledTests or []) ++ [ "test_zarr_read_simple_sharding" ];
-  });
-
-  # pdal 2.9.3 与 GDAL 3.13 的 const-correctness 不兼容（CSLConstList → char** 隐式转换），
-  # 加 -fpermissive 绕过编译错误，解除 vtk → opencv → howdy 依赖链阻塞。
-  pdal = prev.pdal.overrideAttrs (old: {
-    # GDAL 3.13 将 GetMetadata 返回类型改为 CSLConstList (const char*const*)，
-    # pdal 2.9.3 仍用 char**。-fpermissive 降级为 warning，-Wno-error 确保不中断。
-    env = (old.env or {}) // {
-      NIX_CFLAGS_COMPILE = toString ((old.env.NIX_CFLAGS_COMPILE or "") + " -fpermissive -Wno-error");
-    };
-    cmakeFlags = (old.cmakeFlags or []) ++ [
-      "-DCMAKE_CXX_FLAGS=-fpermissive -Wno-error"
-    ];
-  });
-
-  # vtk 9.5.2 的 IO/GDAL 模块同样受 GDAL 3.13 const-correctness 影响，
-  # vtkGDALRasterReader.cxx 用 char** 接 CSLConstList 返回值。
-  vtk = prev.vtk.overrideAttrs (old: {
-    cmakeFlags = (old.cmakeFlags or []) ++ [
-      "-DCMAKE_CXX_FLAGS=-fpermissive -Wno-error"
-    ];
-  });
+  # 注：gdal/pdal/vtk 的旧版 overlay 已移除 — nixpkgs 升级到 gdal 3.13+/pdal 2.10+
+  # 后上游已修复 const-correctness 和 zarr 测试问题。如果再次构建失败再按需加回。
 
   # pipx 1.14.0 的 test_inject 参数化测试在 Python 3.14 下全部 ERROR，
   # face-recognition 1.3.0 在 Python 3.14 下 api.py 调用 quit() 导致 pytest 崩溃。
@@ -216,5 +162,51 @@ STUB
       v4l-utils        # libv4l2.so — 摄像头 V4L2 用户空间枚举
       libcamera        # libcamera SPA 插件
     ]);
+  });
+
+  # power-profiles-daemon 0.30 测试在 nixpkgs unstable sandbox 中失败（dbus 超时），
+  # 阻塞整个系统构建。在 meson 层面禁用测试以解除构建阻塞。
+  power-profiles-daemon = prev.power-profiles-daemon.overrideAttrs (old: {
+    mesonFlags = (old.mesonFlags or []) ++ [ "-Dtests=false" ];
+    doCheck = false;
+  });
+
+  # noctalia v5: 锁屏认证硬编码 PAM service 为 "login"（lock_screen.cpp），
+  # 导致 howdy/fprintd 等模块无法通过独立 PAM service 控制。
+  # - pam-service: 密码认证改用 "noctalia"（security.pam.services.noctalia）
+  # - face-auth: 锁定后立即在后台用 "noctalia-face"（仅 howdy）认证，与密码输入并行，
+  #   任一成功即解锁；识别失败后按键/点击/唤醒时重新触发
+  noctalia = prev.noctalia.overrideAttrs (old: {
+    patches = (old.patches or []) ++ [
+      ../patches/noctalia-pam-service.patch
+      ../patches/noctalia-face-auth.patch
+    ];
+  });
+
+  # wireless-regdb: 移除 US 6 GHz 频段的 NO-IR 标志
+  # 上游 wireless-regdb 对 US 的 6 GHz (5925-7125 MHz) 标记了 NO-IR，
+  # 阻止非 Intel 网卡（rtw89/mt7921/ath12k 等）在 6 GHz 频段主动发送帧。
+  # FCC 规则实际上允许 LPI（低功率室内）客户端设备在 6 GHz 主动传输。
+  # Intel 网卡通过 LAR（Location Aware Regulatory）绕过了这个限制。
+  # 需要同时关闭内核的 REQUIRE_SIGNED_REGDB（见 steam-frame.nix kernelPatches）。
+  # 参考: https://www.michaelstinkerings.org/the-mt7922-6ghz-debacle-why-linux-users-cant-use-wifi-6e-and-how-i-fixed-it/
+  wireless-regdb = prev.wireless-regdb.overrideAttrs (old: {
+    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.python3 ];
+    dontBuild = false;
+    postPatch = (old.postPatch or "") + ''
+      # US 6 GHz: 去掉 NO-IR，保留 NO-OUTDOOR（LPI 功率限制 12 dBm 不变）
+      sed -i '/^country US/,/^country [A-Z]/{
+        s/\(5925 - 7125 @ 320\), (12), NO-OUTDOOR, NO-IR/\1, (12), NO-OUTDOOR/
+      }' db.txt
+      # 5850-5895 MHz 同理
+      sed -i '/^country US/,/^country [A-Z]/{
+        s/\(5850 - 5895 @ 40\), (27), NO-OUTDOOR, AUTO-BW, NO-IR/\1, (27), NO-OUTDOOR, AUTO-BW/
+      }' db.txt
+    '';
+    buildPhase = ''
+      runHook preBuild
+      python3 db2fw.py regulatory.db db.txt
+      runHook postBuild
+    '';
   });
 }

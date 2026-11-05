@@ -10,24 +10,8 @@ let
 
   # ── Noctalia v5 设置 (TOML) ──────────────────────────────────────────────
   # v5 配置位于 ~/.local/state/noctalia/settings.toml，运行时可写。
-  # 仅在文件不存在时部署初始配置，后续修改由 noctalia GUI 完成。
-  initialSettingsToml = pkgs.writeText "noctalia-settings.toml" ''
-    [bar.main]
-    background_opacity = 0.0
-    capsule = false
-    widget_spacing = 2
-    padding = 1
-    shadow = false
-    start = ["workspaces"]
-    center = ["clock"]
-    end = ["tray", "volume", "battery", "notifications"]
-
-    [dock]
-    background_opacity = 0.0
-
-    [shell.panel]
-    transparency_mode = "soft"
-  '';
+  # rebuild 时从仓库配置覆盖部署，保证声明式可复现。
+  initialSettingsToml = ../../../noctalia-config.toml;
 
   # ── 自定义调色板（对应 v4 colors.json 的 Material You token） ──────────
   # v5 支持 custom color scheme 目录；部署到 ~/.local/state/noctalia/custom-palettes/
@@ -116,15 +100,12 @@ in
     '';
   };
 
-  # ── 部署初始配置（仅首次） ────────────────────────────────────────────
+  # ── 部署配置（每次 rebuild 覆盖，保证声明式） ────────────────────────
   home.activation.noctaliaInitConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     SETTINGS="$HOME/.local/state/noctalia/settings.toml"
-    if [ ! -f "$SETTINGS" ]; then
-      mkdir -p "$(dirname "$SETTINGS")"
-      cp "${initialSettingsToml}" "$SETTINGS"
-      chmod 644 "$SETTINGS"
-      echo "Noctalia: deployed initial settings.toml"
-    fi
+    mkdir -p "$(dirname "$SETTINGS")"
+    cp "${initialSettingsToml}" "$SETTINGS"
+    chmod 644 "$SETTINGS"
 
     # 部署自定义调色板
     PALETTE_DIR="$HOME/.local/state/noctalia/custom-palettes"
@@ -140,7 +121,6 @@ in
       After = [ "graphical-session.target" ];
     };
     Service = {
-      Environment = [ "NOCTALIA_PAM_SERVICE=noctalia" ];
       ExecStart = "${noctaliaBin}";
       Restart = "always";
       RestartSec = "2";
@@ -172,4 +152,5 @@ in
       WantedBy = [ "noctalia.service" ];
     };
   };
+
 }

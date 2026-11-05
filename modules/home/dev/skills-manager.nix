@@ -2,15 +2,24 @@
 
 # Skills Manager：GUI + 全量 official skills 自动安装/更新
 # GUI 通过 AppImage 安装（同 cursor 模式），由 default.nix 的 installAppImages 处理
-# Skills 通过 npx skills CLI 在 activation 时批量安装/更新
+# Skills 通过 npx skills CLI 由 sync-official-skills 用户服务批量安装/更新
 {
-  # ── activation: 安装并更新所有 official skills ─────────────────────────
-  # 首次执行较慢（需下载 4000+ skills），后续 rebuild 仅增量更新
+  # ── user service: 安装并更新所有 official skills ─────────────────────────
+  # 首次执行较慢（需下载 4000+ skills），后续仅增量更新
   # 所有 skills 安装到全局 (~/.agents/skills/) 但不自动 sync 到 agent
   # 用 skills-manager GUI 管理 preset/agent 分配
-  home.activation.syncOfficialSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # 不放在 home.activation：全新安装时联网批量下载会超过 home-manager-<user>.service
+  # 的启动超时，导致整个 Home Manager 激活失败。
+  systemd.user.services.sync-official-skills = {
+    Unit = {
+      Description = "Install/update official agent skills";
+      After = [ "network-online.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = toString (pkgs.writeShellScript "sync-official-skills" ''
     # 需要 npx（来自 nodejs）
-    export PATH="${pkgs.nodejs}/bin:$PATH"
+    export PATH="${pkgs.nodejs}/bin:${pkgs.coreutils}/bin:$PATH"
 
     SKILLS_MARKER="${config.home.homeDirectory}/.local/state/skills-manager/official-installed"
     SKILLS_LOG="${config.home.homeDirectory}/.local/state/skills-manager/last-sync.log"
@@ -128,7 +137,7 @@
     if [ -f "$SKILLS_MARKER" ]; then
       # ── 后续 rebuild：仅更新已安装的 skills ──
       echo "skills-manager: updating installed skills..."
-      npx --yes skills@latest update -g -y >> "$SKILLS_LOG" 2>&1 || true
+      timeout 60 npx --yes skills@latest update -g -y >> "$SKILLS_LOG" 2>&1 || true
       echo "skills-manager: update complete ($(date -Iseconds))"
     else
       # ── 首次安装：批量下载所有 official skills ──
@@ -145,7 +154,10 @@
       date -Iseconds > "$SKILLS_MARKER"
       echo "skills-manager: initial install done ($FAILED failures, see $SKILLS_LOG for details)"
     fi
-  '';
+      '');
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
 
   # ── Skills Manager GUI desktop entry ───────────────────────────────────
   xdg.desktopEntries."skills-manager" = {

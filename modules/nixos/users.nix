@@ -13,7 +13,7 @@ in
     isNormalUser = true;
     home = "/home/ep-o1";
     shell = pkgs.fish;
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" "docker" ];
+    extraGroups = [ "wheel" "networkmanager" "video" "audio" "docker" "adbusers" ];
     openssh.authorizedKeys.keys = [ env.sshPublicKey ];
   };
 

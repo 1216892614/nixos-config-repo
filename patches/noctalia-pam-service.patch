@@ -1,0 +1,9 @@
+--- a/src/shell/lockscreen/lock_screen.cpp
++++ b/src/shell/lockscreen/lock_screen.cpp
+@@ -1477,7 +1477,7 @@
+   // pam_fprintd from it: noctalia drives the reader itself over D-Bus and the
+   // two can't share the sensor. See docs/fingerprint.md.
+-  const std::string pamService = "login";
++  const std::string pamService = "noctalia";
+   const std::string pamLanguage(i18n::Service::instance().language());
+   const std::string pamStartFailure = i18n::tr("auth.pam.start-failed");

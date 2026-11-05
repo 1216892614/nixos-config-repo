@@ -7,7 +7,9 @@
 }:
 
 let
-  env = if builtins.pathExists ../../env.nix then import ../../env.nix else { };
+  # 缺少私密配置时立即报错，避免生成空 API key 和空模型列表。
+  env = if builtins.pathExists ../../env.nix then import ../../env.nix else
+    throw "缺少 env.nix：请使用 fish ./scripts/rebuild.fish 或 --flake path:/home/ep-o1/nixos-config-repo#主机名 构建；Git flake 不包含未跟踪的 env.nix。";
   colors = import ../../lib/colors.nix;
   steamPulseFix = pkgs.callPackage ../../pkgs/steam-pulse-fix.nix { };
   qqPackage = (import inputs.nixpkgs-qq {
@@ -33,6 +35,27 @@ let
       done
     '';
   });
+
+  # ── 统一 MCP 服务器定义（cursor / opencode / omp 共用）──────────────────
+  mcpServers = {
+    context7 = {
+      url = "https://mcp.context7.com/mcp";
+      headers = { "x-api-key" = env.context7ApiKey or ""; };
+    };
+    # nixpkgs 自带 mcp-nixos；不用 `nix run github:` 以免启动时撞 GitHub API 限流
+    nixos = {
+      command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
+    };
+    rust-docs = {
+      command = "${config.home.homeDirectory}/.cargo/bin/rust-docs-mcp";
+    };
+    # 连接正在运行的 Chrome（含登录态）；配合 page-share 扩展使用。
+    # 前提：Chrome 中打开 chrome://inspect/#remote-debugging 勾选允许远程调试（一次性）
+    chrome-devtools = {
+      command = "${pkgs.nodejs}/bin/npx";
+      args = [ "-y" "chrome-devtools-mcp@1.12.0" "--autoConnect" ];
+    };
+  };
 in
 {
   imports = [
@@ -96,6 +119,9 @@ in
     imv # Wayland 原生轻量图片查看器
     # ── 云存储 ──
     rclone # 多云存储挂载/同步（OneDrive, GDrive 等）
+    # ── 游戏 Mod ──
+    r2modman # Thunderstore mod manager（管理 Steam 游戏 mod）
+    protontricks # Proton Wine prefix 工具（为 mod 设置 winhttp DLL override 等）
   ];
 
   # ── 文档格式 MIME 关联 ──
@@ -140,26 +166,9 @@ in
 
   # ── Cursor: ~/.cursor/mcp.json ─────────────────────────────────────────
   home.file.".cursor/mcp.json".text = builtins.toJSON {
-    mcpServers = {
-      context7 = {
-        url = "https://mcp.context7.com/mcp";
-        apiKey = env.context7ApiKey or "";
-      };
-      nixos = {
-        command = "nix";
-        args = [ "run" "github:utensils/mcp-nixos" "--" ];
-      };
-      rust-docs = {
-        command = "${config.home.homeDirectory}/.cargo/bin/rust-docs-mcp";
-        transport = "stdio";
-      };
-      chrome-agent = {
-        command = "${config.home.homeDirectory}/.cargo/bin/chrome-agent";
-        args = [ "pipe" ];
-        transport = "stdio";
-      };
-    };
+    inherit mcpServers;
   };
+
 
   # ── OpenCode: opencode.json + oh-my-openagent.json ──────────────────────
   xdg.configFile."opencode/opencode.json".text = builtins.toJSON {
@@ -410,25 +419,7 @@ in
         model = "deepseek/deepseek-v4-pro";
       };
     };
-    mcpServers = {
-      context7 = {
-        url = "https://mcp.context7.com/mcp";
-        apiKey = env.context7ApiKey or "";
-      };
-      nixos = {
-        command = "nix";
-        args = [ "run" "github:utensils/mcp-nixos" "--" ];
-      };
-      rust-docs = {
-        command = "${config.home.homeDirectory}/.cargo/bin/rust-docs-mcp";
-        transport = "stdio";
-      };
-      chrome-agent = {
-        command = "${config.home.homeDirectory}/.cargo/bin/chrome-agent";
-        args = [ "pipe" ];
-        transport = "stdio";
-      };
-    };
+    inherit mcpServers;
   };
 
   # ── omp (oh-my-pi): config.yml (activation, 可写) + models.yml ─────────
@@ -497,6 +488,20 @@ in
       rm -f "${config.home.homeDirectory}/.omp/agent/config.yml"
       cp "${ompConfigContent}" "${config.home.homeDirectory}/.omp/agent/config.yml"
       chmod 644 "${config.home.homeDirectory}/.omp/agent/config.yml"
+    '';
+
+  # ── omp MCP 配置（activation 而非 symlink，omp 运行时会写入）──────────────
+  home.activation.ompMcpConfig =
+    let
+      ompMcpContent = pkgs.writeText "omp-mcp.json" (builtins.toJSON {
+        inherit mcpServers;
+      });
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      mkdir -p "${config.home.homeDirectory}/.omp/agent"
+      rm -f "${config.home.homeDirectory}/.omp/agent/mcp.json"
+      cp "${ompMcpContent}" "${config.home.homeDirectory}/.omp/agent/mcp.json"
+      chmod 644 "${config.home.homeDirectory}/.omp/agent/mcp.json"
     '';
 
   # ── omp plugins: 确保声明式插件在 rebuild 时自动安装 ─────────────────────
@@ -924,6 +929,25 @@ in
     RestartSec=1
   '';
 
+  # ── Portal-wlr: auto-approve screencast（Steam Remote Play 全桌面串流）──
+  # chooser_type=none 只会取输出列表里的第一个显示器，不一定是正在玩的那块。
+  # 改用 simple chooser：输出 niri 当前聚焦的显示器名（开始串流时游戏/XMCL 所在屏），
+  # 取不到时回落到主屏 DP-3。portal-wlr 用输出名（如 DP-3）匹配目标。
+  # max_fps=60 避免 Remote Play 串流帧率被限。
+  xdg.configFile."xdg-desktop-portal-wlr/config".text =
+    let
+      pickOutput = pkgs.writeShellScript "xdpw-pick-focused-output" ''
+        name=$(/run/current-system/sw/bin/niri msg --json focused-output 2>/dev/null | ${pkgs.jq}/bin/jq -r '.name // empty')
+        echo "''${name:-DP-3}"
+      '';
+    in
+    ''
+      [screencast]
+      chooser_type=simple
+      chooser_cmd=${pickOutput}
+      max_fps=60
+    '';
+
   # ── 启动诊断：记录 graphical-session 各服务就绪时间 ──────────────────
   # 查看结果：journalctl --user -u boot-diag -b
   # 排查完毕后可删除此服务
@@ -1049,6 +1073,7 @@ in
     };
     Install.WantedBy = [ "default.target" ];
   };
+
 
   # Chrome: 不使用 gnome-keyring，改用内置密码存储
   # 避免启动时弹出 keyring 解锁对话框（面部识别登录时 keyring 不会自动解锁）
@@ -1638,12 +1663,13 @@ in
     # Load both 32-bit and 64-bit; ld.so silently ignores the wrong ELF class.
     export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix64.so:${steamPulseFix}/lib/steam_pulse_fix32.so''${LD_PRELOAD:+:$LD_PRELOAD}"
 
-    # Wayland Remote Play: Steam 需要通过 PipeWire portal 截屏
+    # Wayland Remote Play: -pipewire 启用 PipeWire ScreenCast 桌面捕获
+    # 不加此参数 Steam 只走 X11 XShm 捕获，Wayland 桌面串流为空。
     # XDG_CURRENT_DESKTOP 让 Steam 知道走 portal 协议而非 X11 截帧
     export XDG_CURRENT_DESKTOP="''${XDG_CURRENT_DESKTOP:-GNOME}"
 
     # Ensure we run NixOS Steam (programs.steam) so extraPackages/fonts are present.
-    exec /run/current-system/sw/bin/steam "$@"
+    exec /run/current-system/sw/bin/steam -pipewire "$@"
   '';
   home.file.".local/bin/steam-wrapper".executable = true;
   xdg.dataFile."applications/steam.desktop".text =
@@ -1652,46 +1678,51 @@ in
       [ "Exec=${config.home.homeDirectory}/.local/bin/steam-wrapper" ]
       (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
 
-  # Steam HDR 启动器：通过 gamescope 包裹 Steam（适用于全屏游戏 HDR）
-  # 注意：也可以在 Steam 单个游戏中设置启动选项：
-  #   gamescope --hdr-enabled --hdr-itm-enable -W 3840 -H 2160 -f -- %command%
-  home.file.".local/bin/steam-hdr".text = ''
+  # Steam 游戏模式：gamescope 独立会话（tty7），Remote Play 串流桌面/非 Steam 游戏用
+  # 系统服务见 modules/nixos/steam-gamescope.nix；Steam 只能单实例，先关掉 niri 里的
+  home.file.".local/bin/steam-gamescope-session".text = ''
     #!/bin/sh
-    if command -v systemctl >/dev/null 2>&1; then
-      for line in $(systemctl --user show-environment 2>/dev/null); do
-        case "$line" in *=*) export "$line" ;; esac
-      done 2>/dev/null || true
+    pidfile="$HOME/.steam/steam.pid"
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      /run/current-system/sw/bin/steam -shutdown >/dev/null 2>&1
+      i=0
+      while kill -0 "$(cat "$pidfile")" 2>/dev/null; do
+        i=$((i + 1))
+        if [ "$i" -gt 30 ]; then
+          echo "steam-gamescope-session: Steam 30s 内未退出，放弃" >&2
+          exit 1
+        fi
+        sleep 1
+      done
     fi
-
-    pick_display() {
-      sock=/tmp/.X11-unix/X1
-      if [ -S "$sock" ]; then
-        DISPLAY=:1
-        export DISPLAY
-      fi
-    }
-    pick_display
-
-    export LD_PRELOAD="${steamPulseFix}/lib/steam_pulse_fix64.so:${steamPulseFix}/lib/steam_pulse_fix32.so''${LD_PRELOAD:+:$LD_PRELOAD}"
-
-    # 通过 gamescope HDR 启动 Steam
-    exec gamescope \
-      --hdr-enabled \
-      --hdr-itm-enable \
-      --prefer-output DP-3 \
-      -W 3840 -H 2160 \
-      --fullscreen \
-      --steam \
-      -- /run/current-system/sw/bin/steam -tenfoot "$@"
+    exec systemctl start steam-gamescope.service
   '';
-  home.file.".local/bin/steam-hdr".executable = true;
-  xdg.desktopEntries.steam-hdr = {
-    name = "Steam (HDR)";
-    genericName = "Game Platform (HDR)";
-    comment = "Steam Big Picture with HDR via Gamescope";
-    exec = "${config.home.homeDirectory}/.local/bin/steam-hdr";
+  home.file.".local/bin/steam-gamescope-session".executable = true;
+  xdg.desktopEntries.steam-gamescope = {
+    name = "Steam (游戏模式)";
+    genericName = "Game Platform (gamescope session)";
+    comment = "切到 tty7 的 gamescope 独立会话，支持 Remote Play 串流桌面与非 Steam 游戏";
+    exec = "${config.home.homeDirectory}/.local/bin/steam-gamescope-session";
     terminal = false;
     icon = "steam";
+    type = "Application";
+    categories = [ "Game" ];
+  };
+
+  # ── r2modman：NixOS/Wayland 下 Electron 需要 --no-sandbox ──────────────
+  # Proton 游戏 mod 流程：
+  #   1. r2modman 选游戏 → 安装 mod
+  #   2. 若游戏为 Proton（非原生 Linux），在游戏根目录创建 .forceproton 空文件
+  #   3. BepInEx mod 需要 winhttp DLL override，两种方式任选：
+  #      a) protontricks <AppID> → default wineprefix → winecfg → Libraries → 添加 winhttp
+  #      b) Steam 启动选项: WINEDLLOVERRIDES="winhttp=n,b" %command%
+  xdg.desktopEntries.r2modman = {
+    name = "r2modman";
+    genericName = "Mod Manager";
+    comment = "Thunderstore mod manager for Steam games";
+    exec = "r2modman --no-sandbox";
+    terminal = false;
+    icon = "r2modman";
     type = "Application";
     categories = [ "Game" ];
   };
@@ -1844,6 +1875,7 @@ in
     _install_ai "obsidian"  "$REPO/obsidian.AppImage"
     _install_ai "skills-manager" "$REPO/skills-manager.AppImage"
     _install_ai "flclash"  "$REPO/flclash.AppImage"
+    _install_ai "frame-control" "$REPO/frame-control.AppImage"
   '';
 
   # ── Herdr: native terminal for coding agents (curl installer) ────────────
@@ -1906,6 +1938,18 @@ in
     categories = [ "Network" ];
   };
 
+  # ── Frame Control 桌面入口（AppImage 解压后） ──────────────────────────
+  xdg.desktopEntries.frame-control = {
+    name = "Frame Control";
+    genericName = "Device Manager";
+    comment = "Desktop app for managing a Valve Steam Frame over SSH";
+    exec = "${config.home.homeDirectory}/.local/opt/frame-control/frame-control --no-sandbox %U";
+    terminal = false;
+    icon = "${config.home.homeDirectory}/.local/opt/frame-control/frame-control.png";
+    categories = [ "Utility" ];
+    mimeType = [ "x-scheme-handler/frame-control" ];
+  };
+
   # ── chrome-agent: browser automation for AI agents (cargo install) ──────
   # 幂等: 只在版本变化或二进制不存在时重新安装
   home.activation.installChromeAgent = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -1936,10 +1980,16 @@ in
   '';
   home.file.".local/bin/java-mc".executable = true;
 
-  # X Minecraft Launcher — bin: xmcl (Electron, root level)
+  # X Minecraft Launcher — bin: xmcl (Electron 43 / Chrome 150, root level)
+  # Chrome 150 ANGLE 需要 NVIDIA 驱动但 AppImage 的 RPATH=$ORIGIN 使 bundled ANGLE
+  # 遮蔽系统 EGL/Vulkan，GPU 子进程 SIGTRAP 崩溃。用 steam-run FHS 提供完整驱动栈。
   home.file.".local/bin/xmcl".text = ''
     #!/usr/bin/env bash
-    exec "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" --no-sandbox --ozone-platform-hint=auto "$@"
+    exec /run/current-system/sw/bin/steam-run \
+      "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" \
+      --no-sandbox --disable-gpu-sandbox \
+      --ozone-platform=x11 \
+      "$@"
   '';
   home.file.".local/bin/xmcl".executable = true;
   xdg.dataFile."applications/xmcl.desktop".text = ''

@@ -1,0 +1,54 @@
+--- a/zellij-server/src/os_input_output.rs
++++ b/zellij-server/src/os_input_output.rs
+@@ -379,6 +379,24 @@
+     fn apply_cached_resizes(&mut self) {}
+ }
+ 
++// script 会包裹真实 shell；目录应从它的子进程读取，保留终端录制功能。
++fn shell_pid_inside_recorder(pid: u32) -> u32 {
++    #[cfg(target_os = "linux")]
++    {
++        if std::fs::read_to_string(format!("/proc/{pid}/comm"))
++            .map(|name| name.trim() == "script")
++            .unwrap_or(false)
++        {
++            if let Ok(children) = std::fs::read_to_string(format!("/proc/{pid}/task/{pid}/children")) {
++                if let Some(child) = children.split_whitespace().next().and_then(|s| s.parse().ok()) {
++                    return child;
++                }
++            }
++        }
++    }
++    pid
++}
++
+ impl ServerOsApi for ServerOsInputOutput {
+     fn set_terminal_size_using_terminal_id(
+         &self,
+@@ -510,7 +528,7 @@
+ 
+     fn get_cwd(&self, pid: u32) -> Option<PathBuf> {
+         let mut system_info = System::new();
+-        let sysinfo_pid = sysinfo::Pid::from_u32(pid);
++        let sysinfo_pid = sysinfo::Pid::from_u32(shell_pid_inside_recorder(pid));
+         let refresh_kind = ProcessRefreshKind::nothing().with_cwd(UpdateKind::Always);
+         system_info.refresh_processes_specifics(
+             ProcessesToUpdate::Some(&[sysinfo_pid]),
+@@ -532,7 +550,7 @@
+         let mut cmds = HashMap::new();
+ 
+         let sysinfo_pids: Vec<sysinfo::Pid> =
+-            pids.iter().map(|&p| sysinfo::Pid::from_u32(p)).collect();
++            pids.iter().map(|&p| sysinfo::Pid::from_u32(shell_pid_inside_recorder(p))).collect();
+         let refresh_kind = ProcessRefreshKind::nothing()
+             .with_cwd(UpdateKind::Always)
+             .with_cmd(UpdateKind::Always);
+@@ -543,7 +561,7 @@
+         );
+ 
+         for pid in pids {
+-            let sysinfo_pid = sysinfo::Pid::from_u32(pid);
++            let sysinfo_pid = sysinfo::Pid::from_u32(shell_pid_inside_recorder(pid));
+             if let Some(process) = system_info.process(sysinfo_pid) {
+                 if let Some(cwd) = process.cwd() {
+                     cwds.insert(pid, cwd.to_path_buf());
