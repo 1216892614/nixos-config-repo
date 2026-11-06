@@ -29,7 +29,7 @@ in
     # OpenJDK 21: JAVA_HOME for launchers (e.g. X Minecraft Launcher) and Java tools
     shellInit = ''
       fish_add_path -g ${config.home.profileDirectory}/bin $HOME/.local/bin $HOME/.cargo/bin $HOME/.deno/bin $HOME/.bun/bin
-      set -gx JAVA_HOME "${pkgs.jdk21}"
+      set -gx JAVA_HOME "$HOME/.local/lib/jdk21"
       fish_add_path -g $JAVA_HOME/bin
       set -gx PKG_CONFIG_PATH "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig"
     '';

@@ -93,12 +93,6 @@ in
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
-    # 不启用 nixpkgs 的 gamescope 会话（GDM 会话 + steam-gamescope 命令）；游戏模式改用
-    # modules/nixos/steam-gamescope.nix，这里的 args 只供它读取
-    gamescopeSession = {
-      enable = false;
-      args = [ "--prefer-output" "DP-3" ];
-    };
     # Same idea as: pkgs.steam.override { extraPkgs = pkgs: [ ...fonts... ]; }
     # Force fonts to exist inside Steam's FHS env (some setups still show □□□ without this).
     extraPackages = with pkgs; [
@@ -236,7 +230,7 @@ EOF
     libva
     libva-utils
     vlc
-    gamescope  # HDR/VRR compositing for games and media
+    gamescope  # 游戏缩放/帧率限制 wrapper
   ];
 
   # IM 环境变量由 niri spawn-at-startup 统一导入 systemd/DBus（见 niri.nix）

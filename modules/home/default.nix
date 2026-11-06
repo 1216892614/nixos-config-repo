@@ -1160,102 +1160,6 @@ in
         fi
   '';
 
-  # ── Gamescope HDR 包裹脚本 ──────────────────────────────────────────────
-  # gamescope 作为轻量 HDR compositor 包裹应用，在 niri 不支持 HDR 合成的情况下
-  # 为单个应用提供 HDR 输出能力（通过 DRM lease 或嵌套合成）
-
-  # VLC HDR 启动器：通过 gamescope 启动 VLC 以支持 HDR 视频播放
-  home.file.".local/bin/vlc-hdr".text = ''
-    #!/bin/sh
-    # gamescope HDR 模式启动 VLC
-    # --hdr-enabled: 启用 HDR 输出
-    # --hdr-itm-enable: 启用 inverse tone mapping（SDR→HDR 提升）
-    # --prefer-output DP-3: 指定 HDR 显示器
-    # --fullscreen: VLC 观影通常全屏
-    exec gamescope \
-      --hdr-enabled \
-      --hdr-itm-enable \
-      --prefer-output DP-3 \
-      --fullscreen \
-      -W 3840 -H 2160 \
-      -- vlc --fullscreen "$@"
-  '';
-  home.file.".local/bin/vlc-hdr".executable = true;
-
-  # VLC HDR 桌面快捷方式
-  xdg.desktopEntries.vlc-hdr = {
-    name = "VLC (HDR)";
-    genericName = "Media Player";
-    comment = "VLC with HDR output via Gamescope";
-    exec = "${config.home.homeDirectory}/.local/bin/vlc-hdr %U";
-    terminal = false;
-    icon = "vlc";
-    type = "Application";
-    categories = [
-      "AudioVideo"
-      "Player"
-    ];
-    mimeType = [
-      "video/x-matroska"
-      "video/mp4"
-      "video/webm"
-      "video/avi"
-      "video/x-msvideo"
-      "video/quicktime"
-      "video/mpeg"
-      "audio/flac"
-      "audio/mpeg"
-      "audio/ogg"
-    ];
-  };
-
-  # Chrome HDR 启动器：通过 gamescope 启动 Chrome 以支持 HDR 网页视频
-  home.file.".local/bin/chrome-hdr".text = ''
-    #!/bin/sh
-    # gamescope HDR 模式启动 Chrome（用于 HDR 视频流：YouTube HDR、Netflix 等）
-    exec gamescope \
-      --hdr-enabled \
-      --hdr-itm-enable \
-      --prefer-output DP-3 \
-      --fullscreen \
-      -W 3840 -H 2160 \
-      -- google-chrome-stable \
-        --password-store=basic \
-        --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,CanvasOopRasterization,UseMultiPlaneFormatForHardwareVideo \
-        --enable-gpu-rasterization \
-        "$@"
-  '';
-  home.file.".local/bin/chrome-hdr".executable = true;
-
-  # Chrome HDR 桌面快捷方式
-  xdg.desktopEntries.chrome-hdr = {
-    name = "Google Chrome (HDR)";
-    genericName = "Web Browser (HDR)";
-    comment = "Chrome with HDR output via Gamescope for streaming HDR video";
-    exec = "${config.home.homeDirectory}/.local/bin/chrome-hdr %U";
-    terminal = false;
-    icon = "google-chrome";
-    type = "Application";
-    categories = [
-      "Network"
-      "WebBrowser"
-    ];
-  };
-
-  # 通用 gamescope HDR 启动器：任意应用可通过 gamescope-hdr <command> 使用 HDR
-  home.file.".local/bin/gamescope-hdr".text = ''
-    #!/bin/sh
-    # 通用 HDR 启动器：gamescope-hdr <任意命令>
-    exec gamescope \
-      --hdr-enabled \
-      --hdr-itm-enable \
-      --prefer-output DP-3 \
-      --fullscreen \
-      -W 3840 -H 2160 \
-      -- "$@"
-  '';
-  home.file.".local/bin/gamescope-hdr".executable = true;
-
   # Symlink ~/.local/share/fonts → system font dir so apps with hardcoded
   # font paths (RustDesk fontdb, etc.) can find CJK fonts on NixOS
   home.activation.linkFonts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -1678,37 +1582,6 @@ in
       [ "Exec=${config.home.homeDirectory}/.local/bin/steam-wrapper" ]
       (builtins.readFile "${pkgs.steam}/share/applications/steam.desktop");
 
-  # Steam 游戏模式：gamescope 独立会话（tty7），Remote Play 串流桌面/非 Steam 游戏用
-  # 系统服务见 modules/nixos/steam-gamescope.nix；Steam 只能单实例，先关掉 niri 里的
-  home.file.".local/bin/steam-gamescope-session".text = ''
-    #!/bin/sh
-    pidfile="$HOME/.steam/steam.pid"
-    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-      /run/current-system/sw/bin/steam -shutdown >/dev/null 2>&1
-      i=0
-      while kill -0 "$(cat "$pidfile")" 2>/dev/null; do
-        i=$((i + 1))
-        if [ "$i" -gt 30 ]; then
-          echo "steam-gamescope-session: Steam 30s 内未退出，放弃" >&2
-          exit 1
-        fi
-        sleep 1
-      done
-    fi
-    exec systemctl start steam-gamescope.service
-  '';
-  home.file.".local/bin/steam-gamescope-session".executable = true;
-  xdg.desktopEntries.steam-gamescope = {
-    name = "Steam (游戏模式)";
-    genericName = "Game Platform (gamescope session)";
-    comment = "切到 tty7 的 gamescope 独立会话，支持 Remote Play 串流桌面与非 Steam 游戏";
-    exec = "${config.home.homeDirectory}/.local/bin/steam-gamescope-session";
-    terminal = false;
-    icon = "steam";
-    type = "Application";
-    categories = [ "Game" ];
-  };
-
   # ── r2modman：NixOS/Wayland 下 Electron 需要 --no-sandbox ──────────────
   # Proton 游戏 mod 流程：
   #   1. r2modman 选游戏 → 安装 mod
@@ -1970,21 +1843,26 @@ in
   '';
 
   # Java wrapper for Minecraft: 注入 LD_LIBRARY_PATH 让 GLFW 能 dlopen 系统库，
-  # 并强制 X11 绕过 niri Wayland 兼容性问题
+  # 并强制 X11 绕过 niri Wayland 兼容性问题。
+  # 使用稳定符号链接 ~/.local/lib/jdk21，不依赖 nix store hash。
   home.file.".local/bin/java-mc".text = ''
     #!/usr/bin/env bash
     export LD_LIBRARY_PATH="/run/current-system/sw/share/nix-ld/lib''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     unset WAYLAND_DISPLAY
     export DISPLAY="''${DISPLAY:-:0}"
-    exec /home/ep-o1/.minecraftx/jre/java-runtime-delta/bin/java.real "$@"
+    exec "$HOME/.local/lib/jdk21/bin/java" "$@"
   '';
   home.file.".local/bin/java-mc".executable = true;
 
   # X Minecraft Launcher — bin: xmcl (Electron 43 / Chrome 150, root level)
-  # Chrome 150 ANGLE 需要 NVIDIA 驱动但 AppImage 的 RPATH=$ORIGIN 使 bundled ANGLE
-  # 遮蔽系统 EGL/Vulkan，GPU 子进程 SIGTRAP 崩溃。用 steam-run FHS 提供完整驱动栈。
+  # steam-run 提供完整 NVIDIA 驱动栈，解决 AppImage bundled ANGLE 遮蔽系统 EGL 的问题。
+  # ozone-platform=x11：Wayland 后端存在兼容性问题，强制走 XWayland。
+  # BROWSER：steam-run FHS 内 xdg-open 无法解析 mimeApps，显式指定浏览器。
+  # JAVA_HOME：指向稳定符号链接，避免 XMCL 保存 nix store hash 路径失效。
   home.file.".local/bin/xmcl".text = ''
     #!/usr/bin/env bash
+    export BROWSER="google-chrome-stable"
+    export JAVA_HOME="$HOME/.local/lib/jdk21"
     exec /run/current-system/sw/bin/steam-run \
       "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" \
       --no-sandbox --disable-gpu-sandbox \

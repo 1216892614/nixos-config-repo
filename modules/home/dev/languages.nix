@@ -46,10 +46,13 @@
     # RUSTC_WRAPPER / SCCACHE_* → managed by ./service-plane.nix
     RUSTUP_HOME = "$HOME/.rustup";
     CARGO_HOME = "$HOME/.cargo";
-    JAVA_HOME = "${pkgs.jdk21}";
+    JAVA_HOME = "$HOME/.local/lib/jdk21";
     # So pkg-config finds .pc files for cargo build scripts (openssl-sys, wayland-sys, etc.)
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
   };
+
+  # 稳定符号链接：XMCL 等工具保存的路径不会因 rebuild hash 变化失效
+  home.file.".local/lib/jdk21".source = pkgs.jdk21;
 
   # Limit parallel linker jobs to prevent rust-lld from exhausting memory
   home.file.".cargo/config.toml".text = ''
