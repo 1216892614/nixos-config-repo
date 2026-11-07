@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Page Share",
   "description": "告诉 AI Agent 你想让它操作的页面",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "permissions": ["activeTab", "tabs", "clipboardWrite"],
   "action": {
     "default_popup": "popup.html",

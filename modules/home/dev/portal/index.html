@@ -1,81 +1,319 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Service Plane</title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--dim:#8b949e;--green:#3fb950;--yellow:#d29922;--red:#f85149;--blue:#58a6ff;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding:2rem}
-.header{text-align:center;margin-bottom:2.5rem}
-.header h1{font-size:1.5rem;font-weight:600;letter-spacing:-.02em}
-.header p{color:var(--dim);font-size:.875rem;margin-top:.25rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;max-width:960px;margin:0 auto}
-.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.25rem;transition:border-color .2s;text-decoration:none;color:inherit;display:block}
-.card:hover{border-color:var(--blue)}
-.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
-.card-name{font-weight:600;font-size:1rem}
-.badge{font-size:.7rem;padding:.15rem .5rem;border-radius:9999px;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
-.badge-active{background:rgba(63,185,80,.15);color:var(--green)}
-.badge-sleeping{background:rgba(210,153,34,.12);color:var(--yellow)}
-.badge-error{background:rgba(248,81,73,.12);color:var(--red)}
-.badge-unknown{background:rgba(139,148,158,.12);color:var(--dim)}
-.card-desc{color:var(--dim);font-size:.8rem;line-height:1.4}
-.card-url{color:var(--blue);font-size:.75rem;margin-top:.5rem;opacity:.7}
-.footer{text-align:center;color:var(--dim);font-size:.75rem;margin-top:3rem}
+  .hb-grid { display: flex; gap: 2px; flex-wrap: wrap; max-width: 192px; }
+  .hb-cell { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+  .hb-up { background: oklch(var(--su)); }
+  .hb-down { background: oklch(var(--er)); }
+  .hb-sleep { background: oklch(var(--bc) / 0.35); }
+  .hb-unknown { background: oklch(var(--b3)); }
+  .hb-starting { background: oklch(var(--wa)); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: oklch(var(--b3)); border-radius: 3px; }
 </style>
 </head>
-<body>
-<div class="header">
-<h1>Service Plane</h1>
-<p>本地服务网关</p>
-</div>
-<div class="grid" id="services"></div>
-<div class="footer">Traefik + Sablier · scale-to-zero</div>
-<script>
-const services = [
-  {name:"FileBrowser", url:"https://files.local", desc:"文件浏览器", container:"service-plane-filebrowser"},
-  {name:"ComfyUI", url:"https://comfyui.local", desc:"AI 图像生成 (GPU)", container:"service-plane-comfyui"},
-  {name:"Pi Agent", url:"https://agent.local", desc:"AI 助手", container:"service-plane-pi-agent", alwaysOn:true},
-  {name:"Traefik", url:"https://traefik.local", desc:"反向代理仪表板", container:"service-plane-traefik", alwaysOn:true},
+<body class="bg-base-100 min-h-screen">
+<div id="app"></div>
+
+<script type="module">
+// ── 服务注册表 ───────────────────────────────────────────────────────────
+const SERVICES = [
+  { id: "comfyui",    name: "ComfyUI",    desc: "AI 图像生成 (GPU)",       container: "service-plane-comfyui",    url: "https://comfyui.local",   type: "http-s2z",  gpu: true },
+  { id: "llm",        name: "LLM",        desc: "Qwen3 4B 推理 (GPU)",     container: "service-plane-llm",        url: "https://llm.local",       type: "http-s2z",  gpu: true },
+  { id: "ocr",        name: "OCR",        desc: "Qwen 3.5 4B OCR (GPU)",   container: "service-plane-ocr",        url: "https://ocr.local",       type: "http-s2z",  gpu: true },
+  { id: "dragonfly",  name: "Dragonfly",  desc: "sccache Redis 后端",       container: "service-plane-dragonfly-1", url: null,                     type: "tcp-s2z" },
+  { id: "searxng",    name: "SearXNG",    desc: "搜索引擎聚合",             container: "service-plane-searxng-1",   url: null,                     type: "tcp-s2z" },
+  { id: "traefik",    name: "Traefik",    desc: "反向代理 + 仪表板",        container: "service-plane-traefik",    url: "https://traefik.local",   type: "always-on" },
+  { id: "sablier",    name: "Sablier",    desc: "HTTP scale-to-zero 调度",  container: "service-plane-sablier",    url: null,                      type: "always-on" },
+  { id: "tcp-gate",   name: "TCP Gate",   desc: "TCP on-demand 唤醒代理",   container: "service-plane-tcp-gate",   url: null,                      type: "always-on" },
+  { id: "unbound",    name: "Unbound",    desc: "本地 .local DNS 解析",     container: "service-plane-unbound",    url: null,                      type: "always-on" },
+  { id: "rustdesk-hbbs", name: "RustDesk Signal", desc: "RustDesk 信令服务",  container: "service-plane-rustdesk-hbbs", url: null,                 type: "always-on" },
+  { id: "rustdesk-hbbr", name: "RustDesk Relay",  desc: "RustDesk 中继服务",  container: "service-plane-rustdesk-hbbr", url: null,                 type: "always-on" },
 ];
 
-function badgeHtml(state) {
-  const map = {active:"活跃",sleeping:"休眠",error:"错误",unknown:"未知"};
-  return `<span class="badge badge-${state}">${map[state]||state}</span>`;
+// ── 心跳历史 ─────────────────────────────────────────────────────────────
+const HEARTBEAT_SIZE = 60;
+const heartbeats = {};
+SERVICES.forEach(s => { heartbeats[s.id] = []; });
+
+// ── 禁用状态（localStorage 持久化）──────────────────────────────────────
+function getDisabled() {
+  try { return JSON.parse(localStorage.getItem("sp-disabled") || "{}"); } catch { return {}; }
+}
+function setDisabled(id, val) {
+  const d = getDisabled(); d[id] = val; localStorage.setItem("sp-disabled", JSON.stringify(d));
 }
 
-function render(states) {
-  const el = document.getElementById("services");
-  el.innerHTML = services.map(s => {
-    const state = states[s.container] || (s.alwaysOn ? "active" : "unknown");
-    return `<a class="card" href="${s.url}">
-      <div class="card-head"><span class="card-name">${s.name}</span>${badgeHtml(state)}</div>
-      <div class="card-desc">${s.desc}</div>
-      <div class="card-url">${s.url.replace("https://","")}</div>
-    </a>`;
-  }).join("");
+// ── 保持运行标记（通过 Docker restart policy 判断）────────────────────────
+// running + restart=unless-stopped → 保持运行模式
+const keepAliveMap = {}; // id -> bool
+
+// ── Docker API ──────────────────────────────────────────────────────────
+async function dockerGet(path) {
+  const r = await fetch(`/api/docker/${path}`);
+  if (!r.ok) throw new Error(`Docker API ${r.status}`);
+  return r.json();
+}
+async function dockerPost(path, body) {
+  const opts = { method: "POST" };
+  if (body) { opts.headers = {"Content-Type":"application/json"}; opts.body = JSON.stringify(body); }
+  const r = await fetch(`/api/docker/${path}`, opts);
+  return r.status;
 }
 
-async function fetchStatus() {
-  const states = {};
+// ── 状态查询 ─────────────────────────────────────────────────────────────
+function parseState(c) {
+  const s = c.State;
+  if (s === "running") return "running";
+  if (s === "exited" || s === "dead") return "stopped";
+  if (s === "created" || s === "restarting") return "starting";
+  if (s === "paused") return "paused";
+  return "unknown";
+}
+
+async function fetchAllStatus() {
   try {
-    // Sablier API: GET /api/strategies/dynamic
-    // Fallback: check Docker via portal API
-    const r = await fetch("/api/status");
-    if (r.ok) {
-      const data = await r.json();
-      Object.assign(states, data);
+    const containers = await dockerGet("containers/json?all=true&filters=" + encodeURIComponent(JSON.stringify({name:["service-plane"]})));
+    const stateMap = {};
+    for (const c of containers) {
+      const name = c.Names[0]?.replace("/","");
+      const svc = SERVICES.find(s => s.container === name);
+      if (svc) {
+        stateMap[svc.id] = parseState(c);
+        // 从 HostConfig.RestartPolicy 推断保持运行
+        // containers/json 的 RestartPolicy 不在顶层，需 inspect
+      }
     }
-  } catch(e) {}
-  // Always-on services assumed active
-  services.filter(s=>s.alwaysOn).forEach(s=>{states[s.container]="active"});
-  render(states);
+    SERVICES.forEach(s => { if (!(s.id in stateMap)) stateMap[s.id] = "absent"; });
+    return stateMap;
+  } catch(e) { console.error("fetchAllStatus:", e); return null; }
 }
 
-fetchStatus();
-setInterval(fetchStatus, 10000);
+// 获取 restart policy（批量 inspect 太重，惰性查询）
+async function fetchRestartPolicy(container) {
+  try {
+    const info = await dockerGet(`containers/${container}/json`);
+    return info?.HostConfig?.RestartPolicy?.Name || "no";
+  } catch { return "no"; }
+}
+
+// ── 容器控制 ─────────────────────────────────────────────────────────────
+
+// 启动（单次，恢复 scale-to-zero 策略）
+async function actionStart(svc) {
+  setDisabled(svc.id, false);
+  await dockerPost(`containers/${svc.container}/update`, { RestartPolicy: { Name: "no" } });
+  await dockerPost(`containers/${svc.container}/start`);
+  keepAliveMap[svc.id] = false;
+}
+
+// 保持运行（设置 restart=unless-stopped，启动）
+async function actionKeepAlive(svc) {
+  setDisabled(svc.id, false);
+  await dockerPost(`containers/${svc.container}/update`, { RestartPolicy: { Name: "unless-stopped" } });
+  await dockerPost(`containers/${svc.container}/start`);
+  keepAliveMap[svc.id] = true;
+}
+
+// 停止（恢复 restart=no，停止容器）
+async function actionStop(svc) {
+  setDisabled(svc.id, false);
+  await dockerPost(`containers/${svc.container}/update`, { RestartPolicy: { Name: "no" } });
+  await dockerPost(`containers/${svc.container}/stop?t=10`);
+  keepAliveMap[svc.id] = false;
+}
+
+// 禁用（停止 + 标记禁止自动启动）
+async function actionDisable(svc) {
+  await dockerPost(`containers/${svc.container}/update`, { RestartPolicy: { Name: "no" } });
+  await dockerPost(`containers/${svc.container}/stop?t=5`);
+  setDisabled(svc.id, true);
+  keepAliveMap[svc.id] = false;
+}
+
+// ── 计算 mode ────────────────────────────────────────────────────────────
+// mode: "running" | "keep-alive" | "stopped" | "disabled" | "absent" | "starting"
+function getMode(svc, state) {
+  if (getDisabled()[svc.id]) return "disabled";
+  if (state === "absent") return "absent";
+  if (state === "starting") return "starting";
+  if (state === "running") return keepAliveMap[svc.id] ? "keep-alive" : "running";
+  return "stopped";
+}
+
+const modeLabels = {
+  "running":    { text: "运行中",   class: "badge-success" },
+  "keep-alive": { text: "保持运行", class: "badge-info" },
+  "stopped":    { text: "休眠中",   class: "badge-ghost" },
+  "disabled":   { text: "已禁用",   class: "badge-error" },
+  "absent":     { text: "未创建",   class: "badge-ghost badge-outline" },
+  "starting":   { text: "启动中",   class: "badge-warning" },
+  "unknown":    { text: "未知",     class: "badge-ghost badge-outline" },
+};
+
+const modeToHbClass = {
+  "running": "hb-up", "keep-alive": "hb-up", "stopped": "hb-sleep",
+  "disabled": "hb-down", "starting": "hb-starting", "absent": "hb-unknown", "unknown": "hb-unknown",
+};
+
+const typeLabels = {
+  "http-s2z": { text: "HTTP", class: "badge-info badge-outline" },
+  "tcp-s2z":  { text: "TCP",  class: "badge-secondary badge-outline" },
+  "always-on":{ text: "常驻", class: "badge-primary badge-outline" },
+};
+
+// ── 渲染 ─────────────────────────────────────────────────────────────────
+function hbGridHtml(svcId) {
+  const hb = heartbeats[svcId] || [];
+  const cells = [];
+  for (let i = 0; i < HEARTBEAT_SIZE; i++) {
+    const idx = hb.length - 1 - i;
+    const cls = idx >= 0 ? (modeToHbClass[hb[idx]] || "hb-unknown") : "hb-unknown";
+    const title = idx >= 0 ? hb[idx] : "无数据";
+    cells.push(`<div class="hb-cell ${cls}" title="${title}"></div>`);
+  }
+  return `<div class="hb-grid">${cells.reverse().join("")}</div>`;
+}
+
+function renderCard(svc, state) {
+  const mode = getMode(svc, state);
+  const ml = modeLabels[mode] || modeLabels.unknown;
+  const tl = typeLabels[svc.type];
+  const isS2z = svc.type.endsWith("-s2z");
+  const urlLine = svc.url ? `<a href="${svc.url}" class="link link-info text-xs opacity-70" target="_blank">${svc.url.replace("https://","")}</a>` : "";
+  const gpuBadge = svc.gpu ? `<span class="badge badge-xs badge-accent badge-outline ml-1">GPU</span>` : "";
+
+  // 按钮组（仅 scale-to-zero 服务）
+  let buttons = "";
+  if (isS2z) {
+    const isActive = mode === "running" || mode === "keep-alive";
+    const isKA = mode === "keep-alive";
+    const isDisabled = mode === "disabled";
+    const isStopped = mode === "stopped" || mode === "absent";
+
+    buttons = `
+    <div class="flex flex-wrap gap-1 mt-1">
+      <button class="btn btn-xs gap-1 ${!isActive && !isDisabled ? "btn-success" : "btn-ghost btn-disabled"}"
+              onclick="window._sp.action('start','${svc.id}')" ${isActive||isDisabled?"disabled":""}>
+        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21"/></svg>启动
+      </button>
+      <button class="btn btn-xs gap-1 ${isKA ? "btn-info" : (isActive ? "btn-info btn-outline" : "btn-ghost btn-disabled")}"
+              onclick="window._sp.action('keepalive','${svc.id}')" ${(!isActive && !isStopped)||isDisabled?"disabled":""}>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>${isKA ? "保持中" : "保持运行"}
+      </button>
+      <button class="btn btn-xs gap-1 ${isActive ? "btn-error btn-outline" : "btn-ghost btn-disabled"}"
+              onclick="window._sp.action('stop','${svc.id}')" ${!isActive?"disabled":""}>
+        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>停止
+      </button>
+      <button class="btn btn-xs gap-1 ${isDisabled ? "btn-neutral" : "btn-ghost"}"
+              onclick="window._sp.action('disable','${svc.id}')">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>${isDisabled ? "已禁用" : "禁用"}
+      </button>
+    </div>`;
+  }
+
+  return `
+  <div class="card bg-base-200 shadow-sm border border-base-300 hover:border-info transition-colors ${mode === "disabled" ? "opacity-50" : ""}">
+    <div class="card-body p-4 gap-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h3 class="card-title text-sm">${svc.name}</h3>
+          ${gpuBadge}
+          <span class="badge badge-xs ${tl.class}">${tl.text}</span>
+        </div>
+        <span class="badge badge-sm ${ml.class}">${ml.text}</span>
+      </div>
+      <p class="text-xs text-base-content/60">${svc.desc}</p>
+      ${urlLine}
+      <div class="mt-1">${hbGridHtml(svc.id)}</div>
+      ${buttons}
+    </div>
+  </div>`;
+}
+
+function render(stateMap) {
+  const s2zServices = SERVICES.filter(s => s.type.endsWith("-s2z"));
+  const alwaysOnServices = SERVICES.filter(s => s.type === "always-on");
+
+  document.getElementById("app").innerHTML = `
+  <div class="max-w-5xl mx-auto px-4 py-6">
+    <div class="text-center mb-6">
+      <h1 class="text-xl font-bold tracking-tight">Service Plane</h1>
+      <p class="text-sm text-base-content/50 mt-1">本地服务网关 · Traefik + Sablier</p>
+    </div>
+    <div class="mb-4">
+      <h2 class="text-sm font-semibold text-base-content/70 mb-2 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        按需服务
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        ${s2zServices.map(s => renderCard(s, stateMap[s.id] || "unknown")).join("")}
+      </div>
+    </div>
+    <div class="divider text-xs text-base-content/30">基础设施</div>
+    <div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        ${alwaysOnServices.map(s => renderCard(s, stateMap[s.id] || "unknown")).join("")}
+      </div>
+    </div>
+    <div class="text-center text-xs text-base-content/30 mt-8">
+      心跳每 5s 采样 · 保留最近 ${HEARTBEAT_SIZE} 次
+    </div>
+  </div>`;
+}
+
+// ── 主循环 ────────────────────────────────────────────────────────────────
+let currentStates = {};
+let busy = false;
+
+async function tick() {
+  if (busy) return;
+  const stateMap = await fetchAllStatus();
+  if (stateMap) {
+    currentStates = stateMap;
+    SERVICES.forEach(s => {
+      const hb = heartbeats[s.id];
+      hb.push(getMode(s, stateMap[s.id] || "unknown"));
+      if (hb.length > HEARTBEAT_SIZE) hb.shift();
+    });
+    render(currentStates);
+  }
+}
+
+// 初始化 keepAliveMap（首次从 Docker inspect 读取）
+async function initKeepAlive() {
+  const s2z = SERVICES.filter(s => s.type.endsWith("-s2z"));
+  await Promise.all(s2z.map(async svc => {
+    const policy = await fetchRestartPolicy(svc.container);
+    keepAliveMap[svc.id] = (policy === "unless-stopped" || policy === "always");
+  }));
+}
+
+window._sp = {
+  async action(type, svcId) {
+    const svc = SERVICES.find(s => s.id === svcId);
+    if (!svc) return;
+    busy = true;
+    try {
+      if (type === "start")     await actionStart(svc);
+      if (type === "keepalive") await actionKeepAlive(svc);
+      if (type === "stop")      await actionStop(svc);
+      if (type === "disable")   await actionDisable(svc);
+    } catch(e) { console.error("action failed:", e); }
+    busy = false;
+    setTimeout(tick, 800);
+  }
+};
+
+await initKeepAlive();
+tick();
+setInterval(tick, 5000);
 </script>
 </body>
 </html>

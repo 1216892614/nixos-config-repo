@@ -11,7 +11,7 @@
 
 stdenv.mkDerivation {
   pname = "page-share";
-  version = "2.0.3";
+  version = "2.0.4";
 
   src = ./.;
 
@@ -68,7 +68,7 @@ print(str().join(chr(int(c,16)+ord('a')) for c in d))
     cat > $out/share/google-chrome/extensions/''${EXT_ID}.json <<EXTJSON
 {
   "external_crx": "$out/lib/page-share/extension.crx",
-  "external_version": "2.0.3"
+  "external_version": "2.0.4"
 }
 EXTJSON
     echo "Extension ID: $EXT_ID"

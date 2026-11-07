@@ -9,13 +9,10 @@
 # ║    portal (always-on)      → 系统主页 + 错误页 + 等待页 (nginx)        ║
 # ║    tcp-gate (always-on)    → TCP on-demand wake + transparent proxy     ║
 # ║    dragonfly (TCP s2z)     → sccache Redis backend                      ║
-# ║    filebrowser (HTTP s2z)  → web file browser                           ║
 # ║    comfyui (HTTP s2z)      → ComfyUI image gen (GPU, comfy-cli)         ║
-# ║    ocr (HTTP s2z)          → vLLM OCR (Qwen 3.5 4B, GPU)               ║
 # ║    comfyui-keepalive (on)  → queue monitor → Sablier session refresh    ║
 # ║    rustdesk-hbbs (always)  → RustDesk signal server (host network)      ║
 # ║    rustdesk-hbbr (always)  → RustDesk relay server (host network)       ║
-# ║    pi-agent (always)       → AI assistant agent (host network)          ║
 # ║                                                                         ║
 # ║  Adding services:                                                       ║
 # ║    TCP scale-to-zero → add to `tcpServices` attrset                     ║
@@ -36,8 +33,6 @@ let
   username = env.username or "ep-o1";
 
   # ── Ports from env ──────────────────────────────────────────────────────
-  fileBrowserPort = env.fileBrowserPort or 8080;
-  piAgentPort = env.piAgentPort or 3001;
   rustdeskRelayPort = env.rustdeskRelayPort or 21117;
   searxngPort = env.searxngPort or 18980;
 
@@ -45,11 +40,8 @@ let
   # Central definition used by Traefik routing, Unbound zone, and /etc/hosts.
   httpServices = {
     plane  = { backend = "http://service-plane-portal:80"; scaleToZero = false; };
-    files  = { backend = "http://service-plane-filebrowser:80"; scaleToZero = true; };
     comfyui = { backend = "http://service-plane-comfyui:8188"; scaleToZero = true; };
     llm    = { backend = "http://service-plane-llm:8080"; scaleToZero = true; };
-    ocr    = { backend = "http://service-plane-ocr:8000"; scaleToZero = true; };
-    agent  = { backend = "http://host.docker.internal:${toString piAgentPort}"; scaleToZero = false; };
     traefik = { backend = "http://127.0.0.1:8080"; scaleToZero = false; };  # Traefik API (internal)
   };
 
@@ -194,9 +186,8 @@ let
   });
 
   # ── Traefik dynamic config (Host-based routing) ─────────────────────────
-  # Each service gets a hostname: files.local, agent.local, traefik.local
+  # Each service gets a hostname: comfyui.local, llm.local, traefik.local
   # All routers use TLS with the local CA wildcard cert.
-  # FileBrowser uses Sablier for scale-to-zero; others route directly.
   traefikDynamicYml = pkgs.writeText "traefik-dynamic.yml" (builtins.toJSON {
     tls = {
       certificates = [
@@ -217,14 +208,6 @@ let
           tls = {};
           priority = 10;
         };
-        # ── Scale-to-zero services ──────────────────────────────────────
-        filebrowser = {
-          rule = "Host(`files.${localDomain}`)";
-          entryPoints = [ "websecure" ];
-          middlewares = [ "filebrowser-sablier" ];
-          service = "filebrowser";
-          tls = {};
-        };
         comfyui = {
           rule = "Host(`comfyui.${localDomain}`)";
           entryPoints = [ "websecure" ];
@@ -232,25 +215,11 @@ let
           service = "comfyui";
           tls = {};
         };
-        ocr = {
-          rule = "Host(`ocr.${localDomain}`)";
-          entryPoints = [ "websecure" ];
-          middlewares = [ "ocr-sablier" ];
-          service = "ocr";
-          tls = {};
-        };
         llm = {
           rule = "Host(`llm.${localDomain}`)";
           entryPoints = [ "websecure" ];
           middlewares = [ "llm-sablier" ];
           service = "llm";
-          tls = {};
-        };
-        # ── Always-on services ──────────────────────────────────────────
-        pi-agent = {
-          rule = "Host(`agent.${localDomain}`)";
-          entryPoints = [ "websecure" ];
-          service = "pi-agent";
           tls = {};
         };
         dashboard = {
@@ -273,34 +242,14 @@ let
         portal.loadBalancer.servers = [
           { url = "http://service-plane-portal:80"; }
         ];
-        filebrowser.loadBalancer.servers = [
-          { url = "http://service-plane-filebrowser:80"; }
-        ];
         comfyui.loadBalancer.servers = [
           { url = "http://service-plane-comfyui:8188"; }
-        ];
-        pi-agent.loadBalancer.servers = [
-          { url = "http://host.docker.internal:${toString piAgentPort}"; }
-        ];
-        ocr.loadBalancer.servers = [
-          { url = "http://service-plane-ocr:8000"; }
         ];
         llm.loadBalancer.servers = [
           { url = "http://service-plane-llm:8080"; }
         ];
       };
       middlewares = {
-        # ── Sablier: FileBrowser 自动唤醒 + 自定义等待页 ────────────────
-        filebrowser-sablier.plugin.sablier = {
-          sablierUrl = "http://service-plane-sablier:10000";
-          names = "service-plane-filebrowser";
-          sessionDuration = "10m";
-          dynamic = {
-            displayName = "FileBrowser";
-            customThemesPath = "/portal/waiting.html";
-            refreshFrequency = "5s";
-          };
-        };
         # ── Sablier: ComfyUI 自动唤醒 + 自定义等待页 ───────────────────
         comfyui-sablier.plugin.sablier = {
           sablierUrl = "http://service-plane-sablier:10000";
@@ -308,17 +257,6 @@ let
           sessionDuration = "30m";
           dynamic = {
             displayName = "ComfyUI";
-            customThemesPath = "/portal/waiting.html";
-            refreshFrequency = "5s";
-          };
-        };
-        # ── Sablier: OCR (vLLM) 自动唤醒 + 自定义等待页 ────────────────
-        ocr-sablier.plugin.sablier = {
-          sablierUrl = "http://service-plane-sablier:10000";
-          names = "service-plane-ocr";
-          sessionDuration = "15m";
-          dynamic = {
-            displayName = "OCR (Qwen 3.5)";
             customThemesPath = "/portal/waiting.html";
             refreshFrequency = "5s";
           };
@@ -344,34 +282,43 @@ let
     };
   });
 
-  # ── Pi Agent entrypoint ─────────────────────────────────────────────────
-  piAgentEntrypoint = pkgs.writeText "pi-agent-entrypoint.sh" ''
-    #!/bin/sh
-    set -eu
-    export PATH="/nix-user/bin:/nix-system/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-    export HOME="/home/${username}"
-    cd "$HOME"
-    exec opencode serve --hostname 0.0.0.0 --port 3000
-  '';
-
   # ── ComfyUI entrypoint (comfy-cli based) ──────────────────────────────
   comfyuiEntrypoint = pkgs.writeText "comfyui-entrypoint.sh" ''
     #!/bin/bash
     set -eu
     export HOME="/home/user"
-    export PATH="$HOME/.local/bin:$PATH"
+    WORKSPACE="$HOME/comfy/workspace"
+    VENV="$WORKSPACE/.venv"
 
-    # 首次启动：安装 comfy-cli + ComfyUI
+    # 补全依赖（pytorch 镜像缺 git 和 python3-venv）
+    if ! command -v git &>/dev/null || [ ! -f /usr/lib/python3.12/ensurepip/__init__.py ]; then
+      apt-get update -qq && apt-get install -y -qq git python3.12-venv >/dev/null
+    fi
+
+    # 激活 workspace venv（如存在）
+    if [ -f "$VENV/bin/activate" ]; then
+      source "$VENV/bin/activate"
+    fi
+
+    # 确保 comfy-cli 可用（workspace venv 持久化，只需装一次）
+    if ! command -v comfy &>/dev/null; then
+      echo "[comfyui] 安装 comfy-cli 到 workspace venv..."
+      pip install --break-system-packages comfy-cli 2>/dev/null || pip install comfy-cli
+    fi
+
+    # 首次启动：安装 ComfyUI
     if [ ! -f "$HOME/comfy/.installed" ]; then
-      echo "[comfyui] 首次启动，安装 comfy-cli..."
-      pip install --user comfy-cli
-      echo "[comfyui] 通过 comfy-cli 安装 ComfyUI..."
-      comfy --workspace="$HOME/comfy" install --nvidia --skip-manager
+      echo "[comfyui] 首次启动，安装 ComfyUI（最新版）..."
+      comfy --workspace="$WORKSPACE" install --nvidia --skip-manager
       touch "$HOME/comfy/.installed"
     fi
 
+    # 每次启动检查更新
+    echo "[comfyui] 检查更新..."
+    comfy --workspace="$WORKSPACE" update 2>/dev/null || true
+
     echo "[comfyui] 启动 ComfyUI..."
-    exec comfy --workspace="$HOME/comfy" launch -- --listen 0.0.0.0 --port 8188
+    exec comfy --workspace="$WORKSPACE" launch -- --listen 0.0.0.0 --port 8188
   '';
 
   # ── ComfyUI keepalive: 队列有任务时刷新 Sablier session ─────────────────
@@ -465,9 +412,11 @@ let
         image = "nginx:alpine";
         container_name = "service-plane-portal";
         restart = "unless-stopped";
+        entrypoint = [ "sh" "-c" "rm -f /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'" ];
         volumes = [
           "${planeDir}/portal:/usr/share/nginx/html:ro"
-          "${planeDir}/portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro"
+          "${planeDir}/portal/nginx.conf:/etc/nginx/nginx.conf:ro"
+          "/var/run/docker.sock:/var/run/docker.sock"
           "/nix/store:/nix/store:ro"
         ];
       };
@@ -503,28 +452,13 @@ let
         # 不依赖 backend 容器 — tcp-gate 按需唤醒它们
       };
 
-      # ── Scale-to-zero (HTTP): FileBrowser ────────────────────────────────
-      filebrowser = {
-        image = "filebrowser/filebrowser:latest";
-        container_name = "service-plane-filebrowser";
-        restart = "no";
-        volumes = [
-          "/home/${username}:/srv:ro"
-          "${dataDir}/filebrowser/database:/database"
-          "${dataDir}/filebrowser/config:/config"
-        ];
-        labels = {
-          "sablier.enable" = "true";
-          "sablier.group" = "filebrowser";
-        };
-      };
-
       # ── Scale-to-zero (HTTP): ComfyUI (GPU, Sablier + queue keepalive) ──
       comfyui = {
-        image = "nvidia/cuda:12.8.1-runtime-ubuntu24.04";
+        image = "pytorch/pytorch:2.11.0-cuda12.8-cudnn9-runtime";
         container_name = "service-plane-comfyui";
         restart = "no";
         entrypoint = [ "bash" "/scripts/comfyui-entrypoint.sh" ];
+        ports = [ "127.0.0.1:8188:8188" ];
         volumes = [
           "${dataDir}/comfyui:/home/user/comfy"
           "${planeDir}/scripts/comfyui-entrypoint.sh:/scripts/comfyui-entrypoint.sh:ro"
@@ -562,45 +496,6 @@ let
         };
       };
 
-      # ── Scale-to-zero (HTTP): OCR vLLM (Qwen 3.5 4B, GPU, Sablier) ────
-      ocr = {
-        image = "vllm/vllm-openai:v0.21.0";
-        container_name = "service-plane-ocr";
-        restart = "no";
-        volumes = [
-          "${dataDir}/ocr/models:/mnt/models"
-          "${config.home.homeDirectory}/.cache/huggingface:/root/.cache/huggingface"
-        ];
-        environment = {
-          NVIDIA_VISIBLE_DEVICES = "all";
-          PORT = "8000";
-          SERVED_NAME = "Qwen/Qwen3.5-4B";
-          GPU_MEMORY = "0.90";
-          MAX_NUM_BATCHED_TOKENS = "2048";
-          MAX_NUM_SEQS = "64";
-          MAX_MODEL_LEN = "2048";
-          HF_HOME = "/root/.cache/huggingface";
-        };
-        command = [
-          "Qwen/Qwen3.5-4B"
-          "--served-model-name" "Qwen/Qwen3.5-4B"
-          "--port" "8000"
-          "--gpu-memory-utilization" "0.90"
-          "--max-model-len" "2048"
-          "--max-num-batched-tokens" "2048"
-          "--max-num-seqs" "64"
-          "--limit-mm-per-prompt" "{\"image\":1, \"video\":0}"
-          "--trust-remote-code"
-          "--enable-chunked-prefill"
-          "--dtype" "float16"
-        ];
-        devices = [ "nvidia.com/gpu=all" ];
-        labels = {
-          "sablier.enable" = "true";
-          "sablier.group" = "ocr";
-        };
-      };
-
       # ── Always-on: ComfyUI keepalive (queue monitor → Sablier refresh) ──
       comfyui-keepalive = {
         image = "docker:27-cli";
@@ -634,27 +529,6 @@ let
         volumes = [ "${dataDir}/rustdesk:/root" ];
       };
 
-      # ── Always-on: Pi Agent (host network for full access) ──────────────
-      pi-agent = {
-        image = "debian:bookworm-slim";
-        container_name = "service-plane-pi-agent";
-        restart = "unless-stopped";
-        network_mode = "host";
-        entrypoint = [ "sh" "/entrypoint/pi-agent-entrypoint.sh" ];
-        volumes = [
-          "/nix/store:/nix/store:ro"
-          "/run/current-system/sw:/nix-system:ro"
-          "/etc/profiles/per-user/${username}:/nix-user:ro"
-          "/home/${username}:/home/${username}"
-          "/var/run/docker.sock:/var/run/docker.sock"
-          "${planeDir}/scripts/pi-agent-entrypoint.sh:/entrypoint/pi-agent-entrypoint.sh:ro"
-        ];
-        environment = {
-          HOME = "/home/${username}";
-          USER = username;
-          TERM = "xterm-256color";
-        };
-      };
     }
     # ── Scale-to-zero (TCP): backend containers ────────────────────────────
     // (lib.mapAttrs (name: svc: {
@@ -688,7 +562,6 @@ in
   # ── Generated config files ──────────────────────────────────────────────
   xdg.configFile."service-plane/docker-compose.yml".source = composeContent;
   xdg.configFile."service-plane/scripts/tcp-gate.sh".source = gateScript;
-  xdg.configFile."service-plane/scripts/pi-agent-entrypoint.sh".source = piAgentEntrypoint;
   xdg.configFile."service-plane/scripts/comfyui-entrypoint.sh".source = comfyuiEntrypoint;
   xdg.configFile."service-plane/scripts/comfyui-keepalive.sh".source = comfyuiKeepalive;
   xdg.configFile."service-plane/traefik/traefik.yml".source = traefikStaticYml;
@@ -706,11 +579,8 @@ in
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _:
       ''mkdir -p "${dataDir}/${name}"''
     ) tcpServices)}
-    mkdir -p "${dataDir}/filebrowser/database"
-    mkdir -p "${dataDir}/filebrowser/config"
     mkdir -p "${dataDir}/rustdesk"
     mkdir -p "${dataDir}/comfyui"
-    mkdir -p "${dataDir}/ocr/models"
     mkdir -p "${dataDir}/llm/models"
   '';
 
@@ -756,9 +626,7 @@ in
         # 允许个别容器启动失败（如 GPU 不可用），不影响其余服务
         ${pkgs.docker}/bin/docker compose up -d --remove-orphans || true
         # Stop scale-to-zero backends (created but should idle)
-        ${pkgs.docker}/bin/docker stop service-plane-filebrowser 2>/dev/null || true
         ${pkgs.docker}/bin/docker stop service-plane-comfyui 2>/dev/null || true
-        ${pkgs.docker}/bin/docker stop service-plane-ocr 2>/dev/null || true
         ${pkgs.docker}/bin/docker stop service-plane-llm 2>/dev/null || true
         ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: _: ''
           ${pkgs.docker}/bin/docker stop "service-plane-${name}-1" 2>/dev/null || true

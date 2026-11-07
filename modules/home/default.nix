@@ -55,6 +55,21 @@ let
       command = "${pkgs.nodejs}/bin/npx";
       args = [ "-y" "chrome-devtools-mcp@1.12.0" "--autoConnect" ];
     };
+    # 本地 ComfyUI MCP（comfy-mcp stdio → Docker 容器内 ComfyUI）
+    comfyui = {
+      command = "${pkgs.uv}/bin/uvx";
+      args = [ "comfy-mcp" ];
+      env = {
+        COMFYUI_URL = "http://127.0.0.1:8188";
+        COMFY_BIN = "${pkgs.writeShellScript "comfy-cli-wrapper" ''
+          exec ${pkgs.uv}/bin/uvx --from comfy-cli comfy "$@"
+        ''}";
+      };
+    };
+    # Figma MCP 远程服务器（OAuth 浏览器认证，首次连接时弹出授权页）
+    figma = {
+      url = "https://mcp.figma.com/mcp";
+    };
   };
 in
 {
@@ -1160,6 +1175,29 @@ in
         fi
   '';
 
+  # Chrome: 导入 Service Plane 本地 CA 到 NSS 数据库
+  # Chrome/Chromium 使用 ~/.pki/nssdb 而非系统 CA bundle，
+  # 不导入会导致访问 *.local HTTPS 时报「不是私密连接」。
+  # 幂等：先删旧的再导入，rebuild 换 CA 后自动更新。
+  home.activation.importLocalCaToNss = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    nssdb="${config.home.homeDirectory}/.pki/nssdb"
+    ca_cert="/etc/service-plane/ca.crt"
+    ca_nick="Service Plane Local CA"
+    certutil="${pkgs.nssTools}/bin/certutil"
+    if [ -f "$ca_cert" ]; then
+      mkdir -p "$nssdb"
+      # 初始化 nssdb（如果不存在）
+      if [ ! -f "$nssdb/cert9.db" ]; then
+        $certutil -d sql:"$nssdb" -N --empty-password
+      fi
+      # 删除旧证书（忽略不存在的情况）
+      $certutil -d sql:"$nssdb" -D -n "$ca_nick" 2>/dev/null || true
+      # 导入：CT,c,c = 信任用于 TLS 服务端验证
+      $certutil -d sql:"$nssdb" -A -n "$ca_nick" -t "CT,c,c" -i "$ca_cert"
+      echo "chrome: imported local CA into nssdb"
+    fi
+  '';
+
   # Symlink ~/.local/share/fonts → system font dir so apps with hardcoded
   # font paths (RustDesk fontdb, etc.) can find CJK fonts on NixOS
   home.activation.linkFonts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -1749,6 +1787,7 @@ in
     _install_ai "skills-manager" "$REPO/skills-manager.AppImage"
     _install_ai "flclash"  "$REPO/flclash.AppImage"
     _install_ai "frame-control" "$REPO/frame-control.AppImage"
+    _install_ai "artcraft-launcher" "$REPO/artcraft-launcher.AppImage"
   '';
 
   # ── Herdr: native terminal for coding agents (curl installer) ────────────
@@ -1823,6 +1862,21 @@ in
     mimeType = [ "x-scheme-handler/frame-control" ];
   };
 
+  # ── ArtCraft Launcher 桌面入口（AppImage 解压后） ──────────────────────
+  xdg.desktopEntries.artcraft-launcher = {
+    name = "ArtCraft Launcher";
+    genericName = "App Launcher";
+    comment = "Install, update and launch the Craft App Suite";
+    exec = "${config.home.homeDirectory}/.local/opt/artcraft-launcher/usr/bin/artcraft-launcher";
+    terminal = false;
+    icon = "${config.home.homeDirectory}/.local/opt/artcraft-launcher/ai.storyteller.artcraft-launcher.png";
+    categories = [ "Utility" ];
+    settings = {
+      StartupWMClass = "ai.storyteller.artcraft-launcher";
+      Keywords = "artcraft;craft;launcher;installer;updater;photocraft;filmcraft;apps;";
+    };
+  };
+
   # ── chrome-agent: browser automation for AI agents (cargo install) ──────
   # 幂等: 只在版本变化或二进制不存在时重新安装
   home.activation.installChromeAgent = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -1855,18 +1909,25 @@ in
   home.file.".local/bin/java-mc".executable = true;
 
   # X Minecraft Launcher — bin: xmcl (Electron 43 / Chrome 150, root level)
-  # steam-run 提供完整 NVIDIA 驱动栈，解决 AppImage bundled ANGLE 遮蔽系统 EGL 的问题。
-  # ozone-platform=x11：Wayland 后端存在兼容性问题，强制走 XWayland。
-  # BROWSER：steam-run FHS 内 xdg-open 无法解析 mimeApps，显式指定浏览器。
+  # steam-run 提供完整 NVIDIA 驱动栈。
+  # 自带 ANGLE 库（libEGL/libGLESv2/libvk_swiftshader/libvulkan）会遮蔽系统 EGL，
+  # 导致 Wayland 渲染失败——首次启动时自动重命名，让 steam-run 的系统 GL 接管。
+  # ozone-platform-hint=auto + enable-wayland-ime：原生 Wayland，输入法和浏览器弹窗正常。
+  # BROWSER：steam-run FHS 内 xdg-open 无法解析 mimeApps，用绝对路径指定浏览器。
   # JAVA_HOME：指向稳定符号链接，避免 XMCL 保存 nix store hash 路径失效。
   home.file.".local/bin/xmcl".text = ''
     #!/usr/bin/env bash
-    export BROWSER="google-chrome-stable"
+    XMCL_DIR="$HOME/.local/opt/xmcl"
+    # 移除 AppImage 自带的 ANGLE/Vulkan 库，让 steam-run 提供系统 NVIDIA EGL
+    for lib in libEGL.so libGLESv2.so libvk_swiftshader.so libvulkan.so.1; do
+      [ -f "$XMCL_DIR/$lib" ] && mv "$XMCL_DIR/$lib" "$XMCL_DIR/$lib.bundled"
+    done
+    export BROWSER="${config.home.profileDirectory}/bin/google-chrome-stable"
     export JAVA_HOME="$HOME/.local/lib/jdk21"
     exec /run/current-system/sw/bin/steam-run \
-      "${config.home.homeDirectory}/.local/opt/xmcl/xmcl" \
+      "$XMCL_DIR/xmcl" \
       --no-sandbox --disable-gpu-sandbox \
-      --ozone-platform=x11 \
+      --ozone-platform-hint=auto --enable-wayland-ime \
       "$@"
   '';
   home.file.".local/bin/xmcl".executable = true;
