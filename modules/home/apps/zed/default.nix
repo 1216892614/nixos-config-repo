@@ -286,11 +286,61 @@ in
           bytecatcode = {
             api_url = "https://bytecat.lamclod.cn/v1";
             available_models = [
+              { name = "claude-fable-5"; display_name = "ByteCat Claude Fable 5"; max_tokens = 200000; }
+              { name = "claude-fable-5-1"; display_name = "ByteCat Claude Fable 5.1"; max_tokens = 200000; }
+              { name = "claude-fable-5-2"; display_name = "ByteCat Claude Fable 5.2"; max_tokens = 200000; }
               { name = "claude-haiku-4-5-20251001"; display_name = "ByteCat Claude Haiku 4.5"; max_tokens = 200000; }
+              { name = "claude-haiku-5-5"; display_name = "ByteCat Claude Haiku 5.5"; max_tokens = 200000; }
+              { name = "claude-opus-4-5"; display_name = "ByteCat Claude Opus 4.5"; max_tokens = 200000; }
+              { name = "claude-opus-4-5-20251101"; display_name = "ByteCat Claude Opus 4.5 20251101"; max_tokens = 200000; }
               { name = "claude-opus-4-6"; display_name = "ByteCat Claude Opus 4.6"; max_tokens = 200000; }
               { name = "claude-opus-4-7"; display_name = "ByteCat Claude Opus 4.7"; max_tokens = 200000; }
               { name = "claude-opus-4-8"; display_name = "ByteCat Claude Opus 4.8"; max_tokens = 200000; }
+              { name = "claude-opus-5"; display_name = "ByteCat Claude Opus 5"; max_tokens = 200000; }
+              { name = "claude-opus-5-5"; display_name = "ByteCat Claude Opus 5.5"; max_tokens = 200000; }
+              { name = "claude-opus-5.5"; display_name = "ByteCat Claude Opus 5.5 Premium"; max_tokens = 200000; }
+              { name = "claude-sonnet-4-5-20250929"; display_name = "ByteCat Claude Sonnet 4.5 20250929"; max_tokens = 200000; }
               { name = "claude-sonnet-4-6"; display_name = "ByteCat Claude Sonnet 4.6"; max_tokens = 200000; }
+              { name = "claude-sonnet-5"; display_name = "ByteCat Claude Sonnet 5"; max_tokens = 200000; }
+              { name = "claude-sonnet-5-5"; display_name = "ByteCat Claude Sonnet 5.5"; max_tokens = 200000; }
+              { name = "codex-auto-review"; display_name = "ByteCat Codex Auto Review"; max_tokens = 200000; }
+              { name = "deepseek-v4.1-flash"; display_name = "ByteCat DeepSeek V4.1 Flash"; max_tokens = 128000; }
+              { name = "gemini-3-flash-preview"; display_name = "ByteCat Gemini 3 Flash Preview"; max_tokens = 1048576; }
+              { name = "gemini-3-pro-image-preview"; display_name = "ByteCat Gemini 3 Pro Image Preview"; max_tokens = 32000; }
+              { name = "gemini-3-pro-preview"; display_name = "ByteCat Gemini 3 Pro Preview"; max_tokens = 1048576; }
+              { name = "gemini-3.1-flash-image"; display_name = "ByteCat Gemini 3.1 Flash Image"; max_tokens = 32000; }
+              { name = "gemini-3.1-flash-image-preview"; display_name = "ByteCat Gemini 3.1 Flash Image Preview"; max_tokens = 32000; }
+              { name = "gemini-3.1-pro-high"; display_name = "ByteCat Gemini 3.1 Pro High"; max_tokens = 1048576; }
+              { name = "gemini-3.1-pro-low"; display_name = "ByteCat Gemini 3.1 Pro Low"; max_tokens = 1048576; }
+              { name = "gemini-3.1-pro-preview"; display_name = "ByteCat Gemini 3.1 Pro Preview"; max_tokens = 1048576; }
+              { name = "gemini-3.5-flash"; display_name = "ByteCat Gemini 3.5 Flash"; max_tokens = 1048576; }
+              { name = "gemini-3.7-flash"; display_name = "ByteCat Gemini 3.7 Flash"; max_tokens = 1048576; }
+              { name = "gemini-3.8-flash"; display_name = "ByteCat Gemini 3.8 Flash"; max_tokens = 1048576; }
+              { name = "gemini-4-argon"; display_name = "ByteCat Gemini 4 Argon"; max_tokens = 1048576; }
+              { name = "gpt-5.3-codex"; display_name = "ByteCat GPT 5.3 Codex"; max_tokens = 272000; }
+              { name = "gpt-5.3-codex-spark"; display_name = "ByteCat GPT 5.3 Codex Spark"; max_tokens = 272000; }
+              { name = "gpt-5.4"; display_name = "ByteCat GPT 5.4"; max_tokens = 272000; }
+              { name = "gpt-5.4-mini"; display_name = "ByteCat GPT 5.4 Mini"; max_tokens = 272000; }
+              { name = "gpt-5.5"; display_name = "ByteCat GPT 5.5"; max_tokens = 272000; }
+              { name = "gpt-5.5-openai-compact"; display_name = "ByteCat GPT 5.5 Compact"; max_tokens = 272000; }
+              { name = "gpt-5.6"; display_name = "ByteCat GPT 5.6"; max_tokens = 272000; }
+              { name = "gpt-5.6-luna"; display_name = "ByteCat GPT 5.6 Luna"; max_tokens = 272000; }
+              { name = "gpt-5.6-sol"; display_name = "ByteCat GPT 5.6 Sol"; max_tokens = 272000; }
+              { name = "gpt-5.6-sol-openai-compact"; display_name = "ByteCat GPT 5.6 Sol Compact"; max_tokens = 272000; }
+              { name = "gpt-5.6-terra"; display_name = "ByteCat GPT 5.6 Terra"; max_tokens = 272000; }
+              { name = "gpt-5.6-terra-openai-compact"; display_name = "ByteCat GPT 5.6 Terra Compact"; max_tokens = 272000; }
+              { name = "gpt-6-astra"; display_name = "ByteCat GPT 6 Astra"; max_tokens = 272000; }
+              { name = "gpt-6-luna"; display_name = "ByteCat GPT 6 Luna"; max_tokens = 272000; }
+              { name = "gpt-6-sol"; display_name = "ByteCat GPT 6 Sol"; max_tokens = 272000; }
+              { name = "gpt-6.1-sol"; display_name = "ByteCat GPT 6.1 Sol"; max_tokens = 272000; }
+              { name = "gpt-image-2"; display_name = "ByteCat GPT Image 2"; max_tokens = 32000; }
+              { name = "gpt-image-2.5-flare"; display_name = "ByteCat GPT Image 2.5 Flare"; max_tokens = 32000; }
+              { name = "gpt-image-2.5-sunburst"; display_name = "ByteCat GPT Image 2.5 Sunburst"; max_tokens = 32000; }
+              { name = "grok-4.5"; display_name = "ByteCat Grok 4.5"; max_tokens = 131072; }
+              { name = "grok-4.6"; display_name = "ByteCat Grok 4.6"; max_tokens = 131072; }
+              { name = "grok-4.7"; display_name = "ByteCat Grok 4.7"; max_tokens = 131072; }
+              { name = "grok-composer-2.5-fast"; display_name = "ByteCat Grok Composer 2.5 Fast"; max_tokens = 131072; }
+              { name = "stealth/union-alpha"; display_name = "ByteCat Stealth Union Alpha"; max_tokens = 200000; }
             ];
           };
         };
