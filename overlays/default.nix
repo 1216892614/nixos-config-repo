@@ -62,7 +62,7 @@ final: prev: {
 
   omp = prev.callPackage ../pkgs/omp.nix { };
 
-  proton-cachyos = prev.callPackage ../pkgs/proton-cachyos.nix { };
+  proton-cachyos = prev.callPackage ../pkgs/proton-cachyos { };
 
   # Codex 使用 nixpkgs 的完整打包，包含 code-mode-host、语音组件和 Nix 路径适配。
   # 上游单文件 musl 压缩包缺少辅助程序，会导致命令工具无法启动。

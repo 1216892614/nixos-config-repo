@@ -18,8 +18,7 @@ stdenv.mkDerivation rec {
     install -m 0755 ntn $out/bin/ntn
   '';
 
-  # Static musl binary — no patching needed
-  dontAutoPatchelf = true;
+  dontAutoPatchelf = true; # Static musl binary needs no patching.
 
   meta = with lib; {
     description = "Notion CLI — authenticate, deploy Workers, and make API requests";

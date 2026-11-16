@@ -2,6 +2,7 @@
 
 let
   colors = import ../../lib/colors.nix;
+  transparentBackgroundForNiriLiquidGlass = "0.0";
 in
 {
   programs.kitty = {
@@ -22,8 +23,7 @@ in
       cursor_trail = 1;
       cursor_trail_decay = "0.1 0.4";
       cursor_trail_start_threshold = 2;
-      # 背景纯透明，让 niri background-effect（liquid-glass）完全透过来
-      background_opacity = "0.0";
+      background_opacity = transparentBackgroundForNiriLiquidGlass;
 
       background = colors.terminal.bg;
       foreground = colors.terminal.fg;

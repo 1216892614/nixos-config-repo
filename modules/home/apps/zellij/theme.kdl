@@ -1,0 +1,97 @@
+themes {
+    moss-fern {
+        text_unselected {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@accent@"
+            emphasis_1 "@terminal_cyan@"
+            emphasis_2 "@terminal_green@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_bg@"
+        }
+        text_selected {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@accent@"
+            emphasis_1 "@terminal_cyan@"
+            emphasis_2 "@terminal_green@"
+            emphasis_3 "@terminal_magenta@"
+            background "@selection@"
+        }
+        ribbon_unselected {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@terminal_red@"
+            emphasis_1 "@terminal_brightWhite@"
+            emphasis_2 "@terminal_blue@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_bg@"
+        }
+        ribbon_selected {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@terminal_red@"
+            emphasis_1 "@accent@"
+            emphasis_2 "@terminal_magenta@"
+            emphasis_3 "@terminal_blue@"
+            background "@terminal_green@"
+        }
+        table_title {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@terminal_cyan@"
+            emphasis_1 "@terminal_green@"
+            emphasis_2 "@terminal_blue@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_bg@"
+        }
+        table_cell_unselected {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@accent@"
+            emphasis_1 "@terminal_cyan@"
+            emphasis_2 "@terminal_green@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_bg@"
+        }
+        table_cell_selected {
+            base "@terminal_black@"
+            emphasis_0 "@accent@"
+            emphasis_1 "@terminal_cyan@"
+            emphasis_2 "@terminal_green@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_green@"
+        }
+        list_unselected {
+            base "@terminal_brightWhite@"
+            emphasis_0 "@accent@"
+            emphasis_1 "@terminal_cyan@"
+            emphasis_2 "@terminal_green@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_bg@"
+        }
+        list_selected {
+            base "@terminal_black@"
+            emphasis_0 "@accent@"
+            emphasis_1 "@terminal_cyan@"
+            emphasis_2 "@terminal_green@"
+            emphasis_3 "@terminal_magenta@"
+            background "@terminal_green@"
+        }
+        frame_selected {
+            base "@terminal_green@"
+            emphasis_0 "@terminal_red@"
+            emphasis_1 "@terminal_brightWhite@"
+            emphasis_2 "@terminal_cyan@"
+            emphasis_3 "@terminal_blue@"
+        }
+        exit_code_success {
+            base "@terminal_green@"
+            emphasis_0 "@terminal_cyan@"
+            emphasis_1 "@terminal_black@"
+            emphasis_2 "@terminal_magenta@"
+            emphasis_3 "@terminal_blue@"
+        }
+        exit_code_error {
+            base "@terminal_red@"
+            emphasis_0 "@terminal_yellow@"
+            emphasis_1 "@accent@"
+            emphasis_2 "@terminal_brightWhite@"
+            emphasis_3 "@terminal_magenta@"
+        }
+    }
+}

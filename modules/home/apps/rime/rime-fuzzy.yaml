@@ -1,0 +1,35 @@
+# 常用模糊音配置
+# 可以在 schema 的 speller/algebra 中通过 __include 引入
+
+fuzzy_pinyin:
+  # z = zh
+  - derive/^zh/z/
+  - derive/^z([^h])/zh$1/
+  
+  # c = ch
+  - derive/^ch/c/
+  - derive/^c([^h])/ch$1/
+  
+  # s = sh
+  - derive/^sh/s/
+  - derive/^s([^h])/sh$1/
+  
+  # l = n
+  - derive/^l/n/
+  - derive/^n/l/
+  
+  # f = h
+  - derive/^f/h/
+  - derive/^h([^u])/f$1/
+  
+  # ang = an
+  - derive/ang$/an/
+  - derive/an$/ang/
+  
+  # eng = en
+  - derive/eng$/en/
+  - derive/en$/eng/
+  
+  # ing = in
+  - derive/ing$/in/
+  - derive/in$/ing/

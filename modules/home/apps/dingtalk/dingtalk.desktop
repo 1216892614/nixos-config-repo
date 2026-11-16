@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=钉钉
+Name[en_US]=DingTalk
+Comment=AI 时代的工作方式
+Exec=@config_home_homeDirectory@/.local/bin/dingtalk %u
+Terminal=false
+Type=Application
+Icon=@config_home_homeDirectory@/.local/opt/dingtalk/opt/apps/com.alibabainc.dingtalk/files/logo.ico
+Categories=Chat;Office;Network;
+Keywords=dingtalk;钉钉;alibaba;
+MimeType=x-scheme-handler/dingtalk;

@@ -1,15 +1,11 @@
-# Allow non-Nix binaries (AppImage Electron apps, Minecraft GLFW, npm addons)
-# to find shared libraries on NixOS via /lib64/ld-linux-x86-64.so.2.
 { pkgs, ... }:
 
 {
   programs.nix-ld = {
     enable = true;
     libraries = with pkgs; [
-      # C++ runtime
       stdenv.cc.cc.lib
 
-      # Electron / Chromium runtime deps (Cursor, XMCL)
       nss
       nspr
       expat
@@ -25,7 +21,6 @@
       e2fsprogs
       fribidi
 
-      # Graphics / GLFW (Minecraft)
       libGL
       libGLU
       libglvnd
@@ -46,7 +41,6 @@
        libxdamage
       vulkan-loader
 
-      # Wayland window decoration (libdecor for GLFW)
       libdecor
       gtk3
       gtk4
@@ -57,13 +51,11 @@
       atk
       dbus
 
-      # Audio
       openal
       alsa-lib
       pulseaudio
       pipewire
 
-      # Common runtime deps
       zlib
       libpng
       freetype

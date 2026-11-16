@@ -14,11 +14,9 @@ rustPlatform.buildRustPackage {
 
   buildInputs = [ pam ];
 
-  # Inject howdy PAM module path at build time
   PAM_HOWDY_PATH = "${howdy}/lib/security/pam_howdy.so";
 
   postInstall = ''
-    # Install as PAM module
     mkdir -p $out/lib/security
     mv $out/lib/libpam_howdy_animated.so $out/lib/security/pam_howdy_animated.so
   '';

@@ -1,11 +1,19 @@
 { pkgs, ... }:
 
+let
+  cjkTtyFont = "Sarasa Mono SC";
+  steamCompatibleFontconfigFallbacks = {
+    sansSerif = [ "Sarasa UI SC" "Source Han Sans SC" "WenQuanYi Zen Hei" ];
+    serif = [ "Source Han Serif SC" "Sarasa UI SC" ];
+    monospace = [ "Sarasa Mono SC" "Source Han Mono SC" ];
+    emoji = [ "Noto Color Emoji" ];
+  };
+in
 {
-  # Use kmscon to replace default VTs — enables CJK rendering in TTY
   services.kmscon = {
     enable = true;
     config.hwaccel = true;
-    config.font-name = "Sarasa Mono SC";
+    config.font-name = cjkTtyFont;
     config.font-size = 14;
   };
 
@@ -38,16 +46,10 @@
       noto-fonts-color-emoji
     ];
 
-    # Steam is sensitive to fontconfig defaults; rely on fontconfig fallback instead.
     fontDir.enable = true;
     fontconfig = {
       enable = true;
-      defaultFonts = {
-        sansSerif = [ "Sarasa UI SC" "Source Han Sans SC" "WenQuanYi Zen Hei" ];
-        serif = [ "Source Han Serif SC" "Sarasa UI SC" ];
-        monospace = [ "Sarasa Mono SC" "Source Han Mono SC" ];
-        emoji = [ "Noto Color Emoji" ];
-      };
+      defaultFonts = steamCompatibleFontconfigFallbacks;
     };
   };
 }

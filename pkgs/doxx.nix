@@ -13,8 +13,7 @@ rustPlatform.buildRustPackage rec {
 
   cargoHash = "sha256-Eix63WAxOdK4//WBDfAdqMrtHCM1VSepSy841hCndeI=";
 
-  # test_renderer_creation 需要真实终端（检测宽度），沙箱中跳过
-  doCheck = false;
+  doCheck = false; # test_renderer_creation 需要真实终端（检测宽度），沙箱中跳过
 
   meta = with lib; {
     description = "Terminal document viewer for .docx files";

@@ -1,5 +1,8 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  recorderRequiredForNoctaliaRecordingButton = pkgs.gpu-screen-recorder;
+in
 {
   programs.obs-studio = {
     enable = true;
@@ -14,7 +17,6 @@
     slurp
     satty
     wf-recorder
-    # Noctalia 顶栏录屏插件依赖，未安装时录屏按钮不显示
-    gpu-screen-recorder
+    recorderRequiredForNoctaliaRecordingButton
   ];
 }

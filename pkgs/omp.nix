@@ -11,11 +11,8 @@ stdenv.mkDerivation rec {
 
   dontUnpack = true;
 
-  # Bun standalone binaries have JS bytecode appended after the ELF.
-  # Strip and patchelf corrupt the appended data. The system's nix-ld
-  # provides /lib64/ld-linux-x86-64.so.2, so no patching needed.
-  dontStrip = true;
-  dontPatchELF = true;
+  dontStrip = true; # Preserve the Bun standalone binary's appended JS bytecode.
+  dontPatchELF = true; # Patchelf corrupts appended bytecode; the system nix-ld supplies the loader.
 
   installPhase = ''
     mkdir -p $out/bin

@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Zed
+Comment=High-performance code editor
+Exec=zed %U
+Terminal=false
+Type=Application
+Icon=zed
+Categories=Development;IDE;TextEditor;
+Keywords=zed;editor;code;
+MimeType=text/plain;application/x-zerosize;x-scheme-handler/zed;
+Actions=NewWorkspace;
+
+[Desktop Action NewWorkspace]
+Exec=zed --new %U
+Name=Open a new workspace

@@ -17,7 +17,11 @@ if [[ "$TYPE" =~ "application/x-qt-image" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
-        timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|' | xclip -sel clip -t text/uri-list
+        CLIP_URI="/tmp/clipsync-clipboard-uri.txt"
+        timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|' > "$CLIP_URI" 2>/dev/null
+        echo -n | xclip -sel clip
+        sleep 0.05
+        xclip -sel clip -t text/uri-list < "$CLIP_URI"
         log "synced: wechat uri-list → X11"
     fi
 
@@ -26,27 +30,44 @@ elif [[ "$TYPE" =~ "text/uri-list" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
-        { echo "copy"; timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|'; } | xclip -sel clip -t x-special/gnome-copied-files
+        CLIP_FILES="/tmp/clipsync-clipboard-files.txt"
+        { echo "copy"; timeout $TIMEOUT wl-paste -t text/uri-list | sed 's|^/|file:///|'; } > "$CLIP_FILES" 2>/dev/null
+        echo -n | xclip -sel clip
+        sleep 0.05
+        xclip -sel clip -t x-special/gnome-copied-files < "$CLIP_FILES"
         log "synced: uri-list → X11 gnome-copied-files"
     fi
 
 # --- Plain text (prioritized over text/html for Qt app compatibility) ---
+# Electron/Qt X11 apps (QQ, WeChat) cache clipboard internally and may miss
+# selection owner changes. Use the same ownership transition workaround as images.
 elif [[ "$TYPE" =~ "text/plain" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/plain 2>/dev/null | tr -d '\n\r' | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]]; then
         X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | hash_data)
         if [[ "$W_HASH" != "$X_HASH" ]]; then
-            timeout $TIMEOUT wl-paste -t text/plain | xclip -sel clip
+            CLIP_TXT="/tmp/clipsync-clipboard.txt"
+            timeout $TIMEOUT wl-paste -t text/plain > "$CLIP_TXT" 2>/dev/null
+            # Briefly claim then release selection to trigger XFixesSelectionNotify
+            echo -n | xclip -sel clip
+            sleep 0.05
+            xclip -sel clip < "$CLIP_TXT"
             log "synced: text → X11"
         fi
     fi
 
 # --- HTML rich text (only when plain text is NOT available) ---
+# Same ownership transition workaround for Electron/Qt apps.
 elif [[ "$TYPE" =~ "text/html" ]]; then
     W_HASH=$(timeout $TIMEOUT wl-paste -t text/html 2>/dev/null | hash_data)
     X_HASH=$(timeout $TIMEOUT xclip -o -sel clip -t text/html 2>/dev/null | hash_data)
     if [[ "$W_HASH" != "$EMPTY_HASH" ]] && [[ -n "$W_HASH" ]] && [[ "$W_HASH" != "$X_HASH" ]]; then
-        timeout $TIMEOUT wl-paste -t text/html | xclip -sel clip -t text/html
+        CLIP_HTML="/tmp/clipsync-clipboard.html"
+        timeout $TIMEOUT wl-paste -t text/html > "$CLIP_HTML" 2>/dev/null
+        # Briefly claim then release selection to trigger XFixesSelectionNotify
+        echo -n | xclip -sel clip
+        sleep 0.05
+        xclip -sel clip -t text/html < "$CLIP_HTML"
         log "synced: text/html → X11"
     fi
 

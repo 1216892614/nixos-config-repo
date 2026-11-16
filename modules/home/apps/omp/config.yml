@@ -1,0 +1,54 @@
+setupVersion: 1
+startup:
+  setupWizard: false
+  checkUpdate: false
+
+theme:
+  dark: moss-fern
+
+symbolPreset: nerd
+
+statusLine:
+  preset: custom
+  separator: none
+  leftSegments:
+    - mode
+    - model
+    - cwd
+  rightSegments:
+    - git
+    - tokens
+    - cost
+    - time
+
+tui:
+  tight: true
+
+display:
+  shimmer: kitt
+
+modelRoles:
+  default: bigbigdog/claude-opus-4-6
+  smol: deepseek/deepseek-v4-pro
+  slow: bigbigdog/claude-opus-4-6:high
+  plan: bigbigdog/claude-opus-4-6
+  vision: bigbigdog/gpt-5.5
+  commit: deepseek/deepseek-v4-pro
+
+defaultThinkingLevel: high
+
+providers:
+  webSearch: searxng
+
+searxng:
+  endpoint: "http://127.0.0.1:18980"
+
+disabledProviders:
+  - ollama
+
+tools:
+  approvalMode: yolo
+
+retry:
+  modelFallback: true
+

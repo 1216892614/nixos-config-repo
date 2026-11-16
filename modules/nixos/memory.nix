@@ -1,65 +1,58 @@
 { config, lib, pkgs, ... }:
 
+let
+  zramBackingPercentForLowLatencyMemory = 50;
+  nvmeFallbackSwapSizeMiB = 32768;
+  killMemoryHogsBeforeKernelStalls = true;
+  idlePageSwappinessForZram = 180;
+  aggressiveDentryInodeReclaimPressure = 200;
+  dirtyPageLimitToAvoidWriteBursts = 10;
+  earlyBackgroundWritebackPercent = 5;
+  freePageReserveToAvoidPressureStallsKiB = 262144;
+  proactiveCompactionToReduceFragmentationStalls = 20;
+  pageCacheReclaimWatermarkBoost = 0;
+  pageCacheReclaimWatermarkScale = 125;
+  heuristicOvercommitForSparseAllocations = 0;
+  fullPreemptionForDesktopLatency = "preempt=full";
+in
 {
-  # ── zram (compressed in-memory swap) ──────────────────────────────
-  # Compresses idle pages in RAM; effectively adds ~50% more usable memory.
-  # With 31 GB physical RAM, zram alone yields ~16 GB extra "virtual" memory
-  # at very low latency (no disk I/O).
   zramSwap = {
     enable = true;
     algorithm = "zstd";       # best ratio / speed tradeoff
-    memoryPercent = 50;        # use up to 50% of RAM as zram backing
+    memoryPercent = zramBackingPercentForLowLatencyMemory;        # use up to 50% of RAM as zram backing
   };
 
-  # ── NVMe swap file (fallback after zram is full) ──────────────────
   swapDevices = [
     {
       device = "/var/swapfile";
-      size = 32768;             # 32 GB, in MiB
+      size = nvmeFallbackSwapSizeMiB;             # 32 GB, in MiB
     }
   ];
 
-  # ── earlyoom – userspace OOM killer ───────────────────────────────
-  # Kills the largest memory hog BEFORE the kernel OOM killer freezes
-  # the entire system. Much more responsive than the kernel OOM.
   services.earlyoom = {
-    enable = true;
+    enable = killMemoryHogsBeforeKernelStalls;
     freeMemThreshold = 5;      # act when free RAM < 5%
     freeSwapThreshold = 5;     # act when free swap < 5%
     enableNotifications = true; # desktop notification on kill
   };
 
-  # ── sysctl: aggressive virtual memory tuning ──────────────────────
   boot.kernel.sysctl = {
-    # Prefer swapping anonymous pages to zram/swap aggressively.
-    # Higher = more willing to swap out idle pages to free RAM for active use.
-    "vm.swappiness" = 180;             # zram-optimised; range 0-200 with zram
+    "vm.swappiness" = idlePageSwappinessForZram;             # zram-optimised; range 0-200 with zram
 
-    # Reclaim dentries/inodes more aggressively (default 100).
-    "vm.vfs_cache_pressure" = 200;
+    "vm.vfs_cache_pressure" = aggressiveDentryInodeReclaimPressure;
 
-    # Flush dirty pages sooner to avoid large write bursts.
-    "vm.dirty_ratio" = 10;             # max % of RAM for dirty pages (default 20)
-    "vm.dirty_background_ratio" = 5;   # start background writeback earlier (default 10)
+    "vm.dirty_ratio" = dirtyPageLimitToAvoidWriteBursts;             # max % of RAM for dirty pages (default 20)
+    "vm.dirty_background_ratio" = earlyBackgroundWritebackPercent;   # start background writeback earlier (default 10)
 
-    # Reserve enough free pages so the kernel doesn't stall under pressure.
-    # ~256 MB for a 32 GB system.
-    "vm.min_free_kbytes" = 262144;
+    "vm.min_free_kbytes" = freePageReserveToAvoidPressureStallsKiB;
 
-    # Compact memory proactively to reduce fragmentation-related stalls.
-    "vm.compaction_proactiveness" = 20;
+    "vm.compaction_proactiveness" = proactiveCompactionToReduceFragmentationStalls;
 
-    # Prefer reclaiming page cache over swapping out when under light pressure.
-    "vm.watermark_boost_factor" = 0;
-    "vm.watermark_scale_factor" = 125;
+    "vm.watermark_boost_factor" = pageCacheReclaimWatermarkBoost;
+    "vm.watermark_scale_factor" = pageCacheReclaimWatermarkScale;
 
-    # Allow moderate overcommit – prevents premature allocation failures
-    # for apps that malloc large but touch little (e.g. JVM, Electron).
-    "vm.overcommit_memory" = 0;        # keep heuristic (safe default)
+    "vm.overcommit_memory" = heuristicOvercommitForSparseAllocations;        # keep heuristic (safe default)
   };
 
-  # ── 内核抢占模式 ──────────────────────────────────────────────────
-  # Linux 7.x 默认 PREEMPT_LAZY，吞吐优先但交互延迟大幅增加；
-  # 桌面使用需要 full preemption 保证 UI / CLI 响应速度。
-  boot.kernelParams = [ "preempt=full" ];
+  boot.kernelParams = [ fullPreemptionForDesktopLatency ];
 }

@@ -1,0 +1,125 @@
+# Moss & Fern — ayu-dark structure, moss palette
+[mgr]
+cwd = { fg = "@comment@" }
+
+hovered         = { reversed = true }
+preview_hovered = { underline = true }
+
+find_keyword  = { fg = "@terminal_yellow@", bold = true, italic = true, underline = true }
+find_position = { fg = "@terminal_magenta@", bold = true, italic = true }
+
+marker_copied   = { fg = "@bg@", bg = "@terminal_green@" }
+marker_cut      = { fg = "@bg@", bg = "@terminal_red@" }
+marker_marked   = { fg = "@bg@", bg = "@terminal_blue@" }
+marker_selected = { fg = "@bg@", bg = "@terminal_yellow@" }
+
+count_copied   = { fg = "@bg@", bg = "@terminal_green@" }
+count_cut      = { fg = "@comment@", bg = "@terminal_red@" }
+count_selected = { fg = "@bg@", bg = "@terminal_yellow@" }
+
+border_symbol = " "
+
+[tabs]
+active   = { fg = "@bg@", bg = "@accent@", bold = true }
+inactive = { fg = "@accent@", bg = "@bg@" }
+sep_inner = { open = "", close = "" }
+sep_outer = { open = "", close = "" }
+
+[mode]
+normal_main = { fg = "@bg@", bg = "@accent@", bold = true }
+normal_alt  = { fg = "@terminal_blue@", bg = "@surface_lift@", bold = true }
+
+select_main = { fg = "@bg@", bg = "@terminal_blue@", bold = true }
+select_alt  = { fg = "@bg@", bg = "@terminal_blue@", bold = true }
+
+unset_main = { fg = "@bg@", bg = "@terminal_red@", bold = true }
+unset_alt  = { fg = "@bg@", bg = "@terminal_red@", bold = true }
+
+[status]
+overall   = {}
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
+
+progress_label  = { fg = "@bg@", bold = true }
+progress_normal = { fg = "@accent@", bg = "@bg@" }
+progress_error  = { fg = "@terminal_red@", bg = "@bg@" }
+
+perm_type  = { fg = "@fg@" }
+perm_write = { fg = "@terminal_red@" }
+perm_exec  = { fg = "@terminal_green@" }
+perm_read  = { fg = "@terminal_blue@" }
+perm_sep   = { fg = "@comment@" }
+
+[select]
+border   = { fg = "@accent@" }
+active   = { fg = "@terminal_red@", bold = true }
+inactive = { fg = "@comment@", bg = "@bg@" }
+
+[input]
+border = { fg = "@accent@" }
+value  = { fg = "@comment@" }
+
+[completion]
+border = { fg = "@accent@", bg = "@bg@" }
+
+[tasks]
+border  = { fg = "@accent@" }
+title   = { fg = "@comment@" }
+hovered = { fg = "@terminal_green@", underline = true }
+
+[which]
+cols = 3
+mask            = { bg = "@bg@" }
+cand            = { fg = "@accent@" }
+rest            = { fg = "@bg@" }
+desc            = { fg = "@comment@" }
+separator       = " > "
+separator_style = { fg = "@comment@" }
+
+[help]
+on     = { fg = "@accent@" }
+run    = { fg = "@terminal_green@" }
+footer = { fg = "@bg@", bg = "@comment@" }
+
+[notify]
+title_info  = { fg = "@terminal_green@" }
+title_warn  = { fg = "@terminal_yellow@" }
+title_error = { fg = "@terminal_red@" }
+
+[filetype]
+rules = [
+  # directories
+  { url = "*/", fg = "@terminal_blue@" },
+
+  # executables
+  { url = "*", is = "exec", fg = "@terminal_green@" },
+
+  # images
+  { mime = "image/*", fg = "@terminal_yellow@" },
+
+  # media
+  { mime = "{audio,video}/*", fg = "@terminal_green@" },
+
+  # archives
+  { mime = "application/{,g}zip", fg = "@terminal_red@" },
+  { mime = "application/x-{tar,bzip*,7z-compressed,xz,rar}", fg = "@terminal_red@" },
+
+  # documents
+  { mime = "application/{pdf,doc,rtf,vnd.*}", fg = "@terminal_blue@" },
+
+  # scripts and code
+  { mime = "application/{x-shellscript,x-python,x-ruby,x-javascript}", fg = "@terminal_yellow@" },
+  { mime = "text/x-{c,c++}", fg = "@terminal_blue@" },
+
+  # config files
+  { url = "*.json", fg = "@terminal_yellow@" },
+  { url = "*.yml", fg = "@terminal_blue@" },
+  { url = "*.toml", fg = "@terminal_magenta@" },
+
+  # special files
+  { url = "*", is = "orphan", bg = "@bg@" },
+  { url = "*", is = "dummy", bg = "@bg@" },
+
+  # fallback
+  { url = "*/", fg = "@terminal_blue@" },
+]

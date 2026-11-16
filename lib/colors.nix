@@ -1,5 +1,3 @@
-# Moss & Fern v2 — forest dark theme with visible color separation
-# Chromatic colors: HSL saturation raised to ~35-55% for real distinction
 {
   bg         = "#1a1d1a";
   fg         = "#c8ccc0";
@@ -53,7 +51,6 @@
     over = "#2e322e";   # surface1 — borders, scrollbar
   };
 
-  # UI semantic tokens
   bar = {
     bg     = "#0e100e";   # statusbar background
     fg     = "#d8dcd0";   # statusbar foreground

@@ -27,8 +27,10 @@ in
       };
 
       init.defaultBranch = "main";
-      pull.rebase = true;
       push.autoSetupRemote = true;
+
+      # gh auth login 需要写这些，但 HM 管理的 config 只读，声明在此
+      credential."https://github.com".helper = "!/run/current-system/sw/bin/gh auth git-credential";
     };
   };
 

@@ -1,0 +1,11 @@
+# 墨奇+小鹤双拼·鹤形 自定义配置
+patch:
+  # 默认英文标点 (ascii_punct = switches index 7)
+  "switches/@7/reset": 1
+
+  # 模糊音(全拼层面) + 原始小鹤双拼转换
+  # derive 必须在 xform 之前，所以完整替换 algebra
+  "speller/algebra":
+    __include: fuzzy_quanpin.yaml:/fuzzy_quanpin
+    __append:
+      __include: moqi_speller.yaml:/flypy_speller

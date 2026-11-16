@@ -1,0 +1,19 @@
+# 全拼层面模糊音规则
+# 在双拼 xform 转换前派生，使 z/zh c/ch s/sh 等可以互通
+fuzzy_quanpin:
+  # 平翘舌 z/zh, c/ch, s/sh
+  - derive/^([zcs])h(.+)/$1$2/
+  - derive/^([zcs])([^h])/$1h$2/
+  # 前后鼻音 an/ang, en/eng, in/ing
+  - derive/^(.+)ang(;.*)$/$1an$2/
+  - derive/^(.+)an(;.*)$/$1ang$2/
+  - derive/^(.+)eng(;.*)$/$1en$2/
+  - derive/^(.+)en(;.*)$/$1eng$2/
+  - derive/^(.+)ing(;.*)$/$1in$2/
+  - derive/^(.+)in(;.*)$/$1ing$2/
+  # n/l
+  - derive/^l/n/
+  - derive/^n/l/
+  # f/h
+  - derive/^f/h/
+  - derive/^h([^u])/f$1/

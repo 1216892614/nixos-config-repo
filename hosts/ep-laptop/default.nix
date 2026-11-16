@@ -9,6 +9,7 @@ in
 {
   imports =
     (map (f: nixosModulesDir + "/${f}") nixosModuleFiles)
+    ++ (import ../../lib/app-modules.nix (nixosModulesDir + "/apps"))
     ++ [ ./hardware-configuration.nix ];
 
   networking.hostName = "ep-laptop";

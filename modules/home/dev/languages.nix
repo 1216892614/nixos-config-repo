@@ -1,15 +1,18 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  pkgConfigSearchPathForCargoBuildScripts = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
+  jdkForStableLauncherPathAcrossRebuilds = pkgs.jdk21;
+  cargoBuildJobsToPreventLinkerMemoryExhaustion = 4;
+in
 {
   home.packages = with pkgs; [
-    # Rust (self-managed via rustup)
     rustup
     sccache
     cargo-edit
     cargo-watch
     cargo-expand
 
-    # C/C++ toolchain
     clang
     lld
     (lib.hiPrio gcc)
@@ -20,18 +23,15 @@
     openssl.dev  # headers + .pc for openssl-sys (e.g. cargo install rust-docs-mcp)
     wayland  # lib + wayland-client.pc for wayland-sys (Rust Wayland crates)
 
-    # Python
     python3
     pipx
     poetry
 
-    # JavaScript / TypeScript
     nodejs_24
     pnpm
     deno
     bun
 
-    # Java (e.g. for X Minecraft Launcher / modded Minecraft)
     jdk21
   ];
 
@@ -43,20 +43,16 @@
   ];
 
   home.sessionVariables = {
-    # RUSTC_WRAPPER / SCCACHE_* → managed by ./service-plane.nix
     RUSTUP_HOME = "$HOME/.rustup";
     CARGO_HOME = "$HOME/.cargo";
     JAVA_HOME = "$HOME/.local/lib/jdk21";
-    # So pkg-config finds .pc files for cargo build scripts (openssl-sys, wayland-sys, etc.)
-    PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.wayland.dev}/lib/pkgconfig";
+    PKG_CONFIG_PATH = pkgConfigSearchPathForCargoBuildScripts;
   };
 
-  # 稳定符号链接：XMCL 等工具保存的路径不会因 rebuild hash 变化失效
-  home.file.".local/lib/jdk21".source = pkgs.jdk21;
+  home.file.".local/lib/jdk21".source = jdkForStableLauncherPathAcrossRebuilds;
 
-  # Limit parallel linker jobs to prevent rust-lld from exhausting memory
   home.file.".cargo/config.toml".text = ''
     [build]
-    jobs = 4
+    jobs = ${toString cargoBuildJobsToPreventLinkerMemoryExhaustion}
   '';
 }

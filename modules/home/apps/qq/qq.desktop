@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=QQ
+Name[zh_CN]=QQ
+Exec=env LD_LIBRARY_PATH=@pkgs_libpulseaudio@/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} @qqPackage@/bin/qq --enable-features=WebRTCPipeWireCapturer --ozone-platform=wayland --enable-wayland-ime %U
+Terminal=false
+Type=Application
+Icon=qq
+Comment=Tencent QQ
+Comment[zh_CN]=腾讯QQ
+Categories=Network;
+Keywords=qq;tencent;

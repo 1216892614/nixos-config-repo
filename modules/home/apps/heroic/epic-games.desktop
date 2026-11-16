@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Epic Games Store
+GenericName=Game Store
+Comment=Epic Games Store (via Heroic Games Launcher)
+Exec=@heroic@/bin/heroic --ozone-platform-hint=auto --enable-wayland-ime %U
+Terminal=false
+Type=Application
+Icon=heroic
+Categories=Game;
+Keywords=epic;games;store;heroic;launcher;
+MimeType=x-scheme-handler/heroic;

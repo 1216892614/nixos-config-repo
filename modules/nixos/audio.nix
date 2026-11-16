@@ -1,5 +1,8 @@
 { pkgs, ... }:
 
+let
+  nodeSuspendTimeoutToAvoidChromeAudioDropouts = 0;
+in
 {
   services.pulseaudio.enable = false;
 
@@ -14,7 +17,6 @@
     wireplumber = {
       enable = true;
       extraConfig = {
-        # 禁用节点挂起，避免 Chrome 播放视频时音频断续
         "10-disable-suspend" = {
           "monitor.alsa.rules" = [
             {
@@ -22,7 +24,7 @@
                 { "node.name" = "~alsa_output.*"; }
               ];
               actions.update-props = {
-                "session.suspend-timeout-seconds" = 0;
+                "session.suspend-timeout-seconds" = nodeSuspendTimeoutToAvoidChromeAudioDropouts;
               };
             }
             {
@@ -30,7 +32,7 @@
                 { "node.name" = "~alsa_input.*"; }
               ];
               actions.update-props = {
-                "session.suspend-timeout-seconds" = 0;
+                "session.suspend-timeout-seconds" = nodeSuspendTimeoutToAvoidChromeAudioDropouts;
               };
             }
           ];

@@ -26,11 +26,9 @@ in
       };
     };
 
-    # Allow cloudflared through firewall
     networking.firewall.allowedTCPPorts = [ 7844 ];
     networking.firewall.allowedUDPPorts = [ 7844 ];
 
-    # Trust WARP interface (cloudflared creates warp0 or similar)
     networking.firewall.trustedInterfaces = [ "warp0" "CloudflaredWARP" ];
   };
 }

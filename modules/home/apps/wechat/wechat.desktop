@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=WeChat
+Name[zh_CN]=微信
+Exec=@config_home_homeDirectory@/.local/bin/wechat-wrapper %U
+Terminal=false
+Type=Application
+Icon=wechat
+Categories=Network;
+Keywords=wechat;weixin;微信;
+Comment=WeChat Desktop
+Comment[zh_CN]=微信桌面版

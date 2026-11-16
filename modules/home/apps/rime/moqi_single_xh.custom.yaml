@@ -1,0 +1,26 @@
+# 墨奇单字+小鹤双拼 自定义配置
+# moqi_single_xh.custom.yaml
+
+patch:
+  # 默认启用英文标点 (ascii_punct 是 switches 第 8 项，0-based index 7)
+  "switches/@7/reset": 1
+
+  # 模糊音（小鹤键位空间：zh=v, ch=i, sh=u）
+  "speller/algebra/+":
+    # 平翘舌 z↔zh(v), c↔ch(i), s↔sh(u)
+    - derive/^z([a-z])/v$1/
+    - derive/^c([a-z])/i$1/
+    - derive/^s([a-z])/u$1/
+    - derive/^v([a-z])/z$1/
+    - derive/^i([a-z])/c$1/
+    - derive/^u([a-z])/s$1/
+    # 前后鼻音 an(j)↔ang(h), en(f)↔eng(g), in(b)↔ing(k)
+    - derive/^([a-z])j$/$1h/
+    - derive/^([a-z])h$/$1j/
+    - derive/^([a-z])f$/$1g/
+    - derive/^([a-z])g$/$1f/
+    - derive/^([a-z])b$/$1k/
+    - derive/^([a-z])k$/$1b/
+    # n/l
+    - derive/^n([a-z])/l$1/
+    - derive/^l([a-z])/n$1/

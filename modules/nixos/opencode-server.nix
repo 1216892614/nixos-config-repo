@@ -9,7 +9,6 @@ let
   env = import envPath;
 in
 {
-  # OpenCode web server (standalone, accessible via Zero Trust)
   systemd.services.opencode-web = {
     description = "OpenCode Web Server";
     after = [ "network.target" ];

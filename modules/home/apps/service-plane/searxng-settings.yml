@@ -1,0 +1,9 @@
+use_default_settings: true
+server:
+  secret_key: "sp-searxng-local-only"
+  image_proxy: true
+  limiter: false
+search:
+  formats:
+    - html
+    - json
