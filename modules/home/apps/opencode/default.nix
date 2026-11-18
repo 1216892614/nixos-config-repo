@@ -89,9 +89,11 @@ in
           baseURL = "https://bytecat.lamclod.cn/v1";
         };
       };
+      # ── bigbigdog: Claude 模型走 Anthropic 原生协议 ──
+      # 避免 OpenAI 兼容层在多轮 thinking 回传时触发 content_filter
       bigbigdog = {
-        npm = "@ai-sdk/openai-compatible";
-        name = "BigBigDog (OpenAI-compatible)";
+        npm = "@ai-sdk/anthropic";
+        name = "BigBigDog";
         options = {
           apiKey = env.opencodeBigbigdogApiKey or (env.bigbigdogApiKey or "");
           baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1");
@@ -120,6 +122,17 @@ in
           "claude-sonnet-5-thinking" = { name = "claude-sonnet-5-thinking"; };
           "claude-sonnet-5-5" = { name = "claude-sonnet-5-5"; };
           "claude-sonnet-5-5-thinking" = { name = "claude-sonnet-5-5-thinking"; };
+        };
+      };
+      # ── bigbigdog-openai: 非 Claude 模型走 OpenAI 兼容协议 ──
+      "bigbigdog-openai" = {
+        npm = "@ai-sdk/openai-compatible";
+        name = "BigBigDog (OpenAI)";
+        options = {
+          apiKey = env.opencodeBigbigdogApiKey or (env.bigbigdogApiKey or "");
+          baseURL = env.opencodeBigbigdogBaseUrl or (env.bigbigdogBaseUrl or "https://www.hongkongdog.cc/v1");
+        };
+        models = {
           "codex-auto-review" = { name = "codex-auto-review"; };
           "composer-2.5" = { name = "composer-2.5"; };
           "gpt-5.4" = { name = "gpt-5.4"; };
@@ -248,7 +261,7 @@ in
       "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
     agents = {
       hephaestus = {
-        model = "bigbigdog/gpt-5.5";
+        model = "bigbigdog-openai/gpt-5.5";
       };
       oracle = {
         model = "deepseek/deepseek-v4-pro";
@@ -277,13 +290,13 @@ in
     };
     categories = {
       visual-engineering = {
-        model = "bigbigdog/gpt-5.5";
+        model = "bigbigdog-openai/gpt-5.5";
       };
       ultrabrain = {
         model = "deepseek/deepseek-v4-pro";
       };
       deep = {
-        model = "bigbigdog/gpt-5.5";
+        model = "bigbigdog-openai/gpt-5.5";
       };
       artistry = {
         model = "deepseek/deepseek-v4-pro";
