@@ -47,6 +47,14 @@ in
     CARGO_HOME = "$HOME/.cargo";
     JAVA_HOME = "$HOME/.local/lib/jdk21";
     PKG_CONFIG_PATH = pkgConfigSearchPathForCargoBuildScripts;
+
+    # ── sccache：仅本地磁盘缓存，超过上限按 LRU 自动淘汰 ──
+    RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
+    CMAKE_C_COMPILER_LAUNCHER = "${pkgs.sccache}/bin/sccache";
+    CMAKE_CXX_COMPILER_LAUNCHER = "${pkgs.sccache}/bin/sccache";
+    SCCACHE_DIR = "${config.xdg.cacheHome}/sccache";
+    SCCACHE_CACHE_SIZE = "10G";
+    SCCACHE_IDLE_TIMEOUT = "0";
   };
 
   home.file.".local/lib/jdk21".source = jdkForStableLauncherPathAcrossRebuilds;

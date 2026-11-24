@@ -24,7 +24,9 @@ let
       hostPort = 6399;
       containerPort = 6379;
       volumes = [ "${dataDir}/dragonfly:/data" ];
-      command = [ "--maxmemory" "2G" "--dbfilename" "dump" "--snapshot_cron" "* * * * *" "--proactor_threads" "4" "--force_epoll" ];
+      # 仅 ai-ime 使用；cache_mode 在接近 maxmemory 时按 LRU 淘汰，不会无限增长
+      # dragonfly 每个 IO 线程至少需要 256MiB，512M 只能配 2 线程
+      command = [ "--maxmemory" "512M" "--cache_mode=true" "--dbfilename" "dump" "--snapshot_cron" "* * * * *" "--proactor_threads" "2" "--force_epoll" ];
       healthCheck = "redis-cli -h dragonfly -p 6379 ping";
       idleTimeout = 600;
     };
@@ -39,6 +41,8 @@ let
       keepAliveCheck = keepSearxngAliveWhileOmpRuns;
     };
   };
+  # 唤醒 TCP 后端：容器被删除时（如 docker prune）回退到 compose 重建
+  wakeCmd = name: ''docker start "service-plane-${name}-1" >/dev/null 2>&1 || docker compose -p service-plane --project-directory "${planeDir}" -f "${planeDir}/docker-compose.yml" up -d --no-deps ${name} >/dev/null 2>&1 || true'';
   gateScript = pkgs.writeText "tcp-gate.sh" (tpl ./tcp-gate.sh {
     idleServices = lib.concatStringsSep "\n    " (lib.mapAttrsToList (name: svc:
       let
@@ -48,6 +52,7 @@ let
         };
         activityCheck = if svc ? keepAliveCheck then tpl ./tcp-keepalive.sh {
           inherit name stopBlock;
+          wake = wakeCmd name;
           keepAliveCheck = svc.keepAliveCheck;
         } else ''
           if [ -f "$activity_file" ]; then
@@ -58,6 +63,7 @@ let
     handlers = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: svc:
       tpl ./tcp-handler.sh {
         inherit name;
+        wake = wakeCmd name;
         healthCheck = svc.healthCheck;
         containerPort = toString svc.containerPort;
       }
@@ -252,6 +258,8 @@ let
         ) tcpServices;
         volumes = [
           "${planeDir}/scripts:/scripts:ro"
+          # compose 文件，供唤醒时重建缺失的后端容器
+          "${planeDir}:${planeDir}:ro"
           "/nix/store:/nix/store:ro"
           "/var/run/docker.sock:/var/run/docker.sock"
           "/proc:/host-proc:ro"
@@ -402,13 +410,5 @@ in
       '';
     };
     Install.WantedBy = [ "default.target" ];
-  };
-  home.sessionVariables = {
-    RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
-    CMAKE_C_COMPILER_LAUNCHER = "${pkgs.sccache}/bin/sccache";
-    CMAKE_CXX_COMPILER_LAUNCHER = "${pkgs.sccache}/bin/sccache";
-    SCCACHE_REDIS = "redis://127.0.0.1:${toString tcpServices.dragonfly.hostPort}";
-    SCCACHE_CACHE_SIZE = "10G";
-    SCCACHE_IDLE_TIMEOUT = "0";
   };
 }

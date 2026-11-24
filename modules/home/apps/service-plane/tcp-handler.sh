@@ -5,7 +5,7 @@ touch "$ACTIVITY_DIR/@name@"
 state=$(docker inspect --format='{{.State.Running}}' "service-plane-@name@-1" 2>/dev/null || echo "false")
 if [ "$state" != "true" ]; then
   echo "[tcp-gate] @name@: waking..." >&2
-  docker start "service-plane-@name@-1" >/dev/null 2>&1 || true
+  @wake@
   i=0; while [ $i -lt 60 ]; do
     if @healthCheck@ >/dev/null 2>&1; then break; fi
     sleep 0.5; i=$((i+1))

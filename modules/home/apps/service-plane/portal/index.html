@@ -27,7 +27,7 @@ const SERVICES = [
   { id: "comfyui",    name: "ComfyUI",    desc: "AI 图像生成 (GPU)",       container: "service-plane-comfyui",    url: "https://comfyui.local",   type: "http-s2z",  gpu: true },
   { id: "llm",        name: "LLM",        desc: "Qwen3 4B 推理 (GPU)",     container: "service-plane-llm",        url: "https://llm.local",       type: "http-s2z",  gpu: true },
   { id: "ocr",        name: "OCR",        desc: "Qwen 3.5 4B OCR (GPU)",   container: "service-plane-ocr",        url: "https://ocr.local",       type: "http-s2z",  gpu: true },
-  { id: "dragonfly",  name: "Dragonfly",  desc: "sccache Redis 后端",       container: "service-plane-dragonfly-1", url: null,                     type: "tcp-s2z" },
+  { id: "dragonfly",  name: "Dragonfly",  desc: "ai-ime 缓存",              container: "service-plane-dragonfly-1", url: null,                     type: "tcp-s2z" },
   { id: "searxng",    name: "SearXNG",    desc: "搜索引擎聚合",             container: "service-plane-searxng-1",   url: null,                     type: "tcp-s2z" },
   { id: "traefik",    name: "Traefik",    desc: "反向代理 + 仪表板",        container: "service-plane-traefik",    url: "https://traefik.local",   type: "always-on" },
   { id: "sablier",    name: "Sablier",    desc: "HTTP scale-to-zero 调度",  container: "service-plane-sablier",    url: null,                      type: "always-on" },

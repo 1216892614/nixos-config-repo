@@ -48,7 +48,7 @@ cp env.nix.example env.nix
 - **编辑器**：Zed（nightly via flake）、Cursor（AppImage）
 - **AI 编码**：OpenCode + oh-my-openagent 插件、omp (oh-my-pi)、Claude Code、Codex、Gemini CLI
 - **终端**：Kitty + Zellij + Fish + Starship
-- **语言**：Python (uv)、Node.js、Rust (sccache → Dragonfly)
+- **语言**：Python (uv)、Node.js、Rust (sccache 本地磁盘缓存，10G LRU)
 - **容器**：Docker + Docker Compose（rootless 用户服务）
 - **文件管理**：Yazi（终端）、FileBrowser（Web）
 
@@ -74,7 +74,7 @@ lo 3x2           # 通用 Zellij 网格布局
 | Sablier | 常驻 | — | HTTP scale-to-zero 生命周期管理 |
 | Unbound | 常驻 | 5353 | `.local` 权威 DNS |
 | tcp-gate | 常驻 | 6399 | TCP 代理 + 按需唤醒 |
-| Dragonfly | 按需 | — | sccache Redis 后端，空闲停止 |
+| Dragonfly | 按需 | — | ai-ime 缓存（512M LRU），空闲停止 |
 | FileBrowser | 按需 | — | Web 文件浏览，空闲停止 |
 | RustDesk | 常驻 | 21115-21117 | 远程桌面信号/中继 |
 | Pi Agent | 常驻 | 3001 | AI 助手（opencode serve） |
@@ -86,7 +86,7 @@ lo 3x2           # 通用 Zellij 网格布局
 - `http://files.local` — 文件浏览（首次访问自动唤醒）
 - `http://agent.local` — AI 助手
 - `http://traefik.local` — 路由状态
-- `redis://127.0.0.1:6399` — Dragonfly（sccache 自动使用）
+- `redis://127.0.0.1:6399` — Dragonfly（ai-ime 使用）
 
 本机通过 `/etc/hosts` 解析 `*.local`；LAN 设备可配置 DNS 指向 `:5353`。
 

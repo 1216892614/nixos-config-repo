@@ -79,6 +79,8 @@ in
       pane_frames = false;
       default_mode = "locked";
       show_startup_tips = false;
+      # 外层终端异常退出（trap 没机会执行）时，server 自行退出，不在后台残留
+      on_force_close = "quit";
     };
 
     extraConfig = (tpl ./theme.kdl {
