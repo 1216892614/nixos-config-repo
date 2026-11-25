@@ -19,3 +19,4 @@ squashfs-root/
 foolproof.json
 imgui.inihosts/*/hardware-configuration.nix
 **/target/
+__pycache__/

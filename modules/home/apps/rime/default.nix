@@ -16,15 +16,16 @@ let
   patchSpellerScript = ./patch-speller.py;
   patchMoqiBypassingCyclicCustomIncludes = ./patch-moqi.py;
   punctuatorYaml = ./rime-punctuator.yaml;
-  aiImeFilter = ./ai-ime/rime_ai_filter.lua;
-  aiImeProcessor = ./ai-ime/rime_ai_processor.lua;
+  aiImeFilter = pkgs.writeText "ai_ime.lua" (tpl ./ai-ime/rime_ai_filter.lua {
+    curl = "${pkgs.curl}/bin/curl";
+  });
   aiImePatchScript = ./ai-ime/patch-register-filter.py;
 
   rimeWithDirectPatchesForCyclicIncludes = pkgs.runCommand "fcitx5-rime-with-custom" {
     nativeBuildInputs = [ pkgs.python3 ];
   } (tpl ./assemble-rime.sh {
     inherit rimeBase defaultCustom moqiSingleXhCustom patchSpellerScript fuzzyQuanpinYaml
-      punctuatorYaml aiImeFilter aiImeProcessor aiImePatchScript;
+      punctuatorYaml aiImeFilter aiImePatchScript;
     patchMoqiScript = patchMoqiBypassingCyclicCustomIncludes;
   });
 in
@@ -39,20 +40,22 @@ in
   });
   systemd.user.services.ai-ime-daemon = {
     Unit = {
-      Description = "AI IME candidate daemon (local Qwen via Ollama)";
+      Description = "AI IME candidate daemon (memory + local Qwen via Ollama)";
       After = [ "graphical-session.target" ];
       Requires = [ "default.target" ];
     };
     Service = {
-      ExecStart = "${pkgs.python3.withPackages (ps: with ps; [ redis requests watchdog ])}/bin/python3 ${./ai-ime/daemon.py}";
+      ExecStart = "${pkgs.python3.withPackages (ps: with ps; [ redis requests ])}/bin/python3 ${./ai-ime/daemon.py}";
       Restart = "on-failure";
       RestartSec = 3;
       Environment = [
         "AI_IME_REDIS_HOST=127.0.0.1"
         "AI_IME_REDIS_PORT=6399"
         "AI_IME_LLM_URL=http://127.0.0.1:11434/v1"
-        "AI_IME_LLM_MODEL=qwen3:4b"
+        "AI_IME_LLM_MODEL=qwen2.5:1.5b-instruct"
         "AI_IME_LLM_TIMEOUT=5"
+        # 每次按键最多为 LLM 阻塞输入法的时间；超时的结果会缓存，下次同样输入直接命中
+        "AI_IME_BUDGET_MS=250"
       ];
     };
     Install.WantedBy = [ "graphical-session.target" ];

@@ -9,9 +9,8 @@ rm -f $out/moqi_wan_flypy.custom.yaml
 python3 @patchSpellerScript@ @fuzzyQuanpinYaml@ $out/moqi_speller.yaml
 python3 @patchMoqiScript@ $out/moqi.yaml @punctuatorYaml@
 
-# AI 候选词: processor + filter + rime.lua 注册
+# AI 候选词: filter + moqi.yaml 注册
 cp @aiImeFilter@ $out/lua/ai_ime.lua
-cp @aiImeProcessor@ $out/lua/rime_ai_processor.lua
 python3 @aiImePatchScript@ $out/moqi.yaml
 
 # rime.lua: 确保模块被加载（librime-lua 自动发现需要此文件存在）
