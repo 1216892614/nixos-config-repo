@@ -24,11 +24,15 @@ LLM：Ollama localhost:11434 (qwen2.5:1.5b-instruct)
 效果和 qwen3:4b 持平，CPU 上快 2.5 倍。改提示词时 few-shot 别用测试里会出现的词。
 """
 
+import ctypes
+import ctypes.util
 import hashlib
 import json
 import os
 import queue
+import select
 import signal
+import struct
 import sys
 import threading
 import time
@@ -49,7 +53,6 @@ MEMORY_FILE = STATE_DIR / "memory.json"
 REQUEST_FILE = RUNTIME_DIR / "request.json"
 RESULT_FILE = RUNTIME_DIR / "result.txt"
 COMMIT_FILE = RUNTIME_DIR / "commit.txt"
-POLL_INTERVAL = 0.010  # 10ms 轮询请求文件
 
 REDIS_HOST = os.environ.get("AI_IME_REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.environ.get("AI_IME_REDIS_PORT", "6399"))
@@ -368,14 +371,49 @@ class Suggester:
         return fut
 
 
-# ── 文件监听主循环 ────────────────────────────────────────────────────
-def _file_mtime(path: Path) -> float:
+
+# ── inotify（通过 ctypes，不需要额外 Python 包）──────────────────────
+_libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+
+IN_CLOSE_WRITE = 0x00000008  # 文件写入并关闭（rename 目标也会触发）
+IN_MOVED_TO    = 0x00000080  # 文件被 rename 到监控目录
+IN_MASK = IN_CLOSE_WRITE | IN_MOVED_TO
+
+_EVENT_HEADER = struct.Struct("iIII")  # wd, mask, cookie, len
+
+
+def _inotify_init() -> int:
+    fd = _libc.inotify_init1(0x00800)  # IN_NONBLOCK
+    if fd < 0:
+        raise OSError(ctypes.get_errno(), "inotify_init1 failed")
+    return fd
+
+
+def _inotify_add_watch(fd: int, path: str, mask: int) -> int:
+    wd = _libc.inotify_add_watch(fd, path.encode(), mask)
+    if wd < 0:
+        raise OSError(ctypes.get_errno(), f"inotify_add_watch failed: {path}")
+    return wd
+
+
+def _inotify_read_events(fd: int) -> list[tuple[int, int, str]]:
+    """读取所有待处理的 inotify 事件，返回 [(wd, mask, name), ...]"""
+    events = []
     try:
-        return path.stat().st_mtime_ns
-    except OSError:
-        return 0
+        buf = os.read(fd, 8192)
+    except BlockingIOError:
+        return events
+    offset = 0
+    while offset < len(buf):
+        wd, mask, _, name_len = _EVENT_HEADER.unpack_from(buf, offset)
+        offset += _EVENT_HEADER.size
+        name = buf[offset:offset + name_len].rstrip(b"\x00").decode(errors="replace")
+        offset += name_len
+        events.append((wd, mask, name))
+    return events
 
 
+# ── 主循环 ────────────────────────────────────────────────────────────
 def main():
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
 
@@ -383,29 +421,59 @@ def main():
     cache = Cache()
     suggester = Suggester(memory, cache, LlmPool(cache))
 
-    print(f"ai-ime-daemon watching {RUNTIME_DIR}", flush=True)
+    # 初始化 inotify，监控 RUNTIME_DIR 下的文件变化
+    ifd = _inotify_init()
+    _inotify_add_watch(ifd, str(RUNTIME_DIR), IN_MASK)
+
+    req_name = REQUEST_FILE.name       # "request.json"
+    commit_name = COMMIT_FILE.name     # "commit.txt"
+
+    print(f"ai-ime-daemon watching {RUNTIME_DIR} (inotify)", flush=True)
     print(f"  LLM: {LLM_BASE_URL} model={LLM_MODEL}", flush=True)
     print(f"  Memory: {MEMORY_FILE}  Cache: {REDIS_HOST}:{REDIS_PORT}", flush=True)
 
     running = True
+    # 用 pipe 做 shutdown 信号：signal handler 写一个字节，select 立刻唤醒
+    wake_r, wake_w = os.pipe()
+    os.set_blocking(wake_r, False)
+    os.set_blocking(wake_w, False)
 
     def shutdown(sig, frame):
         nonlocal running
         running = False
+        try:
+            os.write(wake_w, b"x")
+        except OSError:
+            pass
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
-    last_req_mtime = _file_mtime(REQUEST_FILE)
-    last_commit_mtime = _file_mtime(COMMIT_FILE)
+    poller = select.poll()
+    poller.register(ifd, select.POLLIN)
+    poller.register(wake_r, select.POLLIN)
 
     while running:
-        time.sleep(POLL_INTERVAL)
+        # 阻塞等待文件变化或 shutdown 信号，无 CPU 开销
+        try:
+            ready = poller.poll(5000)  # 5 秒超时兜底
+        except InterruptedError:
+            continue
 
-        # 检查请求文件
-        req_mtime = _file_mtime(REQUEST_FILE)
-        if req_mtime != last_req_mtime:
-            last_req_mtime = req_mtime
+        got_request = False
+        got_commit = False
+
+        for fd, _ in ready:
+            if fd == wake_r:
+                break
+            if fd == ifd:
+                for _, mask, name in _inotify_read_events(ifd):
+                    if name == req_name:
+                        got_request = True
+                    elif name == commit_name:
+                        got_commit = True
+
+        if got_request:
             try:
                 data = json.loads(REQUEST_FILE.read_text())
                 code = str(data.get("input", ""))
@@ -415,10 +483,7 @@ def main():
             except (OSError, json.JSONDecodeError, KeyError) as e:
                 print(f"request read error: {e}", file=sys.stderr, flush=True)
 
-        # 检查上屏通知文件
-        commit_mtime = _file_mtime(COMMIT_FILE)
-        if commit_mtime != last_commit_mtime:
-            last_commit_mtime = commit_mtime
+        if got_commit:
             try:
                 line = COMMIT_FILE.read_text().strip()
                 if "\t" in line:
@@ -428,6 +493,9 @@ def main():
             except OSError as e:
                 print(f"commit read error: {e}", file=sys.stderr, flush=True)
 
+    os.close(ifd)
+    os.close(wake_r)
+    os.close(wake_w)
     print("ai-ime-daemon shutting down", flush=True)
 
 
