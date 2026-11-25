@@ -1,11 +1,10 @@
--- AI 候选词 filter
--- 刷新候选时把按键串和词库前 5 个候选发给 ai-ime-daemon，把它的答案放在第 2 位：
---   答案就是后面某个候选 → 把那个候选提到第 2 位
---   答案是新词（英文名词、记住的人名等）→ 插入一个 🤖 候选
--- 上屏时把按键串和上屏文字发给 daemon，让它记住用户的选择。
--- daemon 自己控制等待预算；curl 的 --max-time 只是兜底。
+-- AI 候选词 filter（零 fork 文件 IPC）
+-- 通信方式：通过 $XDG_RUNTIME_DIR/rime-ai/ 下的文件与 daemon 交互
+--   request.json — 本 filter 写入，daemon 轮询读取
+--   result.txt   — daemon 写入 "code\tresult"，本 filter 读取
+--   commit.txt   — 上屏时写入 "code\ttext"，daemon 轮询读取
+-- Lua 侧完全不 fork 子进程，只做文件读写（微秒级）。
 
-local CURL = "@curl@"
 local MAX_CANDS = 5
 
 local M = {}
@@ -19,32 +18,44 @@ local function json_str(s)
     return '"' .. escaped .. '"'
 end
 
-local function post(env, path, body)
-    local f = io.open(env.req_file, "w")
-    if not f then return nil end
-    f:write(body)
+-- 原子写文件：先写 tmp 再 rename，防止 daemon 读到半截
+local function atomic_write(path, tmp, content)
+    local f = io.open(tmp, "w")
+    if not f then return false end
+    f:write(content)
     f:close()
-    local p = io.popen(env.curl_cmd .. path, "r")
-    if not p then return nil end
-    local out = p:read("*a")
-    p:close()
-    return out
+    os.rename(tmp, path)
+    return true
+end
+
+-- 读取结果文件：格式 "code\tresult"
+local function read_result(path)
+    local f = io.open(path, "r")
+    if not f then return nil, nil end
+    local line = f:read("*l")
+    f:close()
+    if not line then return nil, nil end
+    local tab = line:find("\t", 1, true)
+    if not tab then return nil, nil end
+    return line:sub(1, tab - 1), line:sub(tab + 1)
 end
 
 function M.init(env)
     local runtime = os.getenv("XDG_RUNTIME_DIR")
-    -- 路径要拼进 shell 命令，带单引号的路径直接放弃
     if not runtime or runtime:find("'", 1, true) then return end
     local dir = runtime .. "/rime-ai"
     os.execute("mkdir -p -m 700 '" .. dir .. "'")
-    env.req_file = dir .. "/filter-request.json"
-    env.curl_cmd = CURL .. " -s --max-time 1 --unix-socket '" .. dir .. "/daemon.sock'"
-        .. " --data-binary @'" .. env.req_file .. "' http://ai-ime"
+    env.dir = dir
+    env.request_path = dir .. "/request.json"
+    env.request_tmp  = dir .. "/request.json.tmp"
+    env.result_path  = dir .. "/result.txt"
+    env.commit_path  = dir .. "/commit.txt"
+    env.commit_tmp   = dir .. "/commit.txt.tmp"
 
     env.commit_conn = env.engine.context.commit_notifier:connect(function(ctx)
         local text, code = ctx:get_commit_text(), ctx.input
         if text ~= "" and code ~= "" then
-            post(env, "/commit", '{"input":' .. json_str(code) .. ',"text":' .. json_str(text) .. '}')
+            atomic_write(env.commit_path, env.commit_tmp, code .. "\t" .. text)
         end
     end)
 end
@@ -57,12 +68,12 @@ function M.func(input, env)
     local ctx = env.engine.context
     local seg = ctx.composition:back()
     local code = seg and ctx.input:sub(seg.start + 1, seg._end) or ""
-    -- 只处理普通拼写段；英文前缀、反查、辅助码等模式原样放行
-    if not env.curl_cmd or not seg or not seg:has_tag("abc") or #code < 2 or not code:match("^[a-z]+$") then
+    if not env.dir or not seg or not seg:has_tag("abc") or #code < 2 or not code:match("^[a-z]+$") then
         for cand in input:iter() do yield(cand) end
         return
     end
 
+    -- 收集词库候选
     local f, s, var = input:iter()
     local function next_cand()
         var = f(s, var)
@@ -76,16 +87,19 @@ function M.func(input, env)
         buf[#buf + 1] = cand
         texts[#texts + 1] = json_str(cand.text)
     end
-    -- 词库一个候选都没有时不插：AI 候选会变成第 1 位，按键数到 max_code_length 时会被自动上屏
     if not buf[1] then
         for cand in next_cand do yield(cand) end
         return
     end
 
-    local ai = post(env, "/suggest", '{"input":' .. json_str(code) .. ',"cands":[' .. table.concat(texts, ",") .. ']}')
+    -- 1) 同步轮询：读结果文件，看 daemon 是否已算好上一次的结果
+    local res_code, ai = read_result(env.result_path)
     local promoted = nil
+    local has_ai = res_code == code and ai and ai ~= "" and ai ~= buf[1].text
+
     yield(buf[1])
-    if ai and ai ~= "" and ai ~= buf[1].text then
+    if has_ai then
+        -- AI 结果就绪 → 放第 2 位
         for i = 2, #buf do
             if buf[i].text == ai then promoted = i break end
         end
@@ -94,11 +108,19 @@ function M.func(input, env)
         else
             yield(Candidate("ai", seg.start, seg._end, ai, "🤖"))
         end
-    end
-    for i = 2, #buf do
-        if i ~= promoted then yield(buf[i]) end
+        for i = 2, #buf do
+            if i ~= promoted then yield(buf[i]) end
+        end
+    else
+        -- AI 未就绪 → 正常候选序 + 加载提示在末尾
+        for i = 2, #buf do yield(buf[i]) end
+        yield(Candidate("ai", seg.start, seg._end, "...", "⏳"))
     end
     for cand in next_cand do yield(cand) end
+
+    -- 2) 写请求文件：daemon 检测到后开始计算
+    atomic_write(env.request_path, env.request_tmp,
+        '{"input":' .. json_str(code) .. ',"cands":[' .. table.concat(texts, ",") .. ']}')
 end
 
 return M

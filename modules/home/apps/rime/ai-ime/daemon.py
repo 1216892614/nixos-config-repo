@@ -1,7 +1,12 @@
-"""AI IME Daemon：给 Rime 的第 2 位候选出主意
+"""AI IME Daemon：给 Rime 的第 2 位候选出主意（文件 IPC 版）
 
-Rime filter 每次刷新候选时同步请求 /suggest，带上按键串和词库前几个候选；
-上屏时请求 /commit 记录用户实际选了什么。
+Rime Lua filter 通过 $XDG_RUNTIME_DIR/rime-ai/ 下的文件与本 daemon 通信：
+  request.json — filter 原子写入 {"input":"...","cands":["...",...]}，daemon 检测到变化后开始计算
+  result.txt   — daemon 原子写入 "code\\tresult"，filter 每次按键时读取
+  commit.txt   — filter 上屏时原子写入 "code\\ttext"，daemon 检测到后记录到记忆
+
+Lua 侧完全不 fork 子进程，只做文件读写（微秒级），打字零延迟。
+AI 结果最多慢一个按键出现（首次 LLM 推理期间显示 ⏳ 占位）。
 
 出候选的顺序：
   1. 记忆：同一串按键以前上屏过的词（人名等），或以当前按键开头的常用词
@@ -9,9 +14,8 @@ Rime filter 每次刷新候选时同步请求 /suggest，带上按键串和词�
      - 英文：按键串本身是不是英文单词/技术名词（linux → Linux）
      - 上下文：有最近上屏文字时，词库后面的候选是不是比第 1 个更合适
      小模型被要求"拿不准就弃权"，否则它总会挑一个词库候选，把正确的第 1 位挤下去。
-LLM 只在预算时间内等待；超时的结果留在缓存里，下次同样的输入直接命中。
+LLM 结果后台计算，算完写入 result.txt；filter 下次按键时读到。
 
-通信：$XDG_RUNTIME_DIR/rime-ai/daemon.sock 上的 HTTP
 记忆：$XDG_STATE_HOME/rime-ai/memory.json
 缓存：进程内 LRU + Dragonfly（Redis 兼容）localhost:6399
 LLM：Ollama localhost:11434 (qwen2.5:1.5b-instruct)
@@ -25,14 +29,12 @@ import json
 import os
 import queue
 import signal
-import socketserver
 import sys
 import threading
 import time
 from collections import OrderedDict
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeout
-from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
 import redis
@@ -40,9 +42,14 @@ import requests
 
 # ── 配置 ──────────────────────────────────────────────────────────────
 RUNTIME_DIR = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "rime-ai"
-SOCKET_PATH = Path(os.environ.get("AI_IME_SOCKET", str(RUNTIME_DIR / "daemon.sock")))
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "rime-ai"
 MEMORY_FILE = STATE_DIR / "memory.json"
+
+# 文件 IPC 路径
+REQUEST_FILE = RUNTIME_DIR / "request.json"
+RESULT_FILE = RUNTIME_DIR / "result.txt"
+COMMIT_FILE = RUNTIME_DIR / "commit.txt"
+POLL_INTERVAL = 0.010  # 10ms 轮询请求文件
 
 REDIS_HOST = os.environ.get("AI_IME_REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.environ.get("AI_IME_REDIS_PORT", "6399"))
@@ -51,8 +58,6 @@ CACHE_TTL = int(os.environ.get("AI_IME_CACHE_TTL", "86400"))  # 24h
 LLM_BASE_URL = os.environ.get("AI_IME_LLM_URL", "http://127.0.0.1:11434/v1")
 LLM_MODEL = os.environ.get("AI_IME_LLM_MODEL", "qwen2.5:1.5b-instruct")
 LLM_TIMEOUT = float(os.environ.get("AI_IME_LLM_TIMEOUT", "5.0"))
-# 每次按键最多为 LLM 阻塞输入法这么久
-BUDGET = float(os.environ.get("AI_IME_BUDGET_MS", "250")) / 1000
 
 MIN_INPUT = 2            # 少于 2 个按键不出候选
 EN_MIN_INPUT = 4         # 更短的按键串几乎都是双拼（ui、sd、ni），问英文只会误报
@@ -114,7 +119,6 @@ class Memory:
             self.recent.append([now, text])
             del self.recent[:-RECENT_MAX]
             if len(self.codes) > MEMORY_MAX_CODES:
-                # 淘汰最久没用过的按键串
                 oldest = sorted(self.codes, key=lambda c: max(v[1] for v in self.codes[c].values()))
                 for c in oldest[: len(self.codes) - MEMORY_MAX_CODES]:
                     del self.codes[c]
@@ -237,7 +241,6 @@ def context_messages(code: str, cands: list[str], context: str) -> list[dict]:
 
 
 def parse_english(code: str, answer: str) -> str | None:
-    # 只接受同一串字母换了大小写/加了标点（Node.js），防止模型自由发挥成别的词
     letters = "".join(ch for ch in answer.lower() if ch.isalpha())
     return answer if letters == code else None
 
@@ -249,8 +252,7 @@ def parse_context(cands: list[str], answer: str) -> str | None:
 
 
 def clean(text: str) -> str | None:
-    text = text.strip().strip("\"'“”‘’「」").strip()
-    # 小模型偶尔会解释一通；候选应该是一行短文本
+    text = text.strip().strip("\"'""''「」").strip()
     if not text or "\n" in text or len(text) > 24 or text == "-":
         return None
     return text
@@ -304,38 +306,57 @@ class LlmPool:
                 fut.set_result(result)
 
 
-# ── 出候选 ────────────────────────────────────────────────────────────
+# ── 出候选（文件 IPC：fire 写结果文件，供 filter 轮询读取）──────────────
+def _write_result(code: str, result: str) -> None:
+    """原子写结果文件：code\\tresult"""
+    tmp = RESULT_FILE.with_suffix(".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(f"{code}\t{result}")
+    os.replace(tmp, RESULT_FILE)
+
+
 class Suggester:
     def __init__(self, memory: Memory, cache: Cache, pool: LlmPool):
         self.memory, self.cache, self.pool = memory, cache, pool
 
-    def suggest(self, code: str, cands: list[str]) -> str:
+    def handle_request(self, code: str, cands: list[str]) -> None:
+        """处理一次按键请求：同步查记忆/缓存，异步提交 LLM，结果写文件"""
         if len(code) < MIN_INPUT:
-            return ""
+            return
         top = cands[0] if cands else None
+
+        # 记忆命中 → 立刻写结果
         for remembered in (self.memory.exact(code),
                            self.memory.by_prefix(code) if len(code) >= PREFIX_MIN_INPUT else None):
             if remembered and remembered != top:
-                return remembered
+                _write_result(code, remembered)
+                return
 
-        # 先把两个问题都提交，两个 worker 并行算；再按英文优先的顺序在同一个预算内取结果
-        questions = []
+        # 提交 LLM 问题
+        questions: list[tuple[Future, object]] = []
         if len(code) >= EN_MIN_INPUT:
             questions.append((self._ask(english_messages(code)), lambda a: parse_english(code, a)))
         context = self.memory.context()
         if context and len(cands) >= 2:
             questions.append((self._ask(context_messages(code, cands, context)), lambda a: parse_context(cands, a)))
 
-        deadline = time.monotonic() + BUDGET
-        for fut, parse in questions:
-            try:
-                answer = fut.result(timeout=max(0.0, deadline - time.monotonic()))
-            except FutureTimeout:
-                continue
-            pick = parse(answer) if answer else None
-            if pick and pick != top:
-                return pick
-        return ""
+        if not questions:
+            return
+
+        # 后台等待 LLM 结果，完成后写文件
+        def _wait_and_write():
+            for fut, parse in questions:
+                try:
+                    answer = fut.result(timeout=STALE_JOB)
+                except (FutureTimeout, Exception):
+                    continue
+                pick = parse(answer) if answer else None
+                if pick and pick != top:
+                    _write_result(code, pick)
+                    return
+
+        threading.Thread(target=_wait_and_write, daemon=True).start()
 
     def _ask(self, messages: list[dict]) -> Future:
         key = "ime:" + hashlib.sha1(json.dumps(messages, ensure_ascii=False).encode()).hexdigest()[:20]
@@ -347,74 +368,67 @@ class Suggester:
         return fut
 
 
-# ── HTTP over Unix socket ─────────────────────────────────────────────
-class Handler(BaseHTTPRequestHandler):
-    suggester: Suggester
-
-    def address_string(self):
-        return "unix"
-
-    def log_message(self, fmt, *args):
-        pass
-
-    def _reply(self, status: int, body: str = ""):
-        data = body.encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def do_POST(self):
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            data = json.loads(self.rfile.read(length) or b"{}")
-            code = str(data.get("input", ""))
-        except (ValueError, json.JSONDecodeError):
-            return self._reply(400)
-        if self.path == "/suggest":
-            cands = [str(c) for c in data.get("cands", [])][:5]
-            return self._reply(200, self.suggester.suggest(code, cands))
-        if self.path == "/commit":
-            text = str(data.get("text", ""))
-            # 直接上屏按键本身（回车输出字母）不算选词
-            if code and text and text != code:
-                self.suggester.memory.record(code, text)
-            return self._reply(204)
-        return self._reply(404)
-
-
-class UnixHTTPServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
-    daemon_threads = True
-
-    def get_request(self):
-        conn, _ = self.socket.accept()
-        return conn, ("unix", 0)
+# ── 文件监听主循环 ────────────────────────────────────────────────────
+def _file_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return 0
 
 
 def main():
-    SOCKET_PATH.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    SOCKET_PATH.unlink(missing_ok=True)
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
 
+    memory = Memory(MEMORY_FILE)
     cache = Cache()
-    Handler.suggester = Suggester(Memory(MEMORY_FILE), cache, LlmPool(cache))
-    server = UnixHTTPServer(str(SOCKET_PATH), Handler)
-    os.chmod(SOCKET_PATH, 0o600)
+    suggester = Suggester(memory, cache, LlmPool(cache))
 
-    print(f"ai-ime-daemon listening on {SOCKET_PATH}", flush=True)
-    print(f"  LLM: {LLM_BASE_URL} model={LLM_MODEL} budget={BUDGET * 1000:.0f}ms", flush=True)
+    print(f"ai-ime-daemon watching {RUNTIME_DIR}", flush=True)
+    print(f"  LLM: {LLM_BASE_URL} model={LLM_MODEL}", flush=True)
     print(f"  Memory: {MEMORY_FILE}  Cache: {REDIS_HOST}:{REDIS_PORT}", flush=True)
 
+    running = True
+
     def shutdown(sig, frame):
-        threading.Thread(target=server.shutdown, daemon=True).start()
+        nonlocal running
+        running = False
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
-    try:
-        server.serve_forever()
-    finally:
-        server.server_close()
-        SOCKET_PATH.unlink(missing_ok=True)
+
+    last_req_mtime = _file_mtime(REQUEST_FILE)
+    last_commit_mtime = _file_mtime(COMMIT_FILE)
+
+    while running:
+        time.sleep(POLL_INTERVAL)
+
+        # 检查请求文件
+        req_mtime = _file_mtime(REQUEST_FILE)
+        if req_mtime != last_req_mtime:
+            last_req_mtime = req_mtime
+            try:
+                data = json.loads(REQUEST_FILE.read_text())
+                code = str(data.get("input", ""))
+                cands = [str(c) for c in data.get("cands", [])][:5]
+                if code:
+                    suggester.handle_request(code, cands)
+            except (OSError, json.JSONDecodeError, KeyError) as e:
+                print(f"request read error: {e}", file=sys.stderr, flush=True)
+
+        # 检查上屏通知文件
+        commit_mtime = _file_mtime(COMMIT_FILE)
+        if commit_mtime != last_commit_mtime:
+            last_commit_mtime = commit_mtime
+            try:
+                line = COMMIT_FILE.read_text().strip()
+                if "\t" in line:
+                    code, text = line.split("\t", 1)
+                    if code and text and text != code:
+                        memory.record(code, text)
+            except OSError as e:
+                print(f"commit read error: {e}", file=sys.stderr, flush=True)
+
+    print("ai-ime-daemon shutting down", flush=True)
 
 
 if __name__ == "__main__":

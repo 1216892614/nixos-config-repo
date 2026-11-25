@@ -16,9 +16,7 @@ let
   patchSpellerScript = ./patch-speller.py;
   patchMoqiBypassingCyclicCustomIncludes = ./patch-moqi.py;
   punctuatorYaml = ./rime-punctuator.yaml;
-  aiImeFilter = pkgs.writeText "ai_ime.lua" (tpl ./ai-ime/rime_ai_filter.lua {
-    curl = "${pkgs.curl}/bin/curl";
-  });
+  aiImeFilter = pkgs.writeText "ai_ime.lua" (builtins.readFile ./ai-ime/rime_ai_filter.lua);
   aiImePatchScript = ./ai-ime/patch-register-filter.py;
 
   rimeWithDirectPatchesForCyclicIncludes = pkgs.runCommand "fcitx5-rime-with-custom" {
@@ -54,8 +52,6 @@ in
         "AI_IME_LLM_URL=http://127.0.0.1:11434/v1"
         "AI_IME_LLM_MODEL=qwen2.5:1.5b-instruct"
         "AI_IME_LLM_TIMEOUT=5"
-        # 每次按键最多为 LLM 阻塞输入法的时间；超时的结果会缓存，下次同样输入直接命中
-        "AI_IME_BUDGET_MS=250"
       ];
     };
     Install.WantedBy = [ "graphical-session.target" ];
